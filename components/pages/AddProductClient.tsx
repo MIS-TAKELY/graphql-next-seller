@@ -15,11 +15,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useCategory } from "@/hooks/category/useCategory";
 import { useProduct } from "@/hooks/product/useProduct";
-import { Category, FormData } from "@/types/pages/product";
+import { Category } from "@/types/category.type";
+import { FormData } from "@/types/pages/product";
 import { buildProductInput, validateStep } from "@/utils/product/validateSteps";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const steps = [
@@ -31,13 +31,15 @@ const steps = [
   { id: 6, title: "Preview", description: "Returns and warranty" },
 ];
 
-export default function AddProductClient({categoriesData}:{categoriesData:Category}) {
+export default function AddProductClient({
+  categoriesData,
+}: {
+  categoriesData: Category[];
+}) {
   const [currentStep, setCurrentStep] = useState(1);
   const [errors, setErrors] = useState<any>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { handleSubmitHandler } = useProduct();
-  const { getCategoryData } = useCategory();
 
   const [formData, setFormData] = useState<FormData>({
     // Basic Details
@@ -45,7 +47,7 @@ export default function AddProductClient({categoriesData}:{categoriesData:Catego
     description: "",
     categoryId: "",
     subcategory: "",
-    brandId: "",
+    brand: "",
 
     // Specifications
     features: [],
@@ -107,6 +109,27 @@ export default function AddProductClient({categoriesData}:{categoriesData:Catego
     warranty: "",
   });
 
+  const Categories = useMemo(() => categoriesData ?? [], [categoriesData]);
+
+  // console.log("categoriesData", Categories);
+
+  // const updateFormData = useCallback(
+  //   (field: keyof FormData, value: any) => {
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       [field]: value,
+  //     }));
+
+  //     if (errors[field]) {
+  //       setErrors((prev: any) => ({
+  //         ...prev,
+  //         [field]: undefined,
+  //       }));
+  //     }
+  //   },
+  //   [errors]
+  // );
+
   const updateFormData = (field: keyof FormData, value: any) => {
     setFormData((prev) => ({
       ...prev,
@@ -114,7 +137,7 @@ export default function AddProductClient({categoriesData}:{categoriesData:Catego
     }));
 
     if (errors[field]) {
-      setErrors((prev:any) => ({
+      setErrors((prev: any) => ({
         ...prev,
         [field]: undefined,
       }));
@@ -153,8 +176,9 @@ export default function AddProductClient({categoriesData}:{categoriesData:Catego
     // setIsSubmitting(true);
     try {
       const productInput = buildProductInput(formData);
+      // const productInput = buildProductInput(formData);
 
-      console.log("Product input:", productInput);
+      // console.log("Product input:", productInput);
 
       handleSubmitHandler(productInput);
     } catch (error: any) {
@@ -162,23 +186,21 @@ export default function AddProductClient({categoriesData}:{categoriesData:Catego
       toast.error(
         error.message || "Failed to create product. Please try again."
       );
-    } finally {
-      // setIsSubmitting(false);
     }
   };
 
   const renderStepContent = () => {
     const stepProps = { formData, errors, updateFormData };
-    const categoriesData = getCategoryData?.categories || [];
+    // const categoriesData = getCategoryData?.categories || [];
+
+    // console.log("category data client side-->", Categories);
 
     switch (currentStep) {
       case 1:
-        return (
-          <BasicDetailsStep {...stepProps} categoriesData={categoriesData} />
-        );
+        return <BasicDetailsStep {...stepProps} categoriesData={Categories} />;
       case 2:
         return (
-          <SpecificationsStep {...stepProps} categoriesData={categoriesData} />
+          <SpecificationsStep {...stepProps} categoriesData={Categories} />
         );
       case 3:
         return <PricingStep {...stepProps} />;
@@ -241,7 +263,6 @@ export default function AddProductClient({categoriesData}:{categoriesData:Catego
         onPrev={prevStep}
         onNext={nextStep}
         onSubmit={handleSubmit}
-        isSubmitting={isSubmitting}
       />
     </div>
   );

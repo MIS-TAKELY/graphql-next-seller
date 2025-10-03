@@ -162,7 +162,7 @@ export const productResolvers = {
                 name: input.name,
                 slug,
                 description: input.description || "",
-                status: input.status || "DRAFT",
+                status: "INACTIVE",
                 categoryId: input.categoryId || null,
                 brand: input.brand || "Generic",
                 sellerId,
@@ -195,20 +195,21 @@ export const productResolvers = {
                     altText: img.altText || null,
                     sortOrder:
                       img.sortOrder !== undefined ? img.sortOrder : index,
-                    type: img.type || "PRIMARY",
+                    mediaType: img.mediaType || "PRIMARY",
+                    fileType: img.fileType,
                   })),
                 },
               },
-              include: {
-                variants: {
-                  include: {
-                    specifications: true,
-                  },
-                },
-                images: true,
-                seller: true,
-                category: true,
-              },
+              // include: {
+              //   variants: {
+              //     include: {
+              //       specifications: true,
+              //     },
+              //   },
+              //   images: true,
+              //   seller: true,
+              //   category: true,
+              // },
             });
 
             // Create offers if provided
@@ -277,27 +278,27 @@ export const productResolvers = {
             // Fetch the complete product with all relations
             return await tx.product.findUnique({
               where: { id: newProduct.id },
-              include: {
-                variants: {
-                  include: {
-                    specifications: true,
-                  },
-                },
-                images: true,
-                seller: true,
-                category: true,
-                productOffers: {
-                  include: {
-                    offer: true,
-                  },
-                },
-                deliveryOptions: true,
-                warranty: true,
-                returnPolicy: true,
-              },
+              // include: {
+              //   variants: {
+              //     include: {
+              //       specifications: true,
+              //     },
+              //   },
+              //   images: true,
+              //   seller: true,
+              //   category: true,
+              //   productOffers: {
+              //     include: {
+              //       offer: true,
+              //     },
+              //   },
+              //   deliveryOptions: true,
+              //   warranty: true,
+              //   returnPolicy: true,
+              // },
             });
           },
-          { timeout: 20000 } // Moved timeout here for the entire transaction
+          { timeout: 30000 } // Moved timeout here for the entire transaction
         );
 
         if (!product) throw new Error("Unable to create product");
@@ -319,7 +320,7 @@ export const productResolvers = {
       if (!productId) {
         throw new Error("Product ID is required");
       }
-
+      // console.log("prodyvt ir-->", productId);/
       // Ensure the product exists and belongs to the seller
       const product = await prisma.product.findUnique({
         where: { id: productId },

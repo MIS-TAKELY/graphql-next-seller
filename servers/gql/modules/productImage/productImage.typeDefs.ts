@@ -1,9 +1,14 @@
 import { gql } from "graphql-tag";
 
 export const productImageTypeDefs = gql`
-  enum ImageType {
+  enum MediaType {
     PRIMARY
     PROMOTIONAL
+  }
+
+  enum FileType {
+    IMAGE
+    VIDEO
   }
   type ProductImage {
     id: ID!
@@ -12,13 +17,15 @@ export const productImageTypeDefs = gql`
     url: String!
     altText: String
     sortOrder: Int
-    type: ImageType!
+    mediaType: MediaType!
+    fileType: FileType!
     product: Product!
   }
   input CreateProductImageInput {
     url: String!
     altText: String
-    type: ImageType!
+    mediaType: MediaType!
+    fileType: FileType!
     sortOrder: Int
   }
 `;

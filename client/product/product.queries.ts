@@ -8,6 +8,10 @@ export const GET_PRODUCT_CATEGORIES = gql`
       children {
         id
         name
+        children {
+          id
+          name
+        }
       }
     }
   }

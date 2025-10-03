@@ -1,12 +1,13 @@
+// components/product/steps/MediaStep.tsx
 "use client";
 
-import { FileUpload } from "@/components/fileUpload";
+import { FileUpload, FileWithPreview } from "@/components/fileUpload";
 import { FormField } from "@/components/form-field";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Errors, FormData, Media } from "@/types/pages/product";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
-import { useCallback, useState } from "react";
+import React, { useCallback } from "react";
 
 interface MediaStepProps {
   formData: FormData;
@@ -14,169 +15,159 @@ interface MediaStepProps {
   updateFormData: (field: keyof FormData, value: any) => void;
 }
 
-type FileWithPreview = {
-  file?: File;
-  preview: string;
-  type: "image" | "video" | "other";
-};
+interface IPreviewMediaInterface {
+  url: string;
+  previewType: "image" | "video"; // Renamed and typed for FileUpload
+  isLocal: boolean;
+  pending: boolean;
+}
 
-export const MediaStep = ({
-  formData,
-  errors,
-  updateFormData,
-}: MediaStepProps) => {
-  const [productPreviews, setProductPreviews] = useState<FileWithPreview[]>([]);
-  const [promotionalPreviews, setPromotionalPreviews] = useState<
-    FileWithPreview[]
-  >([]);
+export const MediaStep = React.memo(
+  ({ formData, errors, updateFormData }: MediaStepProps) => {
+    const handleMediaUpload = useCallback(
+      async (
+        files: FileWithPreview[],
+        mediaSection: "productMedia" | "promotionalMedia" // Renamed param for clarity
+      ) => {
+        if (files.length === 0) return;
 
-  const handleMediaUpload = useCallback(
-    async (
-      files: FileWithPreview[],
-      mediaType: "productMedia" | "promotionalMedia"
-    ) => {
-      if (files.length === 0) return;
+        const mediaRole =
+          mediaSection === "productMedia" ? "PRIMARY" : "PROMOTIONAL";
+        const isProductMedia = mediaSection === "productMedia";
 
-      // Update previews immediately
-      const setPreviews =
-        mediaType === "productMedia"
-          ? setProductPreviews
-          : setPromotionalPreviews;
-      setPreviews((prev) => [...prev, ...files]);
+        // Add local preview immediately
+        const pendingMedia: IPreviewMediaInterface[] = files.map((f) => ({
+          url: f.preview,
+          previewType: f.type.startsWith("image/") ? "image" : "video",
+          isLocal: true,
+          pending: true,
+        }));
+        console.log("pending media", pendingMedia);
+        updateFormData(mediaSection, [
+          ...formData[mediaSection],
+          ...pendingMedia,
+        ]);
 
-      try {
-        const uploadPromises = files.map(async (fileWithPreview) => {
-          if (!fileWithPreview.file) return null;
+        try {
+          const uploadPromises = files.map(async (fileWithPreview) => {
+            if (!fileWithPreview.file) return null;
 
-          const resourceType = fileWithPreview.file.type.startsWith("video/")
-            ? "video"
-            : "image";
+            const resourceType = fileWithPreview.file.type.startsWith("video/")
+              ? "video"
+              : "image";
 
-          const result = await uploadToCloudinary(
-            fileWithPreview.file,
-            resourceType
+            const result = await uploadToCloudinary(
+              fileWithPreview.file,
+              resourceType
+            );
+            console.log("result.resourceType", result.resourceType);
+
+            const fileType =
+              result.resourceType.toUpperCase() === "IMAGE" ? "IMAGE" : "VIDEO";
+
+            return {
+              url: result.url,
+              mediaType: mediaRole,
+              publicId: result.publicId,
+              altText: result.altText || "",
+              fileType,
+            } as Media;
+          });
+
+          const uploaded = (await Promise.all(uploadPromises)).filter(
+            (m): m is Media => m !== null
           );
 
-          // Revoke the local preview URL as we now have the Cloudinary URL
-          URL.revokeObjectURL(fileWithPreview.preview);
-
-          return {
-            url: result.url,
-            mediaType: result.resourceType,
-            publicId: result.publicId,
-            altText: "",
-            caption: "",
-          } as Media;
-        });
-
-        const newMedia = (await Promise.all(uploadPromises)).filter(
-          (media): media is Media => media !== null
-        );
-
-        updateFormData(mediaType, [...formData[mediaType], ...newMedia]);
-
-        // Remove previews after successful upload
-        setPreviews((prev) => prev.filter((file) => !files.includes(file)));
-      } catch (error) {
-        console.error("Upload failed:", error);
-        // Remove failed uploads from previews
-        setPreviews((prev) => prev.filter((file) => !files.includes(file)));
-      }
-    },
-    [updateFormData]
-  );
-
-  const handleRemoveMedia = useCallback(
-    (index: number, mediaType: "productMedia" | "promotionalMedia") => {
-      const newMedia = [...formData[mediaType]];
-      const [removedMedia] = newMedia.splice(index, 1);
-      updateFormData(mediaType, newMedia);
-
-      if (removedMedia.url) {
-        URL.revokeObjectURL(removedMedia.url);
-      }
-    },
-    [formData, updateFormData]
-  );
-
-  const handleRemovePreview = useCallback(
-    (index: number, mediaType: "productMedia" | "promotionalMedia") => {
-      const setPreviews =
-        mediaType === "productMedia"
-          ? setProductPreviews
-          : setPromotionalPreviews;
-      setPreviews((prev) => {
-        const newPreviews = [...prev];
-        const [removed] = newPreviews.splice(index, 1);
-        if (removed.preview) {
-          URL.revokeObjectURL(removed.preview);
+          // Replace pending media with uploaded ones
+          updateFormData(mediaSection, [
+            ...formData[mediaSection].filter((m) => !m.pending),
+            ...uploaded,
+          ]);
+        } catch (err) {
+          console.error("Upload failed:", err);
+          // Remove pending if upload failed
+          updateFormData(
+            mediaSection,
+            formData[mediaSection].filter((m) => !m.pending)
+          );
         }
-        return newPreviews;
-      });
-    },
-    []
-  );
+      },
+      [formData, updateFormData]
+    );
 
-  // Combine uploaded media and local previews
-  const productMediaPreviews = [
-    ...formData.productMedia.map((media) => ({
-      preview: media.url,
-      type: media.mediaType as "image" | "video",
-      file: undefined,
-    })),
-    ...productPreviews,
-  ].slice(0, 10); // Respect maxFiles limit
+    const handleRemoveMedia = useCallback(
+      (index: number, mediaSection: "productMedia" | "promotionalMedia") => {
+        const updated = [...formData[mediaSection]];
+        const [removed] = updated.splice(index, 1);
+        updateFormData(mediaSection, updated);
 
-  const promotionalMediaPreviews = [
-    ...formData.promotionalMedia.map((media) => ({
-      preview: media.url,
-      type: media.mediaType as "image" | "video",
-      file: undefined,
-    })),
-    ...promotionalPreviews,
-  ].slice(0, 5); // Respect maxFiles limit
+        if (removed?.isLocal && removed.url) {
+          URL.revokeObjectURL(removed.url);
+        }
+      },
+      [formData, updateFormData]
+    );
 
-  return (
-    <div className="space-y-8">
-      <Card className="p-6">
-        <h3 className="text-lg font-medium mb-4">Product Media</h3>
-        <FormField
-          label="Product Media (Minimum 1 Primary Image required)"
-          error={errors.productMedia}
-          required
-        >
-          <FileUpload
-            value={productMediaPreviews}
-            onChange={(files) =>
-              handleMediaUpload(
-                files.filter((f) => f.file),
-                "productMedia"
-              )
-            }
-            maxFiles={10}
-            allowVideo={true}
-          />
-        </FormField>
-      </Card>
+    const getPreviewType = (media: any): "image" | "video" => {
+      // Helper to map for FileUpload
+      if ("previewType" in media) return media.previewType;
+      if ("fileType" in media)
+        return media.fileType === "IMAGE" ? "image" : "video";
+      return "image"; // Default
+    };
 
-      <Separator />
+    return (
+      <div className="space-y-8">
+        <Card className="p-6">
+          <h3 className="text-lg font-medium mb-4">Product Media</h3>
+          <FormField
+            label="Product Media (Minimum 1 Primary Image required)"
+            error={errors.productMedia}
+            required
+          >
+            <FileUpload
+              value={formData.productMedia.map((m) => ({
+                preview: m.url,
+                type: getPreviewType(m),
+              }))}
+              onChange={(files) =>
+                handleMediaUpload(
+                  files.filter((f) => f.file),
+                  "productMedia"
+                )
+              }
+              onRemove={(i) => handleRemoveMedia(i, "productMedia")}
+              maxFiles={10}
+              allowVideo
+            />
+          </FormField>
+        </Card>
 
-      <Card className="p-6">
-        <h3 className="text-lg font-medium mb-4">Promotional Media</h3>
-        <FormField label="Promotional Media (Optional)">
-          <FileUpload
-            value={promotionalMediaPreviews}
-            onChange={(files) =>
-              handleMediaUpload(
-                files.filter((f) => f.file),
-                "promotionalMedia"
-              )
-            }
-            maxFiles={5}
-            allowVideo={true}
-          />
-        </FormField>
-      </Card>
-    </div>
-  );
-};
+        <Separator />
+
+        <Card className="p-6">
+          <h3 className="text-lg font-medium mb-4">Promotional Media</h3>
+          <FormField label="Promotional Media (Optional)">
+            <FileUpload
+              value={formData.promotionalMedia.map((m) => ({
+                preview: m.url,
+                type: getPreviewType(m),
+              }))}
+              onChange={(files) =>
+                handleMediaUpload(
+                  files.filter((f) => f.file),
+                  "promotionalMedia"
+                )
+              }
+              onRemove={(i) => handleRemoveMedia(i, "promotionalMedia")}
+              maxFiles={5}
+              allowVideo
+            />
+          </FormField>
+        </Card>
+      </div>
+    );
+  }
+);
+
+MediaStep.displayName = "MediaStep";

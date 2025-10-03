@@ -28,10 +28,13 @@ export const validateStep = (
       break;
 
     case 4:
-      if (!formData.productMedia || formData.productMedia.length === 0) {
-        newErrors.productMedia = "At least one product image is required";
+      if (step === 4) {
+        // Media step
+        if (formData.productMedia.length === 0) {
+          newErrors.productMedia = "At least one product image is required.";
+        }
+        break;
       }
-      break;
   }
 
   setErrors(newErrors);
@@ -39,11 +42,12 @@ export const validateStep = (
 };
 
 // transform FormData -> ICreateProductInput
+// transform FormData -> ICreateProductInput
 export const buildProductInput = (formData: FormData): ICreateProductInput => ({
   name: formData.title,
   description: formData.description,
-  categoryId: formData.categoryId,
-  brand: formData.brandId || "Generic",
+  categoryId: formData.subSubcategory || formData.subcategory,
+  brand: formData.brand || "Generic",
   variants: {
     sku: formData.sku,
     price: parseFloat(formData.salePrice) || 0,
@@ -121,16 +125,20 @@ export const buildProductInput = (formData: FormData): ICreateProductInput => ({
         ]
       : undefined,
   images: [
+    // Product media: PRIMARY
     ...formData.productMedia.map((media, index) => ({
       url: media.url,
       altText: media.altText || "",
-      type: "PRIMARY" as const,
+      mediaType: "PRIMARY" as const, // Fixed: Use literal, not media.mediaType (which is role)
+      fileType: media.fileType, // Already "IMAGE" | "VIDEO"
       sortOrder: index,
     })),
+    // Promotional media: PROMOTIONAL
     ...formData.promotionalMedia.map((media, index) => ({
       url: media.url,
       altText: media.altText || "",
-      type: "PROMOTIONAL" as const,
+      mediaType: "PROMOTIONAL" as const, // Fixed: Use mediaType, not type
+      fileType: media.fileType, // Add: Was missing
       sortOrder: formData.productMedia.length + index,
     })),
   ],

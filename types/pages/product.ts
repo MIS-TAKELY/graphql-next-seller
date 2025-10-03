@@ -1,11 +1,12 @@
 // types/pages/product.ts
 
+import { Category } from "../category.type";
+
 export interface Step {
   id: number;
   title: string;
   description: string;
 }
-
 
 export interface ICreateProductInput {
   name: string;
@@ -59,16 +60,10 @@ export interface ICreateProductInput {
   images?: Array<{
     url: string;
     altText?: string;
-    type: "PRIMARY" | "PROMOTIONAL";
+    mediaType?: "PRIMARY" | "PROMOTIONAL";
+    fileType?: "IMAGE" | "VIDEO";
     sortOrder: number;
   }>;
-}
-
-export interface Category {
-  id: string;
-  name: string;
-  slug?: string;
-  parent?: Category | null; // recursive for nested categories
 }
 
 export interface FormData {
@@ -77,7 +72,8 @@ export interface FormData {
   description: string;
   categoryId: string;
   subcategory: string;
-  brandId: string;
+  subSubcategory?: string;
+  brand: string;
 
   // Specifications
   features: string[];
@@ -155,21 +151,18 @@ export interface FormData {
 
 export interface Media {
   url: string;
-  mediaType: "IMAGE" | "VIDEO";
+  mediaType: "PRIMARY" | "PROMOTIONAL";
   publicId?: string;
   altText?: string;
-  caption?: string;
+  fileType?: "IMAGE" | "VIDEO";
+  pending?: boolean;
+  isLocal?: boolean;
 }
 
 export interface Errors {
   [key: string]: string | undefined;
 }
 
-
-export interface GetProductCategory {
-  id: string;
-  parent: Category | null;
-}
 
 export interface ProductImage {
   url: string;

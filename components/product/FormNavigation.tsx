@@ -8,14 +8,12 @@ export const FormNavigation = ({
   onPrev,
   onNext,
   onSubmit,
-  isSubmitting
 }: {
   currentStep: number;
   totalSteps: number;
   onPrev: () => void;
   onNext: () => void;
   onSubmit: () => void;
-  isSubmitting:boolean
 }) => (
   <div className="flex justify-between">
     <Button variant="outline" onClick={onPrev} disabled={currentStep === 1}>

@@ -7,6 +7,7 @@ export const categoryTypeDefs = gql`
     name: String!
     slug: String!
     description: String
+    
     parentId: String
     isActive: Boolean!
     createdAt: DateTime!

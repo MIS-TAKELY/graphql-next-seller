@@ -1,10 +1,6 @@
 "use client";
 
-import { DELETE_PRODUCT } from "@/client/product/product.mutations";
-import {
-  GET_MY_PRODUCTS,
-  GET_PRODUCT_CATEGORIES,
-} from "@/client/product/product.queries";
+import { GET_PRODUCT_CATEGORIES } from "@/client/product/product.queries";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -40,8 +36,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useProduct } from "@/hooks/product/useProduct";
-import { Category, Product } from "@/types/pages/product";
-import { useMutation, useQuery } from "@apollo/client";
+import { Category } from "@/types/category.type";
+import { Product } from "@/types/pages/product";
+import { useQuery } from "@apollo/client";
 import { Edit, Eye, MoreHorizontal, Plus, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import React, { useState } from "react";
@@ -77,26 +74,8 @@ export default function ProductsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const { productsData, productsDataLoading } = useProduct();
-  // const {
-  //   data: productsData,
-  //   loading: productsDataLoading,
-  //   error: productsDataError,
-  // } = useQuery(GET_MY_PRODUCTS, {
-  //   errorPolicy: "all",
-  //   notifyOnNetworkStatusChange: false,
-  // });
 
   const { handleDelete } = useProduct();
-
-  // const [
-  //   deleteProduct,
-  //   { loading: deleteProductLoading, error: deleteProductError },
-  // ] = useMutation(DELETE_PRODUCT, {
-  //   refetchQueries: [{ query: GET_MY_PRODUCTS }],
-  //   awaitRefetchQueries: true,
-  // });
-
-  // console.log("product data-->",productsData)
 
   const {
     data: getCategoryData,
@@ -174,12 +153,7 @@ export default function ProductsPage() {
   const handelDeleteProduct = async (id: string) => {
     console.log("deletigng product");
     try {
-      // await deleteProduct({
-      //   variables: {
-      //     productId: id,
-      //   },
-      // });
-      handleDelete(id)
+      handleDelete(id);
       console.log("deleted successfully");
     } catch (error) {
       console.log("error-->", error);
@@ -419,14 +393,6 @@ export default function ProductsPage() {
                       <TableCell>
                         {getStatusBadge(product.status || "INACTIVE")}
                       </TableCell>
-                      {/* <TableCell className="hidden xl:table-cell">
-                        <div className="text-sm">
-                          <div>{product.sales} sold</div>
-                          <div className="text-muted-foreground">
-                            ${product.revenue.toLocaleString()}
-                          </div>
-                        </div>
-                      </TableCell> */}
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

@@ -22,10 +22,12 @@ export const uploadToCloudinary = async (file: File, resourceType: "image" | "vi
   }
 
   const data = await response.json();
+  console.log("data-->",data)
   return {
     url: data.secure_url,
     publicId: data.public_id,
     resourceType: data.resource_type,
     size: data.bytes,
+    altText:data.display_name
   };
 };

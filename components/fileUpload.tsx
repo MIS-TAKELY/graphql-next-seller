@@ -1,13 +1,13 @@
+// components/fileUpload.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { File, Upload, Video, X } from "lucide-react";
-import type React from "react";
-import { useCallback, useState } from "react";
+import { File, Upload, X } from "lucide-react";
+import React, { useCallback, useState } from "react";
 
-type FileWithPreview = {
+export type FileWithPreview = {
   file?: File;
   preview: string;
   type: "image" | "video" | "other";
@@ -16,6 +16,7 @@ type FileWithPreview = {
 interface FileUploadProps {
   value: FileWithPreview[];
   onChange: (files: FileWithPreview[]) => void;
+  onRemove?: (index: number) => void;
   maxFiles?: number;
   className?: string;
   allowVideo?: boolean;
@@ -25,6 +26,7 @@ interface FileUploadProps {
 export function FileUpload({
   value = [],
   onChange,
+  onRemove,
   maxFiles = 10,
   className,
   allowVideo = false,
@@ -46,7 +48,7 @@ export function FileUpload({
             file.type.startsWith("image/") ||
             (allowVideo && file.type.startsWith("video/"))
           ) {
-            const fileWithPreview: FileWithPreview = {
+            newFiles.push({
               file,
               preview: URL.createObjectURL(file),
               type: file.type.startsWith("image/")
@@ -54,8 +56,7 @@ export function FileUpload({
                 : file.type.startsWith("video/")
                 ? "video"
                 : "other",
-            };
-            newFiles.push(fileWithPreview);
+            });
           }
         });
 
@@ -86,10 +87,13 @@ export function FileUpload({
   }, []);
 
   const removeFile = (index: number) => {
-    const newFiles = value.filter((_, i) => i !== index);
-    onChange(newFiles);
-    // Revoke the object URL to avoid memory leaks
-    URL.revokeObjectURL(value[index].preview);
+    if (onRemove) {
+      onRemove(index);
+    } else {
+      const updated = value.filter((_, i) => i !== index);
+      URL.revokeObjectURL(value[index].preview);
+      onChange(updated);
+    }
   };
 
   const acceptTypes = allowVideo ? "image/*,video/*" : "image/*";
@@ -150,23 +154,20 @@ export function FileUpload({
                     className="w-full h-full object-cover"
                   />
                 ) : item.type === "video" ? (
-                  <div className="relative w-full h-full">
-                    <video className="w-full h-full object-cover">
-                      <source src={item.preview} />
-                    </video>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Video className="h-8 w-8 text-white" />
-                    </div>
-                  </div>
+                  <video className="w-full h-full object-cover">
+                    <source src={item.preview} />
+                  </video>
                 ) : (
                   <div className="flex flex-col items-center justify-center p-4">
                     <File className="h-8 w-8 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground mt-2">
-                      Unsupported file
+                      Unsupported
                     </span>
                   </div>
                 )}
               </div>
+
+              {/* Remove Button */}
               <Button
                 type="button"
                 variant="destructive"
@@ -177,6 +178,8 @@ export function FileUpload({
               >
                 <X className="h-3 w-3" />
               </Button>
+
+              {/* Mark first image as Main */}
               {index === 0 && (
                 <div className="absolute bottom-2 left-2">
                   <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded">

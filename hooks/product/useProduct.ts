@@ -3,11 +3,34 @@ import {
   DELETE_PRODUCT,
 } from "@/client/product/product.mutations";
 import { GET_MY_PRODUCTS } from "@/client/product/product.queries";
-import { ICreateProductInput } from "@/types/pages/product";
+import { ICreateProductInput, Media } from "@/types/pages/product";
 import { useMutation, useQuery } from "@apollo/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { v4 as uuidv4 } from "uuid";
+
+export interface ProductImage {
+  url: string;
+}
+
+export interface ProductVariant {
+  price: number;
+  sku: string;
+  stock: number;
+}
+
+export interface Product {
+  category: string | null;
+  id: string;
+  images: ProductImage[];
+  name: string;
+  slug: string;
+  status: string;
+  variants: ProductVariant[];
+}
+
+export interface GetMyProductsData {
+  getMyProducts: Product[];
+}
 
 export const useProduct = () => {
   const router = useRouter();
@@ -35,10 +58,12 @@ export const useProduct = () => {
           return;
         }
 
+        console.log("input-->", variables);
+
         // Check if we have a valid delete result (post-mutation or optimistic)
         if (!data?.deleteProduct) return;
 
-        const existing = cache.readQuery({
+        const existing: GetMyProductsData | null = cache.readQuery({
           query: GET_MY_PRODUCTS,
         });
         console.log("existing (before delete)", existing);
@@ -67,23 +92,22 @@ export const useProduct = () => {
     update: (cache, { data }, { variables }) => {
       try {
         // Extract the actual input from variables (under 'input')
-        const actualInput = variables?.input;
+        const actualInput:ICreateProductInput = variables?.input;
         if (!actualInput) {
           console.warn("No product input available for cache update");
           return;
         }
-
         // Check if we have a valid product returned (post-mutation)
         if (!data?.addProduct) return;
 
-        const existing = cache.readQuery({
+        const existing: GetMyProductsData | null = cache.readQuery({
           query: GET_MY_PRODUCTS,
         });
         console.log("existing", existing);
         console.log("actualInput-->", actualInput);
 
         // Generate temp ID and slug
-        const tempId = `temp-${uuidv4()}`;
+        const tempId = Date.now();
         const slug = actualInput.name
           ? actualInput.name
               .toLowerCase()
@@ -104,7 +128,6 @@ export const useProduct = () => {
           id: tempId,
           name: actualInput.name,
           slug,
-          status: actualInput.status || "DRAFT",
           description: actualInput.description,
           brand: actualInput.brand,
           category: actualInput.categoryId
@@ -116,13 +139,13 @@ export const useProduct = () => {
               }
             : null,
           images:
-            actualInput.images?.map((img, index) => ({
-              __typename: "ProductImage",
-              id: `temp-img-${index}`,
+            actualInput.images?.map((img, index:number) => ({
+              // __typename: "ProductImage",
+              // id: `temp-img-${index}`,
               url: img.url,
               altText: img.altText || null,
               sortOrder: img.sortOrder ?? index,
-              type: img.type || "PRIMARY",
+              mediaType: img.mediaType || "PRIMARY",
             })) || [],
           variants: variant ? [variant] : [], // Server likely returns array, even if input is single
         };
@@ -156,8 +179,8 @@ export const useProduct = () => {
 
   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
     try {
+      router.push("/products"); 
       toast.success("Product has been created successfully!");
-      router.push("/products");
 
       console.log("Product input:", productInput);
 
@@ -187,7 +210,9 @@ export const useProduct = () => {
       console.log("Mutation response:", addProductResponse);
 
       if (addProductResponse.data?.addProduct) {
-        toast.success("Product has been created successfully!");
+      // router.push("/products"); 
+
+      //   toast.success("Product has been created successfully!");
       }
     } catch (error: any) {
       console.error("Error creating product:", error);
@@ -220,7 +245,6 @@ export const useProduct = () => {
       console.log("Delete response:", deleteResponse);
 
       if (deleteResponse.data?.deleteProduct) {
-        // Optional: router.push("/products"); // If needed after delete
       }
     } catch (error: any) {
       console.error("Error deleting product:", error);
