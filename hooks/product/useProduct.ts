@@ -179,7 +179,7 @@ export const useProduct = () => {
 
   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
     try {
-      // router.push("/products");
+      router.push("/products");
       toast.success("Product has been created successfully!");
 
       console.log("Product input:", productInput);
