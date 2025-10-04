@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
+import { delCache, getCache, setCache } from "@/services/redis.services";
 import { requireAuth, requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
@@ -8,36 +9,54 @@ export const productResolvers = {
     getProducts: async (_: any, __: any, ctx: GraphQLContext) => {
       requireAuth(ctx);
 
-      return prisma.product.findMany({
-        include: {
-          seller: true,
-          variants: {
-            include: {
-              specifications: true,
+      try {
+        const cacheKey = "products:all";
+
+        const cached = await getCache(cacheKey);
+        if (cached) {
+          console.log("⚡ returning products from cache");
+          return cached; // Already parsed inside getCache
+        }
+
+        console.log("💾 caching products (miss)");
+        const products = await prisma.product.findMany({
+          include: {
+            seller: true,
+            variants: {
+              include: {
+                specifications: true,
+              },
             },
-          },
-          images: true,
-          reviews: true,
-          category: {
-            include: {
-              children: true,
-              parent: true,
+            images: true,
+            reviews: true,
+            category: {
+              include: {
+                children: true,
+                parent: true,
+                categorySpecification: true,
+              },
             },
-          },
-          wishlistItems: true,
-          productOffers: {
-            include: {
-              offer: true,
+            wishlistItems: true,
+            productOffers: {
+              include: {
+                offer: true,
+              },
             },
+            deliveryOptions: true,
+            warranty: true,
+            returnPolicy: true,
           },
-          deliveryOptions: true,
-          warranty: true,
-          returnPolicy: true,
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
+          orderBy: {
+            createdAt: "desc",
+          },
+        });
+
+        await setCache(cacheKey, products, 300);
+        return products;
+      } catch (error: any) {
+        console.log("error occured while fetching products", error);
+        return [];
+      }
     },
 
     getProduct: async (
@@ -48,8 +67,16 @@ export const productResolvers = {
       requireAuth(ctx);
 
       if (!productId) throw new Error("Product id is required");
+      const cacheKey = `products:${productId}`;
 
-      return prisma.product.findUnique({
+      const cached = await getCache(cacheKey);
+      if (cached) {
+        console.log("⚡ returning product from cache");
+        return cached;
+      }
+
+      console.log("💾 caching product (miss)");
+      const product = await prisma.product.findUnique({
         where: {
           id: productId,
         },
@@ -83,6 +110,13 @@ export const productResolvers = {
           returnPolicy: true,
         },
       });
+
+      if (product) {
+        // Only cache if fou  nd
+        await setCache(cacheKey, product, 300);
+      }
+
+      return product;
     },
 
     getMyProducts: async (_: any, __: any, ctx: GraphQLContext) => {
@@ -92,7 +126,16 @@ export const productResolvers = {
 
         if (!userId) throw new Error("Invalid user");
 
-        return prisma.product.findMany({
+        const cacheKey = `products:${userId}`;
+
+        const cached = await getCache(cacheKey);
+        if (cached) {
+          console.log("⚡ returning my_product from cache");
+          return cached;
+        }
+
+        console.log("💾 caching product (miss)");
+        const products = await prisma.product.findMany({
           where: { sellerId: userId },
           include: {
             variants: {
@@ -102,14 +145,14 @@ export const productResolvers = {
             },
             images: true,
             category: {
-              include:{
+              include: {
                 children: true,
-                parent:{
-                  include:{
-                    parent:true
-                  }
-                }
-              }
+                parent: {
+                  include: {
+                    parent: true,
+                  },
+                },
+              },
             },
             productOffers: {
               include: {
@@ -121,6 +164,9 @@ export const productResolvers = {
             returnPolicy: true,
           },
         });
+
+        await setCache(cacheKey, products, 300);
+        return products;
       } catch (error: any) {
         console.error("Error while getting my products:", error);
         throw new Error(`Failed to fetch products: ${error.message}`);
@@ -316,6 +362,11 @@ export const productResolvers = {
 
         if (!product) throw new Error("Unable to create product");
         console.log("Product created successfully:", product);
+
+        await Promise.all([
+          delCache("product:all"),
+          delCache(`products:seller:${sellerId}`),
+        ]);
         return true;
       } catch (error: any) {
         console.error("Error while creating product:", error);
@@ -328,8 +379,8 @@ export const productResolvers = {
       { productId }: { productId: string },
       ctx: GraphQLContext
     ) => {
-      requireSeller(ctx);
-
+      const user = requireSeller(ctx);
+      const sellerId = user.id;
       if (!productId) {
         throw new Error("Product ID is required");
       }
@@ -358,6 +409,12 @@ export const productResolvers = {
         });
         if (!productDeleteResponse)
           throw new Error("Unable to to delete the product");
+
+        await Promise.all([
+          delCache(`product:${productId}`),
+          delCache("product:all"),
+          delCache(`products:seller:${sellerId}`),
+        ]);
         return true;
       } catch (error: any) {
         console.error("Error deleting product:", error);
@@ -376,6 +433,8 @@ export const productResolvers = {
         if (!input.id) {
           throw new Error("Product ID is required");
         }
+
+        const sellerId = user.id;
 
         if (!user.id) throw new Error("Invalid user");
 
@@ -680,6 +739,13 @@ export const productResolvers = {
         if (!updatedProduct) {
           throw new Error("Failed to update product");
         }
+
+        const productId = input.id;
+        await Promise.all([
+          delCache(`product:${productId}`),
+          delCache("product:all"),
+          delCache(`products:seller:${sellerId}`),
+        ]);
 
         console.log("Product updated successfully:", updatedProduct);
         return true;
