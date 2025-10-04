@@ -43,7 +43,8 @@ export const validateStep = (
 
 // transform FormData -> ICreateProductInput
 // transform FormData -> ICreateProductInput
-export const buildProductInput = (formData: FormData): ICreateProductInput => ({
+export const buildProductInput = (formData: FormData,id:string): ICreateProductInput => ({
+  id,
   name: formData.name,
   description: formData.description,
   categoryId: formData.subSubcategory || formData.subcategory,

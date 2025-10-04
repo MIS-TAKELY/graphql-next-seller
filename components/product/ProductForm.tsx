@@ -23,6 +23,7 @@ import {
 import { Category } from "@/types/category.type";
 import { FormData } from "@/types/pages/product";
 import { buildProductInput, validateStep } from "@/utils/product/validateSteps";
+import { useParams } from "next/navigation";
 
 type Props = {
   mode: "add" | "edit";
@@ -108,10 +109,14 @@ export function ProductForm({
       warrantyDuration: "",
       warrantyUnit: "months",
       warrantyDescription: "", // ✅ add this line
-      warrantyConditions: "",             
+      warrantyConditions: "",
       warranty: "",
     }
   );
+
+  const parama = useParams();
+  const productId = parama.id as string;
+  // console.log("parama--->",parama.id)
 
   const [errors, setErrors] = useState<any>({});
   const Categories = useMemo(() => categoriesData ?? [], [categoriesData]);
@@ -152,8 +157,9 @@ export function ProductForm({
       return;
     }
     try {
-      console.log("form data--->",formData)
-      const productInput = buildProductInput(formData);
+      console.log("form data--->", formData);
+      if (!productId) throw new Error("Product id is not avilable");
+      const productInput = buildProductInput(formData, productId);
       await onSubmit(productInput);
     } catch (err: any) {
       toast.error(err.message || "Failed to save product.");

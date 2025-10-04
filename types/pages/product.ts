@@ -9,6 +9,7 @@ export interface Step {
 }
 
 export interface ICreateProductInput {
+  id?: string;
   name: string;
   description: string;
   categoryId: string;
@@ -72,7 +73,7 @@ export interface FormData {
   // Basic Details
   name: string;
   description: string;
-  category?: Category; 
+  category?: Category;
   categoryId: string;
   subcategory: string;
   subSubcategory?: string;
@@ -150,6 +151,7 @@ export interface Media {
   fileType?: "IMAGE" | "VIDEO";
   pending?: boolean;
   isLocal?: boolean;
+   sortOrder?: number;
 }
 
 export interface Errors {
@@ -174,4 +176,5 @@ export interface Product {
   category: Category;
   images: ProductImage[];
   variants: ProductVariant[];
+ 
 }

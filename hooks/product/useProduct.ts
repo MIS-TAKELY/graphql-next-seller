@@ -1,10 +1,11 @@
 import {
   ADD_PRODUCT,
   DELETE_PRODUCT,
+  UPDATE_PRODUCT,
 } from "@/client/product/product.mutations";
 import { GET_MY_PRODUCTS } from "@/client/product/product.queries";
-import { ICreateProductInput } from "@/types/pages/product";
-import { useMutation, useQuery } from "@apollo/client";
+import { ICreateProductInput, Media } from "@/types/pages/product";
+import { useApolloClient, useMutation, useQuery } from "@apollo/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -26,6 +27,8 @@ export interface Product {
   slug: string;
   status: string;
   variants: ProductVariant[];
+  brand?: string;
+  description?: string;
 }
 
 export interface GetMyProductsData {
@@ -34,6 +37,7 @@ export interface GetMyProductsData {
 
 export const useProduct = () => {
   const router = useRouter();
+  const client = useApolloClient();
 
   const {
     data: productsData,
@@ -45,69 +49,45 @@ export const useProduct = () => {
     fetchPolicy: "cache-first",
   });
 
-  const [
-    deleteProduct,
-    { loading: deleteProductLoading, error: deleteProductError },
-  ] = useMutation(DELETE_PRODUCT, {
+  const [deleteProduct] = useMutation(DELETE_PRODUCT, {
     update: (cache, { data }, { variables }) => {
       try {
-        // Extract productId from variables
         const productId = variables?.productId;
-        if (!productId) {
-          console.log("No product ID available for cache update");
-          return;
-        }
-
-        console.log("input-->", variables);
-
-        // Check if we have a valid delete result (post-mutation or optimistic)
-        if (!data?.deleteProduct) return;
+        if (!productId) return;
 
         const existing: GetMyProductsData | null = cache.readQuery({
           query: GET_MY_PRODUCTS,
         });
-        console.log("existing (before delete)", existing);
 
-        // Filter out the product with matching ID
         const updatedProducts = (existing?.getMyProducts || []).filter(
-          (p: any) => p.id !== productId
+          (p) => p.id !== productId
         );
 
-        // Write back the filtered list
         cache.writeQuery({
           query: GET_MY_PRODUCTS,
-          data: {
-            getMyProducts: updatedProducts,
-          },
+          data: { getMyProducts: updatedProducts },
         });
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error updating cache for delete:", error);
       }
     },
-    refetchQueries: [{ query: GET_MY_PRODUCTS }], // Optional: Refetch for confirmation
-    // awaitRefetchQueries: true, // Uncomment if you want to wait for refetch before proceeding
+    optimisticResponse: (vars) => ({
+      deleteProduct: true,
+    }),
   });
 
   const [addProduct] = useMutation(ADD_PRODUCT, {
     update: (cache, { data }, { variables }) => {
       try {
-        // Extract the actual input from variables (under 'input')
         const actualInput: ICreateProductInput = variables?.input;
-        if (!actualInput) {
-          console.warn("No product input available for cache update");
-          return;
-        }
-        // Check if we have a valid product returned (post-mutation)
-        if (!data?.addProduct) return;
+        if (!actualInput) return;
 
         const existing: GetMyProductsData | null = cache.readQuery({
           query: GET_MY_PRODUCTS,
         });
-        console.log("existing", existing);
-        console.log("actualInput-->", actualInput);
 
-        // Generate temp ID and slug
-        const tempId = Date.now();
+        const tempId = "temp-" + Date.now();
+
         const slug = actualInput.name
           ? actualInput.name
               .toLowerCase()
@@ -115,11 +95,10 @@ export const useProduct = () => {
               .replace(/[^a-z0-9-]/g, "")
           : "temp-product";
 
-        // Single variant per schema (not array)
         const variant = actualInput.variants
           ? {
               __typename: "ProductVariant",
-              ...actualInput.variants, // Spread sku, price, etc.
+              ...actualInput.variants,
             }
           : null;
 
@@ -128,8 +107,8 @@ export const useProduct = () => {
           id: tempId,
           name: actualInput.name,
           slug,
-          description: actualInput.description,
-          brand: actualInput.brand,
+          description: actualInput.description || "",
+          brand: actualInput.brand || "",
           category: actualInput.categoryId
             ? {
                 __typename: "Category",
@@ -139,25 +118,19 @@ export const useProduct = () => {
               }
             : null,
           images:
-            actualInput.images?.map((img, index: number) => ({
-              // __typename: "ProductImage",
-              // id: `temp-img-${index}`,
+            actualInput.images?.map((img, index) => ({
+              __typename: "ProductImage",
               url: img.url,
               altText: img.altText || null,
               sortOrder: img.sortOrder ?? index,
               mediaType: img.mediaType || "PRIMARY",
             })) || [],
-          variants: variant ? [variant] : [], // Server likely returns array, even if input is single
+          variants: variant ? [variant] : [],
+          status: "DRAFT",
         };
 
-        console.log(
-          "updated cache-->",
-          ...(existing?.getMyProducts || []),
-          optimisticProduct
-        );
-
         const productExists = existing?.getMyProducts?.some(
-          (p: any) => p.id === optimisticProduct.id
+          (p) => p.id === optimisticProduct.id
         );
 
         if (!productExists) {
@@ -171,48 +144,30 @@ export const useProduct = () => {
             },
           });
         }
-      } catch (error: any) {
-        console.error("Error updating cache:", error);
+      } catch (error) {
+        console.error("Error updating cache for add:", error);
       }
     },
+    optimisticResponse: (vars) => ({
+      addProduct: true,
+    }),
   });
 
   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
     try {
-      router.push("/products");
       toast.success("Product has been created successfully!");
-
-      console.log("Product input:", productInput);
-
-      if (!productInput.name) {
-        throw new Error("Product name is required");
-      }
-
-      if (!productInput.images || productInput.images.length === 0) {
+      router.push("/products");
+      if (!productInput.name) throw new Error("Product name is required");
+      if (!productInput.images || productInput.images.length === 0)
         throw new Error("At least one image is required");
-      }
-
-      if (!productInput.variants?.sku) {
+      if (!productInput.variants?.sku)
         throw new Error("Product variant SKU is required");
-      }
 
-      // Log the exact variables being sent
       const mutationVariables = { input: productInput };
-      console.log("Mutation variables:", mutationVariables);
 
-      const addProductResponse = await addProduct({
+      await addProduct({
         variables: mutationVariables,
-        optimisticResponse: {
-          addProduct: true,
-        },
       });
-
-      console.log("Mutation response:", addProductResponse);
-
-      if (addProductResponse.data?.addProduct) {
-        // router.push("/products");
-        //   toast.success("Product has been created successfully!");
-      }
     } catch (error: any) {
       console.error("Error creating product:", error);
       toast.error(
@@ -223,34 +178,103 @@ export const useProduct = () => {
 
   const handleDelete = async (productId: string) => {
     try {
-      toast.success("Product has been deleted successfully!");
+      if (!productId) throw new Error("Product ID is required");
 
-      console.log("Deleting product with ID:", productId);
-
-      if (!productId) {
-        throw new Error("Product ID is required");
-      }
-
-      const deleteVariables = { productId };
-      console.log("Delete variables:", deleteVariables);
-
-      const deleteResponse = await deleteProduct({
-        variables: deleteVariables,
-        optimisticResponse: {
-          deleteProduct: true, // Fake success for immediate removal
-        },
+      await deleteProduct({
+        variables: { productId },
       });
 
-      console.log("Delete response:", deleteResponse);
-
-      if (deleteResponse.data?.deleteProduct) {
-      }
+      toast.success("Product has been deleted successfully!");
     } catch (error: any) {
       console.error("Error deleting product:", error);
       toast.error(
         error.message || "Failed to delete product. Please try again."
       );
-      // Apollo auto-rolls back the optimistic removal on error
+    }
+  };
+  const [updateProduct] = useMutation(UPDATE_PRODUCT, {
+    // Before making optimistic update — store snapshot
+
+    update: (cache, { data }, { variables }) => {
+      try {
+        const actualInput: any = variables?.input;
+        if (!actualInput?.id) return;
+
+        const existing: GetMyProductsData | null = cache.readQuery({
+          query: GET_MY_PRODUCTS,
+        });
+
+        const updatedProducts = (existing?.getMyProducts || []).map((p) => {
+          if (p.id !== actualInput.id) return p;
+
+          const variant = actualInput.variants
+            ? {
+                __typename: "ProductVariant",
+                ...actualInput.variants,
+              }
+            : null;
+
+          return {
+            ...p,
+            name: actualInput.name ?? p.name,
+            description: actualInput.description ?? p.description,
+            brand: actualInput.brand ?? p.brand,
+            category: actualInput.categoryId
+              ? {
+                  __typename: "Category",
+                  id: actualInput.categoryId,
+                  parent: null,
+                  children: [],
+                }
+              : p.category,
+            images:
+              actualInput.images?.map((img:Media, index:number) => ({
+                __typename: "ProductImage",
+                url: img.url,
+                altText: img.altText || null,
+                sortOrder: img.sortOrder ?? index,
+                mediaType: img.mediaType || "PRIMARY",
+              })) || p.images,
+            variants: variant ? [variant] : p.variants,
+          };
+        });
+
+        cache.writeQuery({
+          query: GET_MY_PRODUCTS,
+          data: { getMyProducts: updatedProducts },
+        });
+      } catch (error) {
+        console.error("Error updating cache for update:", error);
+      }
+    },
+    optimisticResponse: (vars) => ({
+      updateProduct: true,
+    }),
+    onError: (error, options) => {
+      if (options?.context?.previous) {
+        client.cache.writeQuery({
+          query: GET_MY_PRODUCTS,
+          data: options.context.previous,
+        });
+      }
+    },
+  });
+  const handleUpdateHandler = async (
+    productInput: ICreateProductInput & { id: string }
+  ) => {
+    try {
+      if (!productInput.id) throw new Error("Product ID is required");
+
+      toast.success("Product has been updated successfully!");
+      router.push("/products");
+      await updateProduct({
+        variables: { input: productInput },
+      });
+    } catch (error: any) {
+      console.error("Error updating product:", error);
+      toast.error(
+        error.message || "Failed to update product. Please try again."
+      );
     }
   };
 
@@ -260,7 +284,6 @@ export const useProduct = () => {
     productsData,
     productsDataLoading,
     productsDataError,
-    deleteProductLoading,
-    deleteProductError,
+    handleUpdateHandler,
   };
 };

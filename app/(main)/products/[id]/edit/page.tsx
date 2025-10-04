@@ -1,16 +1,14 @@
 // app/products/[id]/edit/page.tsx
 "use client";
 
-import {
-  DELETE_PRODUCT,
-  UPDATE_PRODUCT,
-} from "@/client/product/product.mutations";
+import { DELETE_PRODUCT } from "@/client/product/product.mutations";
 import {
   GET_PRODUCT,
   GET_PRODUCT_CATEGORIES,
   GET_PRODUCTS,
 } from "@/client/product/product.queries";
 import { ProductForm } from "@/components/product/ProductForm";
+import { useProduct } from "@/hooks/product/useProduct";
 import { transformProductToFormData } from "@/utils/product/transformProductData";
 import { useMutation, useQuery } from "@apollo/client";
 import { useParams, useRouter } from "next/navigation";
@@ -20,6 +18,8 @@ export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
 
+  const { handleUpdateHandler } = useProduct();
+
   const { data: productData, loading: productLoading } = useQuery(GET_PRODUCT, {
     variables: { productId: params.id },
   });
@@ -28,7 +28,6 @@ export default function EditProductPage() {
     GET_PRODUCT_CATEGORIES
   );
 
-  const [updateProduct, { loading: updating }] = useMutation(UPDATE_PRODUCT);
   const [deleteProduct, { loading: deleting }] = useMutation(DELETE_PRODUCT, {
     refetchQueries: [{ query: GET_PRODUCTS }],
   });
@@ -45,7 +44,7 @@ export default function EditProductPage() {
   }
 
   const product = productData?.getProduct;
-  console.log("Product to edit(initial data)",product)
+  console.log("Product to edit(initial data)", product);
   if (!product) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -61,24 +60,6 @@ export default function EditProductPage() {
 
   // Transform the product data to form format
   const initialValues = transformProductToFormData(product);
-
-  const handleUpdate = async (input: any) => {
-    console.log("updating input-->",input)
-    try {
-      await updateProduct({
-        variables: {
-          input: {
-            ...input,
-            id: params.id,
-          },
-        },
-      });
-      toast.success("Product updated successfully!");
-      // router.push("/products");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update product");
-    }
-  };
 
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -97,9 +78,9 @@ export default function EditProductPage() {
       mode="edit"
       categoriesData={categoryData?.categories || []}
       initialValues={initialValues}
-      onSubmit={handleUpdate}
+      onSubmit={handleUpdateHandler}
       onDelete={handleDelete}
-      isSubmitting={updating}
+      // isSubmitting={updating}
       isDeleting={deleting}
       title="Edit Product"
       subtitle="Update product information and settings."

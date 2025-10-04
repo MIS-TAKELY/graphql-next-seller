@@ -1,299 +1,266 @@
-import {
-  FormField,
-  ValidatedInput,
-  ValidatedSelect,
-  ValidatedTextarea,
-} from "@/components/form-field";
-import { Button } from "@/components/ui/button";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-} from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { SelectItem } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
-import { Category } from "@/types/category.type";
-import { FormData } from "@/types/pages/product";
-import { Check, ChevronsUpDown } from "lucide-react";
-import React, { useMemo, useState } from "react";
+// import {
+//   ADD_PRODUCT,
+//   DELETE_PRODUCT,
+// } from "@/client/product/product.mutations";
+// import { GET_MY_PRODUCTS } from "@/client/product/product.queries";
+// import { ICreateProductInput } from "@/types/pages/product";
+// import { useMutation, useQuery } from "@apollo/client";
+// import { useRouter } from "next/navigation";
+// import { toast } from "sonner";
 
-interface BasicDetailsStepProps {
-  formData: FormData;
-  errors: any;
-  updateFormData: (field: keyof FormData, value: any) => void;
-  categoriesData: Category[];
-}
+// export interface ProductImage {
+//   url: string;
+// }
 
-export const BasicDetailsStep = React.memo(
-  ({
-    formData,
-    errors,
-    updateFormData,
-    categoriesData,
-  }: BasicDetailsStepProps) => {
-    const dummyBrands = [
-      { id: "brand1", name: "Apple" },
-      { id: "brand2", name: "Samsung" },
-      { id: "brand3", name: "Nike" },
-      { id: "brand4", name: "Adidas" },
-      { id: "brand5", name: "Sony" },
-    ];
+// export interface ProductVariant {
+//   price: number;
+//   sku: string;
+//   stock: number;
+// }
 
-    const [open, setOpen] = useState(false);
-    const [inputValue, setInputValue] = useState(formData.brand || "");
+// export interface Product {
+//   category: string | null;
+//   id: string;
+//   images: ProductImage[];
+//   name: string;
+//   slug: string;
+//   status: string;
+//   variants: ProductVariant[];
+// }
 
-    const handleSelect = (brand: string) => {
-      setInputValue(brand);
-      updateFormData("brand", brand);
-      setOpen(false);
-    };
+// export interface GetMyProductsData {
+//   getMyProducts: Product[];
+// }
 
-    // Get subcategories based on selected category
-    const subcategories = useMemo(() => {
-      if (
-        !formData.categoryId &&
-        (!formData?.category?.parent?.id || !formData?.category?.id)
-      )
-        return [];
-      console.log("hello");
-      const category = categoriesData.find(
-        (cat) =>
-          cat.id === formData.categoryId ||
-          formData?.category?.parent.id ||
-          formData?.category?.id
-      );
-      console.log("category", category);
-      return category?.children || [];
-    }, [formData.categoryId, categoriesData]);
+// export const useProduct = () => {
+//   const router = useRouter();
 
-    // Get sub-subcategories based on selected subcategory
-    const subSubcategories = useMemo(() => {
-      if (!formData.subcategory) return [];
-      const subcategory = subcategories.find(
-        (sub) => sub.id === formData.subcategory
-      );
-      return subcategory?.children || [];
-    }, [formData.subcategory, subcategories]);
+//   const {
+//     data: productsData,
+//     loading: productsDataLoading,
+//     error: productsDataError,
+//   } = useQuery(GET_MY_PRODUCTS, {
+//     errorPolicy: "all",
+//     notifyOnNetworkStatusChange: false,
+//     fetchPolicy: "cache-first",
+//   });
 
-    // Reset dependent fields when parent selection changes
-    const handleCategoryChange = (value: string) => {
-      updateFormData("categoryId", value);
-      updateFormData("subcategory", ""); // Reset subcategory
-      updateFormData("subSubcategory", ""); // Reset sub-subcategory
-    };
+//   const [
+//     deleteProduct,
+//     { loading: deleteProductLoading, error: deleteProductError },
+//   ] = useMutation(DELETE_PRODUCT, {
+//     update: (cache, { data }, { variables }) => {
+//       try {
+//         // Extract productId from variables
+//         const productId = variables?.productId;
+//         if (!productId) {
+//           console.log("No product ID available for cache update");
+//           return;
+//         }
 
-    const handleSubcategoryChange = (value: string) => {
-      updateFormData("subcategory", value);
-      updateFormData("subSubcategory", ""); // Reset sub-subcategory
-    };
+//         console.log("input-->", variables);
 
-    console.log("form datat-->", formData.title);
-    console.log("form datan-->", formData.name);
+//         // Check if we have a valid delete result (post-mutation or optimistic)
+//         if (!data?.deleteProduct) return;
 
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Product Title" error={errors.name} required>
-            <ValidatedInput
-              placeholder="Enter product title"
-              value={formData.name}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                updateFormData("title", e.target.value)
-              }
-              error={errors.name}
-            />
-          </FormField>
+//         const existing: GetMyProductsData | null = cache.readQuery({
+//           query: GET_MY_PRODUCTS,
+//         });
+//         console.log("existing (before delete)", existing);
 
-          <FormField label="Brand" error={errors.brand}>
-            <Popover open={open} onOpenChange={setOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  role="combobox"
-                  aria-expanded={open}
-                  className="w-full justify-between"
-                >
-                  {inputValue || "Select or type brand"}
-                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[300px] p-0">
-                <Command>
-                  <CommandInput
-                    placeholder="Search or type brand..."
-                    value={inputValue}
-                    onValueChange={(val) => {
-                      setInputValue(val);
-                      updateFormData("brand", val);
-                    }}
-                  />
-                  <CommandEmpty>No brand found.</CommandEmpty>
-                  <CommandGroup>
-                    {dummyBrands?.map((b) => (
-                      <CommandItem
-                        key={b.id}
-                        onSelect={() => handleSelect(b.name)}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            inputValue === b.name ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        {b.name}
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </FormField>
-        </div>
+//         // Filter out the product with matching ID
+//         const updatedProducts = (existing?.getMyProducts || []).filter(
+//           (p: any) => p.id !== productId
+//         );
 
-        {/* Three-level category selection */}
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Main Category */}
-            <FormField label="Main Category" error={errors.categoryId} required>
-              <ValidatedSelect
-                value={
-                  formData.categoryId ||
-                  formData?.category?.parent?.parent?.id ||
-                  formData?.category?.parent?.id
-                }
-                onValueChange={handleCategoryChange}
-                placeholder="Select main category"
-                error={errors.categoryId}
-              >
-                {categoriesData?.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </ValidatedSelect>
-            </FormField>
+//         // Write back the filtered list
+//         cache.writeQuery({
+//           query: GET_MY_PRODUCTS,
+//           data: {
+//             getMyProducts: updatedProducts,
+//           },
+//         });
+//       } catch (error: any) {
+//         console.error("Error updating cache for delete:", error);
+//       }
+//     },
+//     refetchQueries: [{ query: GET_MY_PRODUCTS }], // Optional: Refetch for confirmation
+//     // awaitRefetchQueries: true, // Uncomment if you want to wait for refetch before proceeding
+//   });
 
-            {/* Subcategory */}
-            <FormField label="Subcategory" error={errors.subcategory} required>
-              <ValidatedSelect
-                value={
-                  formData.subcategory ||
-                  formData?.category?.parent?.parent?.id ||
-                  formData?.category?.parent?.id
-                }
-                onValueChange={handleSubcategoryChange}
-                placeholder="Select subcategory"
-                error={errors.subcategory}
-                // disabled={!formData.categoryId || subcategories.length === 0}
-              >
-                {subcategories.map((sub) => (
-                  <SelectItem key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </SelectItem>
-                ))}
-              </ValidatedSelect>
-            </FormField>
+//   const [addProduct] = useMutation(ADD_PRODUCT, {
+//     update: (cache, { data }, { variables }) => {
+//       try {
+//         // Extract the actual input from variables (under 'input')
+//         const actualInput: ICreateProductInput = variables?.input;
+//         if (!actualInput) {
+//           console.warn("No product input available for cache update");
+//           return;
+//         }
+//         // Check if we have a valid product returned (post-mutation)
+//         if (!data?.addProduct) return;
 
-            {/* Sub-subcategory (Third level) */}
-            <FormField
-              label="Product Type"
-              error={errors.subSubcategory}
-              required={subSubcategories.length > 0}
-            >
-              <ValidatedSelect
-                value={formData.subSubcategory || formData?.category?.id}
-                onValueChange={(value: string) =>
-                  updateFormData("subSubcategory", value)
-                }
-                placeholder="Select product type"
-                error={errors.subSubcategory}
-                disabled={
-                  !formData.subcategory || subSubcategories.length === 0
-                }
-              >
-                {subSubcategories.map((item) => (
-                  <SelectItem key={item.id} value={item.id}>
-                    {item.name}
-                  </SelectItem>
-                ))}
-              </ValidatedSelect>
-            </FormField>
-          </div>
+//         const existing: GetMyProductsData | null = cache.readQuery({
+//           query: GET_MY_PRODUCTS,
+//         });
+//         console.log("existing", existing);
+//         console.log("actualInput-->", actualInput);
 
-          {/* Display selected path for clarity */}
-          {formData.categoryId ||
-            (formData?.category?.id && (
-              <div className="p-3 bg-muted rounded-md">
-                <p className="text-sm text-muted-foreground">
-                  Selected category path:{" "}
-                  <span className="font-medium text-foreground">
-                    {
-                      categoriesData.find((c) => c.id === formData.categoryId)
-                        ?.name
-                    }
-                    {
-                      categoriesData.find(
-                        (c) => c.id === formData.category?.parent?.id
-                      )?.name
-                    }
-                    {formData.subcategory &&
-                      ` → ${
-                        subcategories.find(
-                          (s) =>
-                            s.id === formData.category?.parent?.id ||
-                            formData.category?.id
-                        )?.name
-                      }`}
+//         // Generate temp ID and slug
+//         const tempId = Date.now();
+//         const slug = actualInput.name
+//           ? actualInput.name
+//               .toLowerCase()
+//               .replace(/\s+/g, "-")
+//               .replace(/[^a-z0-9-]/g, "")
+//           : "temp-product";
 
-                    {formData.subcategory &&
-                      ` → ${
-                        subcategories.find((s) => s.id === formData.subcategory)
-                          ?.name
-                      }`}
-                    {formData.subSubcategory &&
-                      ` → ${
-                        subSubcategories.find(
-                          (s) => s.id === formData.category?.id
-                        )?.name
-                      }`}
+//         // Single variant per schema (not array)
+//         const variant = actualInput.variants
+//           ? {
+//               __typename: "ProductVariant",
+//               ...actualInput.variants, // Spread sku, price, etc.
+//             }
+//           : null;
 
-                    {formData.subSubcategory &&
-                      ` → ${
-                        subSubcategories.find(
-                          (s) => s.id === formData.subSubcategory
-                        )?.name
-                      }`}
-                  </span>
-                </p>
-              </div>
-            ))}
-        </div>
+//         const optimisticProduct = {
+//           __typename: "Product",
+//           id: tempId,
+//           name: actualInput.name,
+//           slug,
+//           description: actualInput.description,
+//           brand: actualInput.brand,
+//           category: actualInput.categoryId
+//             ? {
+//                 __typename: "Category",
+//                 id: actualInput.categoryId,
+//                 parent: null,
+//                 children: [],
+//               }
+//             : null,
+//           images:
+//             actualInput.images?.map((img, index: number) => ({
+//               // __typename: "ProductImage",
+//               // id: `temp-img-${index}`,
+//               url: img.url,
+//               altText: img.altText || null,
+//               sortOrder: img.sortOrder ?? index,
+//               mediaType: img.mediaType || "PRIMARY",
+//             })) || [],
+//           variants: variant ? [variant] : [], // Server likely returns array, even if input is single
+//         };
 
-        <FormField
-          label="Product Description"
-          error={errors.description}
-          required
-        >
-          <ValidatedTextarea
-            placeholder="Describe your product..."
-            className="min-h-[120px]"
-            value={formData.description}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              updateFormData("description", e.target.value)
-            }
-            error={errors.description}
-          />
-        </FormField>
-      </div>
-    );
-  }
-);
+//         console.log(
+//           "updated cache-->",
+//           ...(existing?.getMyProducts || []),
+//           optimisticProduct
+//         );
 
-BasicDetailsStep.displayName = "BasicDetailsStep";
+//         const productExists = existing?.getMyProducts?.some(
+//           (p: any) => p.id === optimisticProduct.id
+//         );
+
+//         if (!productExists) {
+//           cache.writeQuery({
+//             query: GET_MY_PRODUCTS,
+//             data: {
+//               getMyProducts: [
+//                 ...(existing?.getMyProducts || []),
+//                 optimisticProduct,
+//               ],
+//             },
+//           });
+//         }
+//       } catch (error: any) {
+//         console.error("Error updating cache:", error);
+//       }
+//     },
+//   });
+
+//   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
+//     try {
+//       router.push("/products");
+//       toast.success("Product has been created successfully!");
+
+//       console.log("Product input:", productInput);
+
+//       if (!productInput.name) {
+//         throw new Error("Product name is required");
+//       }
+
+//       if (!productInput.images || productInput.images.length === 0) {
+//         throw new Error("At least one image is required");
+//       }
+
+//       if (!productInput.variants?.sku) {
+//         throw new Error("Product variant SKU is required");
+//       }
+
+//       // Log the exact variables being sent
+//       const mutationVariables = { input: productInput };
+//       console.log("Mutation variables:", mutationVariables);
+
+//       const addProductResponse = await addProduct({
+//         variables: mutationVariables,
+//         optimisticResponse: {
+//           addProduct: true,
+//         },
+//       });
+
+//       console.log("Mutation response:", addProductResponse);
+
+//       if (addProductResponse.data?.addProduct) {
+//         // router.push("/products");
+//         //   toast.success("Product has been created successfully!");
+//       }
+//     } catch (error: any) {
+//       console.error("Error creating product:", error);
+//       toast.error(
+//         error.message || "Failed to create product. Please try again."
+//       );
+//     }
+//   };
+
+//   const handleDelete = async (productId: string) => {
+//     try {
+//       toast.success("Product has been deleted successfully!");
+
+//       console.log("Deleting product with ID:", productId);
+
+//       if (!productId) {
+//         throw new Error("Product ID is required");
+//       }
+
+//       const deleteVariables = { productId };
+//       console.log("Delete variables:", deleteVariables);
+
+//       const deleteResponse = await deleteProduct({
+//         variables: deleteVariables,
+//         optimisticResponse: {
+//           deleteProduct: true, // Fake success for immediate removal
+//         },
+//       });
+
+//       console.log("Delete response:", deleteResponse);
+
+//       if (deleteResponse.data?.deleteProduct) {
+//       }
+//     } catch (error: any) {
+//       console.error("Error deleting product:", error);
+//       toast.error(
+//         error.message || "Failed to delete product. Please try again."
+//       );
+//       // Apollo auto-rolls back the optimistic removal on error
+//     }
+//   };
+
+//   return {
+//     handleSubmitHandler,
+//     handleDelete,
+//     productsData,
+//     productsDataLoading,
+//     productsDataError,
+//     deleteProductLoading,
+//     deleteProductError,
+//   };
+// };
