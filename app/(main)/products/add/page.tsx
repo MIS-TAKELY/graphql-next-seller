@@ -15,6 +15,6 @@ export default async function AddProductPage() {
   });
 
   const categoriesData: Category[] = categoryResponse.data?.categories;
-  // console.log("category-->", categoriesData); // Fixed typo: "categgory" -> "category"
+  console.log("category-->", categoriesData); // Fixed typo: "categgory" -> "category"
   return <AddProductClient categoriesData={categoriesData} />;
 }

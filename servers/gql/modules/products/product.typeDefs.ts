@@ -22,6 +22,7 @@ export const productTypeDefs = gql`
     sellerId: String!
     name: String!
     slug: String!
+    categoryId: String
     description: String
     status: ProductStatus!
     brand: String
@@ -42,7 +43,6 @@ export const productTypeDefs = gql`
   input CreateProductInput {
     name: String!
     description: String
-    status: ProductStatus
     categoryId: String
     brand: String
     variants: CreateProductVariantInput
@@ -52,6 +52,21 @@ export const productTypeDefs = gql`
     returnPolicy: [CreateReturnPolicyInput!]
     images: [CreateProductImageInput!]!
   }
+
+  input UpdateProductInput {
+    id: ID!
+    name: String
+    description: String
+    categoryId: String
+    brand: String
+    variants: CreateProductVariantInput
+    productOffers: [CreateProductOfferInput!]
+    deliveryOptions: [CreateDeliveryOptionInput!]
+    warranty: [CreateWarrantyInput!]
+    returnPolicy: [CreateReturnPolicyInput!]
+    images: [CreateProductImageInput!]
+  }
+
   type Query {
     getProducts: [Product!]!
     getProduct(productId: ID!): Product!
@@ -60,6 +75,7 @@ export const productTypeDefs = gql`
 
   type Mutation {
     addProduct(input: CreateProductInput!): Boolean
+    updateProduct(input: UpdateProductInput!): Boolean
     deleteProduct(productId: ID!): Boolean
   }
 `;

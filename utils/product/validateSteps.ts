@@ -9,7 +9,7 @@ export const validateStep = (
 
   switch (step) {
     case 1:
-      if (!formData.title.trim()) newErrors.title = "Product title is required";
+      if (!formData.name.trim()) newErrors.name = "Product title is required";
       if (!formData.categoryId) newErrors.categoryId = "Category is required";
       if (!formData.subcategory)
         newErrors.subcategory = "Subcategory is required";
@@ -18,7 +18,7 @@ export const validateStep = (
       break;
 
     case 3:
-      if (!formData.salePrice || parseFloat(formData.salePrice) <= 0) {
+      if (!formData.price || parseFloat(formData.price) <= 0) {
         newErrors.salePrice = "Valid selling price is required";
       }
       if (!formData.sku?.trim()) newErrors.sku = "SKU is required";
@@ -44,24 +44,21 @@ export const validateStep = (
 // transform FormData -> ICreateProductInput
 // transform FormData -> ICreateProductInput
 export const buildProductInput = (formData: FormData): ICreateProductInput => ({
-  name: formData.title,
+  name: formData.name,
   description: formData.description,
   categoryId: formData.subSubcategory || formData.subcategory,
   brand: formData.brand || "Generic",
   variants: {
     sku: formData.sku,
-    price: parseFloat(formData.salePrice) || 0,
+    price: parseFloat(formData.price) || 0,
     mrp: parseFloat(formData.mrp) || 0,
     stock: parseInt(formData.stock, 10) || 0,
     isDefault: true,
     attributes: {
       weight: formData.weight ? parseFloat(formData.weight) : undefined,
-      dimensions:
-        formData.length && formData.width && formData.height
-          ? parseFloat(formData.length) *
-            parseFloat(formData.width) *
-            parseFloat(formData.height)
-          : undefined,
+      length: formData.length ? parseFloat(formData.weight) : undefined,
+      width: formData.width ? parseFloat(formData.weight) : undefined,
+      height: formData.height ? parseFloat(formData.weight) : undefined,
       shippingClass: formData.shippingMethod || undefined,
     },
     specifications: formData.specifications
@@ -73,7 +70,6 @@ export const buildProductInput = (formData: FormData): ICreateProductInput => ({
         {
           offer: {
             title: formData.offerTitle,
-            description: "",
             type: formData.offerType,
             value: parseFloat(formData.offerValue) || 0,
             startDate: formData.offerStart,

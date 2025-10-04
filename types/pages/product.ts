@@ -20,7 +20,9 @@ export interface ICreateProductInput {
     stock: number;
     attributes?: {
       weight?: number;
-      dimensions?: number;
+      height?: number;
+      length?: number;
+      width?: number;
       shippingClass?: string;
     };
     isDefault: boolean;
@@ -68,8 +70,9 @@ export interface ICreateProductInput {
 
 export interface FormData {
   // Basic Details
-  title: string;
+  name: string;
   description: string;
+  category?: Category; 
   categoryId: string;
   subcategory: string;
   subSubcategory?: string;
@@ -85,7 +88,7 @@ export interface FormData {
   specificationDisplayFormat: "bullet" | "table";
 
   // Pricing & Inventory
-  salePrice: string;
+  price: string;
   mrp: string;
   comparePrice: string;
   costPrice: string;
@@ -101,16 +104,6 @@ export interface FormData {
   offerStart: string;
   offerEnd: string;
 
-  // Discounts (legacy - can be removed if using offers)
-  // hasDiscount: boolean;
-  // discountType: string;
-  // discountValue: string;
-  // discountStart: string;
-  // discountEnd: string;
-  // maximumDiscount: string;
-  // minimumAmount: string;
-  // maxUsageTotal: string;
-  // maxUsagePerUser: string;
   buyX: string;
   getY: string;
 
@@ -145,7 +138,7 @@ export interface FormData {
   warrantyUnit: string;
   warrantyDescription: string;
   warrantyConditions: string;
-  warrantyPeriod: string;
+  // warrantyPeriod: string;
   warranty: string;
 }
 
@@ -162,7 +155,6 @@ export interface Media {
 export interface Errors {
   [key: string]: string | undefined;
 }
-
 
 export interface ProductImage {
   url: string;

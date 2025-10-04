@@ -3,7 +3,7 @@ import {
   DELETE_PRODUCT,
 } from "@/client/product/product.mutations";
 import { GET_MY_PRODUCTS } from "@/client/product/product.queries";
-import { ICreateProductInput, Media } from "@/types/pages/product";
+import { ICreateProductInput } from "@/types/pages/product";
 import { useMutation, useQuery } from "@apollo/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -92,7 +92,7 @@ export const useProduct = () => {
     update: (cache, { data }, { variables }) => {
       try {
         // Extract the actual input from variables (under 'input')
-        const actualInput:ICreateProductInput = variables?.input;
+        const actualInput: ICreateProductInput = variables?.input;
         if (!actualInput) {
           console.warn("No product input available for cache update");
           return;
@@ -139,7 +139,7 @@ export const useProduct = () => {
               }
             : null,
           images:
-            actualInput.images?.map((img, index:number) => ({
+            actualInput.images?.map((img, index: number) => ({
               // __typename: "ProductImage",
               // id: `temp-img-${index}`,
               url: img.url,
@@ -179,7 +179,7 @@ export const useProduct = () => {
 
   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
     try {
-      router.push("/products"); 
+      // router.push("/products");
       toast.success("Product has been created successfully!");
 
       console.log("Product input:", productInput);
@@ -210,9 +210,8 @@ export const useProduct = () => {
       console.log("Mutation response:", addProductResponse);
 
       if (addProductResponse.data?.addProduct) {
-      // router.push("/products"); 
-
-      //   toast.success("Product has been created successfully!");
+        // router.push("/products");
+        //   toast.success("Product has been created successfully!");
       }
     } catch (error: any) {
       console.error("Error creating product:", error);

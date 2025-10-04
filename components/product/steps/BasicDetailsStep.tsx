@@ -38,6 +38,8 @@ export const BasicDetailsStep = React.memo(
     updateFormData,
     categoriesData,
   }: BasicDetailsStepProps) => {
+    // ... existing code
+
     const dummyBrands = [
       { id: "brand1", name: "Apple" },
       { id: "brand2", name: "Samsung" },
@@ -46,34 +48,6 @@ export const BasicDetailsStep = React.memo(
       { id: "brand5", name: "Sony" },
     ];
 
-    const [open, setOpen] = useState(false);
-    const [inputValue, setInputValue] = useState(formData.brand || "");
-
-    const handleSelect = (brand: string) => {
-      setInputValue(brand);
-      updateFormData("brand", brand);
-      setOpen(false);
-    };
-
-    // Get subcategories based on selected category
-    const subcategories = useMemo(() => {
-      if (!formData.categoryId) return [];
-      const category = categoriesData.find(
-        (cat) => cat.id === formData.categoryId
-      );
-      return category?.children || [];
-    }, [formData.categoryId, categoriesData]);
-
-    // Get sub-subcategories based on selected subcategory
-    const subSubcategories = useMemo(() => {
-      if (!formData.subcategory) return [];
-      const subcategory = subcategories.find(
-        (sub) => sub.id === formData.subcategory
-      );
-      return subcategory?.children || [];
-    }, [formData.subcategory, subcategories]);
-
-    // Reset dependent fields when parent selection changes
     const handleCategoryChange = (value: string) => {
       updateFormData("categoryId", value);
       updateFormData("subcategory", ""); // Reset subcategory
@@ -85,17 +59,79 @@ export const BasicDetailsStep = React.memo(
       updateFormData("subSubcategory", ""); // Reset sub-subcategory
     };
 
+    const [open, setOpen] = useState(false);
+    const [inputValue, setInputValue] = useState(formData.brand || "");
+
+    const handleSelect = (brand: string) => {
+      setInputValue(brand);
+      updateFormData("brand", brand);
+      setOpen(false);
+    };
+
+    // Better handling of initial category values
+    const getCategoryValue = () => {
+      if (formData.categoryId) return formData.categoryId;
+      if (formData.category?.parent?.parent?.id)
+        return formData.category.parent.parent.id;
+      if (formData.category?.parent?.id) return formData.category.parent.id;
+      if (formData.category?.id && !formData.category?.parent)
+        return formData.category.id;
+      return "";
+    };
+
+    const getSubcategoryValue = () => {
+      if (formData.subcategory) return formData.subcategory;
+      if (formData.category?.parent?.id && formData.category?.parent?.parent) {
+        return formData.category.parent.id;
+      }
+      if (
+        formData.category?.id &&
+        formData.category?.parent &&
+        !formData.category?.parent?.parent
+      ) {
+        return formData.category.id;
+      }
+      return "";
+    };
+
+    const getSubSubcategoryValue = () => {
+      if (formData.subSubcategory) return formData.subSubcategory;
+      if (formData.category?.id && formData.category?.parent?.parent) {
+        return formData.category.id;
+      }
+      return "";
+    };
+
+    // Get subcategories based on selected category
+    const subcategories = useMemo(() => {
+      const categoryId = getCategoryValue();
+      if (!categoryId) return [];
+
+      const category = categoriesData.find((cat) => cat.id === categoryId);
+      return category?.children || [];
+    }, [formData.categoryId, formData.category, categoriesData]);
+
+    // Get sub-subcategories based on selected subcategory
+    const subSubcategories = useMemo(() => {
+      const subcategoryId = getSubcategoryValue();
+      if (!subcategoryId) return [];
+
+      const subcategory = subcategories.find((sub) => sub.id === subcategoryId);
+      return subcategory?.children || [];
+    }, [formData.subcategory, formData.category, subcategories]);
+
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField label="Product Title" error={errors.title} required>
+          <FormField label="Product Title" error={errors.name} required>
             <ValidatedInput
               placeholder="Enter product title"
-              value={formData.title}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                updateFormData("title", e.target.value)
-              }
-              error={errors.title}
+              value={formData.name || ""}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                updateFormData("name", e.target.value);
+                updateFormData("name", e.target.value);
+              }}
+              error={errors.name}
             />
           </FormField>
 
@@ -143,6 +179,8 @@ export const BasicDetailsStep = React.memo(
               </PopoverContent>
             </Popover>
           </FormField>
+
+          {/* Brand field remains the same */}
         </div>
 
         {/* Three-level category selection */}
@@ -151,27 +189,29 @@ export const BasicDetailsStep = React.memo(
             {/* Main Category */}
             <FormField label="Main Category" error={errors.categoryId} required>
               <ValidatedSelect
-                value={formData.categoryId}
+                value={getCategoryValue()}
                 onValueChange={handleCategoryChange}
                 placeholder="Select main category"
                 error={errors.categoryId}
               >
-                {categoriesData?.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
+                {categoriesData
+                  ?.filter((cat) => !cat.parent)
+                  .map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
               </ValidatedSelect>
             </FormField>
 
             {/* Subcategory */}
             <FormField label="Subcategory" error={errors.subcategory} required>
               <ValidatedSelect
-                value={formData.subcategory}
+                value={getSubcategoryValue()}
                 onValueChange={handleSubcategoryChange}
                 placeholder="Select subcategory"
                 error={errors.subcategory}
-                disabled={!formData.categoryId || subcategories.length === 0}
+                disabled={!getCategoryValue() || subcategories.length === 0}
               >
                 {subcategories.map((sub) => (
                   <SelectItem key={sub.id} value={sub.id}>
@@ -181,21 +221,21 @@ export const BasicDetailsStep = React.memo(
               </ValidatedSelect>
             </FormField>
 
-            {/* Sub-subcategory (Third level) */}
+            {/* Sub-subcategory */}
             <FormField
               label="Product Type"
               error={errors.subSubcategory}
               required={subSubcategories.length > 0}
             >
               <ValidatedSelect
-                value={formData.subSubcategory || ""}
+                value={getSubSubcategoryValue()}
                 onValueChange={(value: string) =>
                   updateFormData("subSubcategory", value)
                 }
                 placeholder="Select product type"
                 error={errors.subSubcategory}
                 disabled={
-                  !formData.subcategory || subSubcategories.length === 0
+                  !getSubcategoryValue() || subSubcategories.length === 0
                 }
               >
                 {subSubcategories.map((item) => (
@@ -206,32 +246,6 @@ export const BasicDetailsStep = React.memo(
               </ValidatedSelect>
             </FormField>
           </div>
-
-          {/* Display selected path for clarity */}
-          {formData.categoryId && (
-            <div className="p-3 bg-muted rounded-md">
-              <p className="text-sm text-muted-foreground">
-                Selected category path:{" "}
-                <span className="font-medium text-foreground">
-                  {
-                    categoriesData.find((c) => c.id === formData.categoryId)
-                      ?.name
-                  }
-                  {formData.subcategory &&
-                    ` → ${
-                      subcategories.find((s) => s.id === formData.subcategory)
-                        ?.name
-                    }`}
-                  {formData.subSubcategory &&
-                    ` → ${
-                      subSubcategories.find(
-                        (s) => s.id === formData.subSubcategory
-                      )?.name
-                    }`}
-                </span>
-              </p>
-            </div>
-          )}
         </div>
 
         <FormField
@@ -253,5 +267,3 @@ export const BasicDetailsStep = React.memo(
     );
   }
 );
-
-BasicDetailsStep.displayName = "BasicDetailsStep";

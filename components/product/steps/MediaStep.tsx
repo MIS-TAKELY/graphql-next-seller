@@ -33,7 +33,6 @@ export const MediaStep = React.memo(
 
         const mediaRole =
           mediaSection === "productMedia" ? "PRIMARY" : "PROMOTIONAL";
-        const isProductMedia = mediaSection === "productMedia";
 
         // Add local preview immediately
         const pendingMedia: IPreviewMediaInterface[] = files.map((f) => ({

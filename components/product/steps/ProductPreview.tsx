@@ -30,7 +30,7 @@ export const ProductPreview = React.memo(
             <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
               <p>
                 <span className="font-medium">Title:</span>{" "}
-                {formData.title || "Not provided"}
+                {formData.name || "Not provided"}
               </p>
               <p>
                 <span className="font-medium">Brand:</span>{" "}
@@ -111,18 +111,9 @@ export const ProductPreview = React.memo(
             <div className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
               <p>
                 <span className="font-medium">Sale Price:</span>{" "}
-                {formData.salePrice
-                  ? `NPR ${formData.salePrice}`
-                  : "Not provided"}
+                {formData.price ? `NPR ${formData.price}` : "Not provided"}
               </p>
-              <p>
-                <span className="font-medium">Compare Price:</span>{" "}
-                {formData.comparePrice ? `NPR ${formData.comparePrice}` : "N/A"}
-              </p>
-              <p>
-                <span className="font-medium">Cost Price:</span>{" "}
-                {formData.costPrice ? `NPR ${formData.costPrice}` : "N/A"}
-              </p>
+
               <p>
                 <span className="font-medium">Stock:</span>{" "}
                 {formData.stock || "Not provided"}
@@ -155,9 +146,7 @@ export const ProductPreview = React.memo(
                         {media.fileType === "IMAGE" ? (
                           <img
                             src={media.url}
-                            alt={
-                              media.altText || "Product image"
-                            }
+                            alt={media.altText || "Product image"}
                             className="w-full h-32 object-cover rounded-md"
                           />
                         ) : (
@@ -183,10 +172,7 @@ export const ProductPreview = React.memo(
                         {media.fileType === "IMAGE" ? (
                           <img
                             src={media.url}
-                            alt={
-                              media.altText ||
-                              "Promotional image"
-                            }
+                            alt={media.altText || "Promotional image"}
                             className="w-full h-32 object-cover rounded-md"
                           />
                         ) : (
@@ -286,9 +272,9 @@ export const ProductPreview = React.memo(
               <p>
                 <span className="font-medium">Warranty:</span>{" "}
                 {formData.warranty ||
-                formData.warrantyPeriod ||
+                formData.warrantyDuration ||
                 formData.warrantyConditions
-                  ? `${formData.warrantyPeriod || "Not specified"} - ${
+                  ? `${formData.warrantyDuration || "Not specified"} - ${
                       formData.warrantyConditions ||
                       formData.warranty ||
                       "Not specified"

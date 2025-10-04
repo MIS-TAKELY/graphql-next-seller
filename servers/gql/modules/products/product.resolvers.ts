@@ -65,7 +65,11 @@ export const productResolvers = {
           category: {
             include: {
               children: true,
-              parent: true,
+              parent: {
+                include: {
+                  parent: true,
+                },
+              },
             },
           },
           wishlistItems: true,
@@ -349,6 +353,330 @@ export const productResolvers = {
       } catch (error: any) {
         console.error("Error deleting product:", error);
         throw new Error(`Failed to delete product: ${error.message}`);
+      }
+    },
+
+    updateProduct: async (
+      _: any,
+      { input }: { input: any },
+      ctx: GraphQLContext
+    ) => {
+      try {
+        const user = requireSeller(ctx);
+
+        if (!input.id) {
+          throw new Error("Product ID is required");
+        }
+
+        if (!user.id) throw new Error("Invalid user");
+
+        // Verify ownership
+        const existingProduct = await prisma.product.findFirst({
+          where: {
+            id: input.id,
+            sellerId: user.id,
+          },
+        });
+
+        if (!existingProduct) {
+          throw new Error(
+            "Product not found or you are not authorized to update it"
+          );
+        }
+
+        // Prepare product update data
+        let productData: any = {};
+        if (input.name !== undefined) {
+          productData.name = input.name;
+          // Regenerate slug if name changed
+          if (input.name !== existingProduct.name) {
+            productData.slug = await generateUniqueSlug(input.name);
+          }
+        }
+        if (input.description !== undefined)
+          productData.description = input.description;
+        if (input.status !== undefined) productData.status = input.status;
+        if (input.categoryId !== undefined)
+          productData.categoryId = input.categoryId;
+        if (input.brand !== undefined) productData.brand = input.brand;
+
+        // If no fields to update, return existing with full relations
+        if (
+          Object.keys(productData).length === 0 &&
+          !input.variants &&
+          input.images === undefined &&
+          input.productOffers === undefined &&
+          input.deliveryOptions === undefined &&
+          input.warranty === undefined &&
+          input.returnPolicy === undefined
+        ) {
+          return prisma.product.findUnique({
+            where: { id: input.id },
+            include: {
+              seller: true,
+              variants: {
+                include: {
+                  specifications: true,
+                },
+              },
+              images: true,
+              reviews: true,
+              category: {
+                include: {
+                  children: true,
+                  parent: {
+                    include: {
+                      parent: true,
+                    },
+                  },
+                },
+              },
+              wishlistItems: true,
+              productOffers: {
+                include: {
+                  offer: true,
+                },
+              },
+              deliveryOptions: true,
+              warranty: true,
+              returnPolicy: true,
+            },
+          });
+        }
+
+        const updatedProduct = await prisma.$transaction(
+          async (tx) => {
+            // Update the product
+            if (Object.keys(productData).length > 0) {
+              await tx.product.update({
+                where: { id: input.id },
+                data: productData,
+              });
+            }
+
+            if (input.variants) {
+              if (!input.variants.sku)
+                throw new Error("SKU is required for variant");
+              if (
+                input.variants.price == null ||
+                isNaN(Number(input.variants.price))
+              )
+                throw new Error("Valid price is required for variant");
+              if (
+                input.variants.stock == null ||
+                isNaN(Number(input.variants.stock))
+              )
+                throw new Error("Valid stock quantity is required for variant");
+
+              let defaultVariant = await tx.productVariant.findFirst({
+                where: {
+                  productId: input.id,
+                  isDefault: true,
+                },
+              });
+
+              if (defaultVariant) {
+                await tx.productVariant.update({
+                  where: { id: defaultVariant.id },
+                  data: {
+                    sku: input.variants.sku,
+                    price: input.variants.price,
+                    mrp: input.variants.mrp || input.variants.price,
+                    stock: input.variants.stock,
+                    attributes: input.variants.attributes || {},
+                    isDefault: input.variants.isDefault !== false,
+                  },
+                });
+
+                await tx.productSpecification.deleteMany({
+                  where: { variantId: defaultVariant.id },
+                });
+                if (input.variants.specifications?.length > 0) {
+                  await tx.productSpecification.createMany({
+                    data: input.variants.specifications.map((spec: any) => ({
+                      variantId: defaultVariant.id,
+                      key: spec.key,
+                      value: spec.value,
+                    })),
+                  });
+                }
+              } else {
+                // Create default variant if none exists
+                await tx.productVariant.create({
+                  data: {
+                    productId: input.id,
+                    sku: input.variants.sku,
+                    price: input.variants.price,
+                    mrp: input.variants.mrp || input.variants.price,
+                    stock: input.variants.stock,
+                    attributes: input.variants.attributes || {},
+                    isDefault: input.variants.isDefault !== false,
+                    specifications:
+                      input.variants.specifications?.length > 0
+                        ? {
+                            create: input.variants.specifications.map(
+                              (spec: any) => ({
+                                key: spec.key,
+                                value: spec.value,
+                              })
+                            ),
+                          }
+                        : undefined,
+                  },
+                });
+              }
+            }
+
+            // Replace images if provided
+            if (input.images !== undefined) {
+              await tx.productImage.deleteMany({
+                where: { productId: input.id },
+              });
+              if (input.images?.length > 0) {
+                await tx.productImage.createMany({
+                  data: input.images.map((img: any, index: number) => ({
+                    productId: input.id,
+                    url: img.url,
+                    altText: img.altText || null,
+                    sortOrder:
+                      img.sortOrder !== undefined ? img.sortOrder : index,
+                    mediaType: img.mediaType || "PRIMARY",
+                    fileType: img.fileType,
+                  })),
+                });
+              }
+            }
+
+            // Replace product offers if provided
+            if (input.productOffers !== undefined) {
+              await tx.productOffer.deleteMany({
+                where: { productId: input.id },
+              });
+              // Optionally clean up orphaned offers, but skipping for now as they might be reused elsewhere
+              if (input.productOffers?.length > 0) {
+                for (const offerInput of input.productOffers) {
+                  const offer = await tx.offer.create({
+                    data: {
+                      title: offerInput.offer.title,
+                      description: offerInput.offer.description || null,
+                      type: offerInput.offer.type,
+                      value: offerInput.offer.value,
+                      startDate: new Date(offerInput.offer.startDate),
+                      endDate: new Date(offerInput.offer.endDate),
+                      bannerImage: offerInput.offer.bannerImage || null,
+                      isActive: true,
+                    },
+                  });
+
+                  await tx.productOffer.create({
+                    data: {
+                      productId: input.id,
+                      offerId: offer.id,
+                    },
+                  });
+                }
+              }
+            }
+
+            // Replace delivery options if provided
+            if (input.deliveryOptions !== undefined) {
+              await tx.deliveryOption.deleteMany({
+                where: { productId: input.id },
+              });
+              if (input.deliveryOptions?.length > 0) {
+                await tx.deliveryOption.createMany({
+                  data: input.deliveryOptions.map((option: any) => ({
+                    productId: input.id,
+                    title: option.title,
+                    description: option.description || null,
+                    isDefault: option.isDefault || false,
+                  })),
+                });
+              }
+            }
+
+            // Replace warranty if provided
+            if (input.warranty !== undefined) {
+              await tx.warranty.deleteMany({
+                where: { productId: input.id },
+              });
+              if (input.warranty?.length > 0) {
+                await tx.warranty.createMany({
+                  data: input.warranty.map((warranty: any) => ({
+                    productId: input.id,
+                    type: warranty.type,
+                    duration: warranty.duration || null,
+                    unit: warranty.unit || null,
+                    description: warranty.description || null,
+                  })),
+                });
+              }
+            }
+
+            // Replace return policy if provided
+            if (input.returnPolicy !== undefined) {
+              await tx.returnPolicy.deleteMany({
+                where: { productId: input.id },
+              });
+              if (input.returnPolicy?.length > 0) {
+                await tx.returnPolicy.createMany({
+                  data: input.returnPolicy.map((policy: any) => ({
+                    productId: input.id,
+                    type: policy.type,
+                    duration: policy.duration || null,
+                    unit: policy.unit || null,
+                    conditions: policy.conditions || null,
+                  })),
+                });
+              }
+            }
+
+            // Fetch the updated product with all relations
+            return await tx.product.findUnique({
+              where: { id: input.id },
+              include: {
+                seller: true,
+                variants: {
+                  include: {
+                    specifications: true,
+                  },
+                },
+                images: true,
+                reviews: true,
+                category: {
+                  include: {
+                    children: true,
+                    parent: {
+                      include: {
+                        parent: true,
+                      },
+                    },
+                  },
+                },
+                wishlistItems: true,
+                productOffers: {
+                  include: {
+                    offer: true,
+                  },
+                },
+                deliveryOptions: true,
+                warranty: true,
+                returnPolicy: true,
+              },
+            });
+          },
+          { timeout: 30000 }
+        );
+
+        if (!updatedProduct) {
+          throw new Error("Failed to update product");
+        }
+
+        console.log("Product updated successfully:", updatedProduct);
+        return true;
+      } catch (error: any) {
+        console.error("Error while updating product:", error);
+        throw new Error(`Failed to update product: ${error.message}`);
       }
     },
   },

@@ -22,10 +22,10 @@ export const PricingStep = React.memo(
   ({ formData, errors, updateFormData }: PricingStepProps) => {
     // Calculate offer preview based on offer type
     const calculateOfferPreview = () => {
-      if (!formData.hasOffer || !formData.salePrice) {
+      if (!formData.hasOffer || !formData.price) {
         return "N/A";
       }
-      const price = parseFloat(formData.salePrice) || 0;
+      const price = parseFloat(formData.price) || 0;
       const value = parseFloat(formData.offerValue) || 0;
 
       switch (formData.offerType) {
@@ -50,15 +50,15 @@ export const PricingStep = React.memo(
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               label="Sale Price (NPR)"
-              error={errors.salePrice}
+              error={errors.price}
               required
             >
               <ValidatedInput
                 type="number"
                 placeholder="0.00"
-                value={formData.salePrice}
-                onChange={(e) => updateFormData("salePrice", e.target.value)}
-                error={errors.salePrice}
+                value={formData.price}
+                onChange={(e) => updateFormData("price", e.target.value)}
+                error={errors.price}
                 min="0"
                 step="0.01"
                 className="bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
@@ -66,7 +66,7 @@ export const PricingStep = React.memo(
             </FormField>
             <FormField
               label="Maximum Retail Price (NPR)"
-              error={errors.salePrice}
+              error={errors.price}
               required
             >
               <ValidatedInput
