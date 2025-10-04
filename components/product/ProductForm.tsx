@@ -30,7 +30,7 @@ type Props = {
   categoriesData: Category[];
   initialValues?: FormData; // when editing a product
   onSubmit: (input: any) => Promise<void>;
-  onDelete?: () => Promise<void>; // optional, only for edit
+  onDelete?: (produtcId: string) => Promise<void>; // optional, only for edit
   isDeleting?: boolean;
   isSubmitting?: boolean;
   title: string;
@@ -199,7 +199,9 @@ export function ProductForm({
         {mode === "edit" && onDelete && (
           <button
             className="px-3 py-2 bg-red-600 text-white rounded"
-            onClick={onDelete}
+            onClick={() => {
+              onDelete(productId);
+            }}
             disabled={isDeleting || isSubmitting}
           >
             {isDeleting ? "Deleting..." : "Delete"}

@@ -1,245 +1,58 @@
-// export const useProduct = () => {
-//   const router = useRouter();
+// app/products/[id]/edit/page.tsx
 
-//   const {
-//     data: productsData,
-//     loading: productsDataLoading,
-//     error: productsDataError,
-//   } = useQuery(GET_MY_PRODUCTS, {
-//     errorPolicy: "all",
-//     notifyOnNetworkStatusChange: false,
-//     fetchPolicy: "cache-first",
-//   });
+import {
+  GET_PRODUCT,
+  GET_PRODUCT_CATEGORIES,
+  GET_PRODUCTS,
+} from "@/client/product/product.queries"; // Assuming server-side GraphQL queries are available
+import { ProductForm } from "@/components/product/ProductForm";
+import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
+import { transformProductToFormData } from "@/utils/product/transformProductData";
+import { notFound } from "next/navigation";
 
-//   const [deleteProduct] = useMutation(DELETE_PRODUCT, {
-//     update: (cache, { data }, { variables }) => {
-//       try {
-//         const productId = variables?.productId;
-//         if (!productId) return;
+export async function generateStaticParams() {
+  const client = await getServerApolloClient();
 
-//         const existing: GetMyProductsData | null = cache.readQuery({
-//           query: GET_MY_PRODUCTS,
-//         });
+  const { data } = await client.query({
+    query: GET_PRODUCTS,
+  });
 
-//         const updatedProducts = (existing?.getMyProducts || []).filter(
-//           (p) => p.id !== productId
-//         );
+  console.log("data-->",data)
 
-//         cache.writeQuery({
-//           query: GET_MY_PRODUCTS,
-//           data: { getMyProducts: updatedProducts },
-//         });
-//       } catch (error) {
-//         console.error("Error updating cache for delete:", error);
-//       }
-//     },
-//     optimisticResponse: (vars) => ({
-//       deleteProduct: true,
-//     }),
-//   });
+  return data.map((product: { id: string }) => ({
+    id: product.id.toString(),
+  }));
+}
 
-//   const [addProduct] = useMutation(ADD_PRODUCT, {
-//     update: (cache, { data }, { variables }) => {
-//       try {
-//         const actualInput: ICreateProductInput = variables?.input;
-//         if (!actualInput) return;
+export const revalidate = 60; // Regenerate the page every 60 seconds
 
-//         const existing: GetMyProductsData | null = cache.readQuery({
-//           query: GET_MY_PRODUCTS,
-//         });
+export default async function EditProductPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const productData = await GET_PRODUCT({ productId: params.id }); // Assuming server-side query execution
+  const categoryData = await GET_PRODUCT_CATEGORIES(); // Assuming server-side query execution
 
-//         const tempId = "temp-" + Date.now();
+  const product = productData?.getProduct;
+  if (!product) {
+    notFound();
+  }
 
-//         const slug = actualInput.name
-//           ? actualInput.name
-//               .toLowerCase()
-//               .replace(/\s+/g, "-")
-//               .replace(/[^a-z0-9-]/g, "")
-//           : "temp-product";
+  // Transform the product data to form format
+  const initialValues = transformProductToFormData(product);
 
-//         const variant = actualInput.variants
-//           ? {
-//               __typename: "ProductVariant",
-//               ...actualInput.variants,
-//             }
-//           : null;
-
-//         const optimisticProduct: Product = {
-//           __typename: "Product",
-//           id: tempId,
-//           name: actualInput.name,
-//           slug,
-//           description: actualInput.description || "",
-//           brand: actualInput.brand || "",
-//           category: actualInput.categoryId
-//             ? {
-//                 __typename: "Category",
-//                 id: actualInput.categoryId,
-//                 parent: null,
-//                 children: [],
-//               }
-//             : null,
-//           images:
-//             actualInput.images?.map((img, index) => ({
-//               __typename: "ProductImage",
-//               url: img.url,
-//               altText: img.altText || null,
-//               sortOrder: img.sortOrder ?? index,
-//               mediaType: img.mediaType || "PRIMARY",
-//             })) || [],
-//           variants: variant ? [variant] : [],
-//           status: "DRAFT",
-//         };
-
-//         const productExists = existing?.getMyProducts?.some(
-//           (p) => p.id === optimisticProduct.id
-//         );
-
-//         if (!productExists) {
-//           cache.writeQuery({
-//             query: GET_MY_PRODUCTS,
-//             data: {
-//               getMyProducts: [
-//                 ...(existing?.getMyProducts || []),
-//                 optimisticProduct,
-//               ],
-//             },
-//           });
-//         }
-//       } catch (error) {
-//         console.error("Error updating cache for add:", error);
-//       }
-//     },
-//     optimisticResponse: (vars) => ({
-//       addProduct: true,
-//     }),
-//   });
-
-//   const [updateProduct] = useMutation(UPDATE_PRODUCT, {
-//     update: (cache, { data }, { variables }) => {
-//       try {
-//         const actualInput: any = variables?.input;
-//         if (!actualInput?.id) return;
-
-//         const existing: GetMyProductsData | null = cache.readQuery({
-//           query: GET_MY_PRODUCTS,
-//         });
-
-//         const updatedProducts = (existing?.getMyProducts || []).map(
-//           (p) => {
-//             if (p.id !== actualInput.id) return p;
-
-//             const variant = actualInput.variants
-//               ? {
-//                   __typename: "ProductVariant",
-//                   ...actualInput.variants,
-//                 }
-//               : null;
-
-//             return {
-//               ...p,
-//               name: actualInput.name ?? p.name,
-//               description: actualInput.description ?? p.description,
-//               brand: actualInput.brand ?? p.brand,
-//               category: actualInput.categoryId
-//                 ? {
-//                     __typename: "Category",
-//                     id: actualInput.categoryId,
-//                     parent: null,
-//                     children: [],
-//                   }
-//                 : p.category,
-//               images:
-//                 actualInput.images?.map((img, index) => ({
-//                   __typename: "ProductImage",
-//                   url: img.url,
-//                   altText: img.altText || null,
-//                   sortOrder: img.sortOrder ?? index,
-//                   mediaType: img.mediaType || "PRIMARY",
-//                 })) || p.images,
-//               variants: variant ? [variant] : p.variants,
-//             };
-//           }
-//         );
-
-//         cache.writeQuery({
-//           query: GET_MY_PRODUCTS,
-//           data: { getMyProducts: updatedProducts },
-//         });
-//       } catch (error) {
-//         console.error("Error updating cache for update:", error);
-//       }
-//     },
-//     optimisticResponse: (vars) => ({
-//       updateProduct: true,
-//     }),
-//   });
-
-//   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
-//     try {
-//       if (!productInput.name) throw new Error("Product name is required");
-//       if (!productInput.images || productInput.images.length === 0)
-//         throw new Error("At least one image is required");
-//       if (!productInput.variants?.sku)
-//         throw new Error("Product variant SKU is required");
-
-//       const mutationVariables = { input: productInput };
-
-//       await addProduct({
-//         variables: mutationVariables,
-//       });
-
-//       toast.success("Product has been created successfully!");
-//       router.push("/products");
-//     } catch (error: any) {
-//       console.error("Error creating product:", error);
-//       toast.error(
-//         error.message || "Failed to create product. Please try again."
-//       );
-//     }
-//   };
-
-//   const handleUpdateHandler = async (productInput: ICreateProductInput & { id: string }) => {
-//     try {
-//       if (!productInput.id) throw new Error("Product ID is required");
-
-//       await updateProduct({
-//         variables: { input: productInput },
-//       });
-
-//       toast.success("Product has been updated successfully!");
-//       router.push("/products");
-//     } catch (error: any) {
-//       console.error("Error updating product:", error);
-//       toast.error(
-//         error.message || "Failed to update product. Please try again."
-//       );
-//     }
-//   };
-
-//   const handleDelete = async (productId: string) => {
-//     try {
-//       if (!productId) throw new Error("Product ID is required");
-
-//       await deleteProduct({
-//         variables: { productId },
-//       });
-
-//       toast.success("Product has been deleted successfully!");
-//     } catch (error: any) {
-//       console.error("Error deleting product:", error);
-//       toast.error(
-//         error.message || "Failed to delete product. Please try again."
-//       );
-//     }
-//   };
-
-//   return {
-//     handleSubmitHandler,
-//     handleUpdateHandler,
-//     handleDelete,
-//     productsData,
-//     productsDataLoading,
-//     productsDataError,
-//   };
-// };
+  return (
+    <ProductForm
+      mode="edit"
+      categoriesData={categoryData?.categories || []}
+      initialValues={initialValues}
+      // productId={params.id} // Pass productId if needed for client-side mutations
+      title="Edit Product"
+      // isDeleting={deleting}
+      onDelete={handleDelete}
+      onSubmit={handleUpdateHandler}
+      subtitle="Update product information and settings."
+    />
+  );
+}

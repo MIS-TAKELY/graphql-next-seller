@@ -1,51 +1,60 @@
-// app/products/[id]/edit/page.tsx
-"use client";
-
-import { DELETE_PRODUCT } from "@/client/product/product.mutations";
 import {
   GET_PRODUCT,
   GET_PRODUCT_CATEGORIES,
-  GET_PRODUCTS,
 } from "@/client/product/product.queries";
-import { ProductForm } from "@/components/product/ProductForm";
-import { useProduct } from "@/hooks/product/useProduct";
-import { transformProductToFormData } from "@/utils/product/transformProductData";
-import { useMutation, useQuery } from "@apollo/client";
-import { useParams, useRouter } from "next/navigation";
-import { toast } from "sonner";
+import EditProductClient from "@/components/product/EditProductClient";
+import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
 
-export default function EditProductPage() {
-  const router = useRouter();
-  const params = useParams();
+export const revalidate = 60;
 
-  const { handleUpdateHandler } = useProduct();
+interface EditProductPageProps {
+  params: Promise<{ id: string }>; // Updated: params is now a Promise
+}
 
-  const { data: productData, loading: productLoading } = useQuery(GET_PRODUCT, {
-    variables: { productId: params.id },
-  });
+export default async function EditProductPage(props: EditProductPageProps) {
+  const client = await getServerApolloClient(); // Switch to auth client
+  const params = await props.params; // Await params
+  const productId = params.id;
 
-  const { data: categoryData, loading: categoryLoading } = useQuery(
-    GET_PRODUCT_CATEGORIES
-  );
+  let productData;
+  let categoryData;
 
-  const [deleteProduct, { loading: deleting }] = useMutation(DELETE_PRODUCT, {
-    refetchQueries: [{ query: GET_PRODUCTS }],
-  });
+  try {
+    const [productQuery, categoryQuery] = await Promise.all([
+      client.query({
+        query: GET_PRODUCT,
+        variables: { productId },
+      }),
+      client.query({
+        query: GET_PRODUCT_CATEGORIES,
+      }),
+    ]);
 
-  if (productLoading || categoryLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4">Loading product...</p>
+    productData = productQuery.data;
+    categoryData = categoryQuery.data;
+  } catch (error:any) {
+    // Handle GraphQL errors (e.g., auth failure)
+    console.error("Failed to fetch product data:", error);
+    if (error.message.includes("Authentication required")) {
+      // Optionally redirect to login: redirect('/login');
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-2">Authentication Required</h2>
+            <p className="text-muted-foreground">
+              Please log in to edit products.
+            </p>
+          </div>
         </div>
-      </div>
-    );
+      );
+    }
+    // Re-throw other errors or handle as needed
+    throw error;
   }
 
-  const product = productData?.getProduct;
-  console.log("Product to edit(initial data)", product);
-  if (!product) {
+  console.log("product data", productData); // Keep for debugging; remove in prod
+
+  if (!productData?.getProduct) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -58,32 +67,10 @@ export default function EditProductPage() {
     );
   }
 
-  // Transform the product data to form format
-  const initialValues = transformProductToFormData(product);
-
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
-
-    try {
-      await deleteProduct({ variables: { productId: params.id } });
-      toast.success("Product deleted successfully.");
-      router.push("/products");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete product");
-    }
-  };
-
   return (
-    <ProductForm
-      mode="edit"
-      categoriesData={categoryData?.categories || []}
-      initialValues={initialValues}
-      onSubmit={handleUpdateHandler}
-      onDelete={handleDelete}
-      // isSubmitting={updating}
-      isDeleting={deleting}
-      title="Edit Product"
-      subtitle="Update product information and settings."
+    <EditProductClient
+      product={productData.getProduct}
+      categories={categoryData?.categories || []}
     />
   );
 }
