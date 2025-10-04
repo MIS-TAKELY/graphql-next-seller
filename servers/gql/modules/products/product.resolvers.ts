@@ -101,7 +101,16 @@ export const productResolvers = {
               },
             },
             images: true,
-            category: true,
+            category: {
+              include:{
+                children: true,
+                parent:{
+                  include:{
+                    parent:true
+                  }
+                }
+              }
+            },
             productOffers: {
               include: {
                 offer: true,

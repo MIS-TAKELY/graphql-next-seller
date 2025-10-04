@@ -135,9 +135,15 @@ export const GET_MY_PRODUCTS = gql`
         stock
       }
       category {
-        parent {
-          name
+        id
+        name
+        children {
           id
+          name
+          children {
+            id
+            name
+          }
         }
       }
     }
