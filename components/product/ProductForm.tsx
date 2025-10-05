@@ -158,7 +158,7 @@ export function ProductForm({
     }
     try {
       console.log("form data--->", formData);
-      if (!productId) throw new Error("Product id is not avilable");
+      // if (!productId) throw new Error("Product id is not avilable");
       const productInput = buildProductInput(formData, productId);
       await onSubmit(productInput);
     } catch (err: any) {

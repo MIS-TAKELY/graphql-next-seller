@@ -11,7 +11,6 @@ export default async function AddProductPage() {
 
   const categoryResponse = await client.query({
     query: GET_PRODUCT_CATEGORIES,
-    // Change to 'cache-first' for better SSG caching (avoids unnecessary refetches at build time)
     fetchPolicy: "cache-first",
     errorPolicy: "all",
   });

@@ -33,6 +33,8 @@ export const transformProductToFormData = (product: any): FormData => {
         publicId: img.publicId || "",
       })) || [];
 
+  console.log("varient---->", firstVariant.attributes);
+
   // Transform specifications
   const specifications =
     firstVariant.specifications?.map((spec: any) => ({
@@ -86,15 +88,15 @@ export const transformProductToFormData = (product: any): FormData => {
     promotionalMedia,
 
     // Shipping
-    weight: product.weight?.toString() || "",
-    length: product.dimensions?.length?.toString() || "",
-    width: product.dimensions?.width?.toString() || "",
-    height: product.dimensions?.height?.toString() || "",
+    weight: firstVariant?.attributes?.weight?.toString() || "",
+    length: firstVariant?.attributes?.length?.toString() || "",
+    width: firstVariant?.attributes?.width?.toString() || "",
+    height: firstVariant?.attributes?.height?.toString() || "",
     isFragile: product.isFragile || false,
-    shippingMethod: deliveryOption?.method || "",
+    shippingMethod: firstVariant?.attributes?.shippingClass || "",
     carrier: deliveryOption?.carrier || "",
     estimatedDelivery: deliveryOption?.estimatedDelivery || "",
-    freeDeliveryOption: deliveryOption?.freeDeliveryOption || "none",
+    freeDeliveryOption: deliveryOption?.title || "none",
     freeDeliveryProvinces: deliveryOption?.freeDeliveryProvinces || [],
     noInternationalShipping: product.noInternationalShipping || false,
     restrictedStates: product.restrictedStates || [],

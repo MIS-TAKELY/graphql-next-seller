@@ -51,7 +51,7 @@ export const productResolvers = {
           },
         });
 
-        await setCache(cacheKey, products, 300);
+        await setCache(cacheKey, products);
         return products;
       } catch (error: any) {
         console.log("error occured while fetching products", error);
@@ -113,7 +113,7 @@ export const productResolvers = {
 
       if (product) {
         // Only cache if fou  nd
-        await setCache(cacheKey, product, 300);
+        await setCache(cacheKey, product);
       }
 
       return product;
@@ -165,7 +165,7 @@ export const productResolvers = {
           },
         });
 
-        await setCache(cacheKey, products, 300);
+        await setCache(cacheKey, products);
         return products;
       } catch (error: any) {
         console.error("Error while getting my products:", error);
