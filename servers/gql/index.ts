@@ -9,7 +9,11 @@ import { categoryResolvers } from "./modules/category/category.resolvers";
 import { categoryTypeDefs } from "./modules/category/category.typeDefs";
 import { categorySpecificationsTypeDefs } from "./modules/categorySpecification/categorySpecification.typeDefs";
 import { categorySpecificationResolvers } from "./modules/categorySpecification/categorySpecifications.resolvers";
+import { conversationResolvers } from "./modules/conversation/conversation.resolvers";
+import { conversationTypedefs } from "./modules/conversation/conversaton.typeDefs";
 import { deliveryTypedefs } from "./modules/delivery/delivery.typeDefs";
+import { messageResolvers } from "./modules/message/message.resolvers";
+import { messageTypedefs } from "./modules/message/message.typeDefs";
 import { offerTypeDefs } from "./modules/offer/offer.typedefs";
 import { orderTypeDefs } from "./modules/order/order.typeDefs";
 import { orderItemTypeDefs } from "./modules/orderItem/orderItem.typeDefs";
@@ -68,6 +72,8 @@ const typeDefs = mergeTypeDefs([
   wishlistTypeDefs,
   wishlistItemTypeDefs,
   warrentyTypeDefs,
+  messageTypedefs,
+  conversationTypedefs,
 ]);
 
 const resolvers = mergeResolvers([
@@ -75,6 +81,8 @@ const resolvers = mergeResolvers([
   productResolvers,
   categoryResolvers,
   categorySpecificationResolvers,
+  messageResolvers,
+  conversationResolvers,
 ]);
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers });

@@ -363,6 +363,7 @@ export const productResolvers = {
         if (!product) throw new Error("Unable to create product");
         console.log("Product created successfully:", product);
 
+        console.log("deleting cache");
         await Promise.all([
           delCache("product:all"),
           delCache(`products:seller:${sellerId}`),

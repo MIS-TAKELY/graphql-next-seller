@@ -5,8 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
-  output   = "../app/generated/prisma"
+  provider      = "prisma-client-js"
+  output        = "../app/generated/prisma"
+  binaryTargets = ["native", "windows", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -26,6 +27,13 @@ enum AddressType {
   BILLING
   BUSINESS
   WAREHOUSE
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  SYSTEM // e.g., "Order shipped" notifications
 }
 
 enum OrderStatus {
@@ -150,20 +158,91 @@ model User {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  addresses      Address[]       @relation("UserAddresses")
-  paymentMethods PaymentMethod[] @relation("UserPayments")
-  cartItems      CartItem[]      @relation("UserCartItems")
-  orders         Order[]         @relation("BuyerOrders")
-  reviews        Review[]
-  products       Product[]       @relation("SellerProducts")
-  payouts        Payout[]        @relation("SellerPayouts")
-  sellerOrders   SellerOrder[]   @relation("SellerOrders")
-  wishlists      Wishlist[]
+  addresses               Address[]                 @relation("UserAddresses")
+  paymentMethods          PaymentMethod[]           @relation("UserPayments")
+  cartItems               CartItem[]                @relation("UserCartItems")
+  orders                  Order[]                   @relation("BuyerOrders")
+  reviews                 Review[]
+  products                Product[]                 @relation("SellerProducts")
+  payouts                 Payout[]                  @relation("SellerPayouts")
+  sellerOrders            SellerOrder[]             @relation("SellerOrders")
+  wishlists               Wishlist[]
   // discountUsage  DiscountUsage[] @relation("UserDiscountUsage")
-  ReviewVote     ReviewVote[]
+  ReviewVote              ReviewVote[]
+  buyerConversations      Conversation[]            @relation("BuyerConversations")
+  sellerConversations     Conversation[]            @relation("SellerConversations")
+  sentMessages            Message[]                 @relation("UserSentMessages")
+  ConversationParticipant ConversationParticipant[]
 
   @@index([email, role])
   @@map("users")
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  productId String // Ties chat to a specific product
+  senderId   String // Buyer who initiates
+  recieverId  String // Seller of the product
+  title     String? // Auto-generated, e.g., "Chat about iPhone 14"
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  product                 Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sender                   User                      @relation("BuyerConversations", fields: [senderId], references: [id], onDelete: Cascade)
+  reciever                  User                      @relation("SellerConversations", fields: [recieverId], references: [id], onDelete: Cascade)
+  messages                Message[]
+  ConversationParticipant ConversationParticipant[]
+
+  @@unique([senderId, recieverId, productId]) // Ensures one chat per buyer-product pair
+  @@index([productId, createdAt])
+  @@map("conversations")
+}
+
+// Model for individual messages in a conversation
+model Message {
+  id             String      @id @default(cuid())
+  conversationId String
+  senderId       String // Who sent it (buyer or seller)
+  content        String? // Text content
+  type           MessageType @default(TEXT)
+  fileUrl        String? // For images/videos
+  isRead         Boolean     @default(false)
+  sentAt         DateTime    @default(now())
+
+  // Relations
+  conversation      Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender            User                @relation("UserSentMessages", fields: [senderId], references: [id])
+  MessageAttachment MessageAttachment[]
+
+  @@index([conversationId, sentAt]) // For efficient fetching of recent messages
+  @@map("messages")
+}
+
+model MessageAttachment {
+  id        String   @id @default(cuid())
+  messageId String
+  url       String
+  type      FileType
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+
+  user         User         @relation(fields: [userId], references: [id])
+  conversation Conversation @relation(fields: [conversationId], references: [id])
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
 }
 
 model Address {
@@ -345,6 +424,7 @@ model Product {
   deliveryOptions DeliveryOption[]
   warranty        Warranty[]
   returnPolicy    ReturnPolicy[]
+  Conversation    Conversation[]
 
   @@index([slug, sellerId])
   @@map("products")

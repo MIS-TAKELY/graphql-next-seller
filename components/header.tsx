@@ -1,8 +1,9 @@
-"use client"
+"use client";
 
-import { Bell, Search, Menu, Sun, Moon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Sidebar } from "@/components/sidebar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,22 +11,26 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Sidebar } from "@/components/sidebar"
-import { useTheme } from "next-themes"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { SignOutButton } from "@clerk/nextjs";
+import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
+import { useTheme } from "next-themes";
 
 export function Header() {
-  const { theme, setTheme } = useTheme()
+  const { theme, setTheme } = useTheme();
 
   return (
     <header className="flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4 lg:h-[60px] lg:px-6">
       {/* Mobile menu trigger */}
       <Sheet>
         <SheetTrigger asChild>
-          <Button variant="outline" size="icon" className="shrink-0 md:hidden bg-transparent">
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0 md:hidden bg-transparent"
+          >
             <Menu className="h-5 w-5" />
             <span className="sr-only">Toggle navigation menu</span>
           </Button>
@@ -48,9 +53,15 @@ export function Header() {
         </form>
       </div>
 
-      <Button variant="outline" size="icon" className="ml-auto h-8 w-8 relative bg-transparent shrink-0">
+      <Button
+        variant="outline"
+        size="icon"
+        className="ml-auto h-8 w-8 relative bg-transparent shrink-0"
+      >
         <Bell className="h-4 w-4" />
-        <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 text-xs">3</Badge>
+        <Badge className="absolute -top-1 -right-1 h-4 w-4 rounded-full p-0 text-xs">
+          3
+        </Badge>
         <span className="sr-only">Toggle notifications</span>
       </Button>
 
@@ -68,7 +79,11 @@ export function Header() {
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="secondary" size="icon" className="rounded-full h-8 w-8 shrink-0">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full h-8 w-8 shrink-0"
+          >
             <Avatar className="h-8 w-8">
               <AvatarImage src="/placeholder-user.jpg" alt="Avatar" />
               <AvatarFallback>JD</AvatarFallback>
@@ -83,9 +98,11 @@ export function Header() {
           <DropdownMenuItem>Store Settings</DropdownMenuItem>
           <DropdownMenuItem>Billing</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Logout</DropdownMenuItem>
+          <DropdownMenuItem>
+            <SignOutButton>Logout</SignOutButton>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
-  )
+  );
 }
