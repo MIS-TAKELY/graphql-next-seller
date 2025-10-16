@@ -71,6 +71,7 @@ export const messageResolvers = {
           conversationId: string;
           content?: string;
           type?: string;
+          clientId?: string | undefined;
           attachments?: Array<{ url: string; type: string }>;
         };
       },
@@ -82,7 +83,13 @@ export const messageResolvers = {
         );
       }
 
-      const { conversationId, content, type, attachments = [] } = input;
+      const {
+        conversationId,
+        content,
+        clientId,
+        type,
+        attachments = [],
+      } = input;
 
       const prismaType =
         (type?.toUpperCase() as
@@ -123,6 +130,7 @@ export const messageResolvers = {
             senderId: user.id,
             content: content || null,
             type: prismaType,
+            clientId,
             fileUrl: attachments.length > 0 ? null : undefined,
           },
           include: {
@@ -181,6 +189,7 @@ export const messageResolvers = {
           id: result.id,
           content: result.content || "",
           type: result.type,
+          clientId,
           fileUrl: result.fileUrl || "",
           isRead: result.isRead || false,
           sentAt: result.sentAt.toISOString(),
@@ -206,7 +215,7 @@ export const messageResolvers = {
         data: { lastReadAt: null }, // Reset to force unread status; adjust logic as needed
       });
 
-      return result;
+      return { ...result, clientId };
     },
   },
 };

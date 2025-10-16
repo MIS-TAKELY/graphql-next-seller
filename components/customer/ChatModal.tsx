@@ -1,3 +1,4 @@
+// components/customers/ChatModal.tsx
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { LocalMessage } from "@/hooks/chat/useChat";
-import { Conversation } from "@/types/customer/customer.types";
+import type { LocalMessage } from "@/hooks/chat/useSellerChat";
+import type { Conversation } from "@/types/customer/customer.types";
 import { MessageCircleMore, Send } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
@@ -41,23 +42,16 @@ export default function ChatModal({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  console.log("selectedConversationId---->", selectedConversationId);
-  console.log("conversation---->", conversation);
-
-  // Compute the selected conversation from the array
   const selectedConversation = selectedConversationId
     ? conversation.find((c) => c.id === selectedConversationId)
     : null;
 
-  console.log("selectedConversation---->", selectedConversation);
-  console.log("messages in modal---->", messages);
-
-  // Auto-scroll
+  // Auto-scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages.length]);
 
-  // Focus input
+  // Focus input when opened
   useEffect(() => {
     if (open && inputRef.current) {
       const timeout = setTimeout(() => inputRef.current?.focus(), 100);
@@ -67,10 +61,9 @@ export default function ChatModal({
 
   const handleSendMessage = useCallback(() => {
     const trimmed = inputValue.trim();
-    if (trimmed) {
-      onSend(trimmed);
-      setInputValue("");
-    }
+    if (!trimmed) return;
+    onSend(trimmed);
+    setInputValue("");
   }, [inputValue, onSend]);
 
   const handleKeyDown = useCallback(
@@ -82,6 +75,8 @@ export default function ChatModal({
     },
     [handleSendMessage]
   );
+
+  const disableComposer = isLoading || !selectedConversationId;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,7 +107,10 @@ export default function ChatModal({
                 </p>
               ) : (
                 messages.map((message) => (
-                  <MessageBubble key={message.id} message={message} />
+                  <MessageBubble
+                    key={message.clientId ?? message.id}
+                    message={message}
+                  />
                 ))
               )}
               <div ref={messagesEndRef} />
@@ -127,13 +125,16 @@ export default function ChatModal({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isLoading ? "Loading..." : "Type your message..."}
+              placeholder={
+                disableComposer ? "Loading..." : "Type your message..."
+              }
               className="flex-1 text-sm"
               maxLength={500}
+              disabled={disableComposer}
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || isLoading}
+              disabled={!inputValue.trim() || disableComposer}
               size="icon"
               className="shrink-0"
               aria-label="Send message"

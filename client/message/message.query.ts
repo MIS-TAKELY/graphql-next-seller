@@ -8,6 +8,7 @@ export const GET_MESSAGES = gql`
       type
       fileUrl
       isRead
+      clientId
       sentAt
       sender {
         id

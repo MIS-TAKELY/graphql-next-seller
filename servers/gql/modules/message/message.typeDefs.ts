@@ -22,6 +22,7 @@ export const messageTypedefs = gql`
     content: String
     type: MessageType!
     attachments: [AttachmentInput]
+    clientId: String
   }
 
   input AttachmentInput {
@@ -40,6 +41,7 @@ export const messageTypedefs = gql`
     sentAt: DateTime!
     attachments: [MessageAttachment!]!
     sender: User!
+    clientId: String
   }
 
   type MessageAttachment {

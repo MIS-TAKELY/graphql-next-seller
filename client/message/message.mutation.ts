@@ -9,6 +9,7 @@ export const SEND_MESSAGE = gql`
       fileUrl
       isRead
       sentAt
+      clientId
       sender {
         id
         firstName

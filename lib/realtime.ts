@@ -18,6 +18,7 @@ const schema = {
       type: z.enum(["TEXT", "IMAGE", "VIDEO", "SYSTEM"]),
       fileUrl: z.string().nullable().optional(),
       isRead: z.boolean(),
+      clientId: z.string().optional(),
       sentAt: z.string(),
       sender: z.object({
         id: z.string(),
