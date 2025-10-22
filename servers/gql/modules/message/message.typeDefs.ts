@@ -1,6 +1,5 @@
 // servers/gql/messageTypedefs.ts
-
-import { gql } from "graphql-tag"; // or your preferred way to define SDL
+import { gql } from "graphql-tag";
 
 export const messageTypedefs = gql`
   enum MessageType {
@@ -13,10 +12,12 @@ export const messageTypedefs = gql`
   enum FileType {
     IMAGE
     VIDEO
+    DOCUMENT
   }
 
   scalar DateTime
   scalar Upload
+
   input SendMessageInput {
     conversationId: ID!
     content: String
@@ -53,8 +54,9 @@ export const messageTypedefs = gql`
   type Mutation {
     sendMessage(input: SendMessageInput!): Message!
   }
+
   type Query {
-    # Fetch messages for a conversation with optional pagination
     messages(conversationId: ID!, limit: Int = 20, offset: Int = 0): [Message!]!
   }
 `;
+  

@@ -1,8 +1,10 @@
+// hooks/chat/useSellerChat.ts
 "use client";
 
 import { SEND_MESSAGE } from "@/client/message/message.mutation";
 import { GET_MESSAGES } from "@/client/message/message.query";
 import { RealtimeEvents } from "@/lib/realtime";
+import { uploadFilesToStorage } from "@/utils/uploadFilesToStorage";
 import {
   ApolloError,
   FetchPolicy,
@@ -14,13 +16,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export interface LocalMessage {
-  id: string; // server id or temporary
-  clientId?: string; // client-generated for optimistic reconciliation
+  id: string;
+  clientId?: string;
   text: string;
   sender: "seller" | "buyer";
   timestamp: Date;
   status?: "sending" | "sent" | "failed";
-  attachments?: Array<{ id: string; url: string; type: "IMAGE" | "VIDEO" }>;
+  attachments?: Array<{
+    id: string;
+    url: string;
+    type: "IMAGE" | "VIDEO";
+  }>;
 }
 
 const FETCH_POLICY_NO_CACHE: FetchPolicy = "no-cache";
@@ -29,13 +35,13 @@ export const useSellerChat = (conversationId?: string | null) => {
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hasShownError, setHasShownError] = useState(false); // throttle repeated toasts
+  const [hasShownError, setHasShownError] = useState(false);
 
-  // Reset when switching conversations
   const lastConversationRef = useRef<string | null | undefined>(conversationId);
+
   useEffect(() => {
     if (lastConversationRef.current !== conversationId) {
-      lastConversationRef.current = conversationId ?? null;
+      lastConversationRef.current = conversationId;
       setMessages([]);
       setError(null);
       setIsLoading(false);
@@ -43,173 +49,151 @@ export const useSellerChat = (conversationId?: string | null) => {
     }
   }, [conversationId]);
 
-  // Normalize server -> LocalMessage
   const normalizeServerMessage = useCallback((msg: any): LocalMessage => {
-    const attachments = (
-      msg.attachments && msg.attachments.length > 0
-        ? msg.attachments.map((a: any) => ({
-            id: a.id,
-            url: a.url,
-            type: a.type as "IMAGE" | "VIDEO",
-          }))
-        : msg.fileUrl
-        ? [
-            {
-              id: msg.id,
-              url: msg.fileUrl,
-              type: (msg.type as "IMAGE" | "VIDEO") ?? "IMAGE",
-            },
-          ]
-        : []
-    ) as LocalMessage["attachments"];
+    const attachments = msg.attachments?.length
+      ? msg.attachments.map((a: any) => ({
+          id: a.id || crypto.randomUUID(),
+          url: a.url,
+          type: a.type as "IMAGE" | "VIDEO" | "DOCUMENT",
+        }))
+      : msg.fileUrl
+      ? [
+          {
+            id: msg.id || crypto.randomUUID(),
+            url: msg.fileUrl,
+            type: msg.type as "IMAGE" | "VIDEO" | "DOCUMENT",
+          },
+        ]
+      : undefined;
 
     return {
       id: msg.id,
       clientId: msg.clientId ?? undefined,
       text: msg.content || "",
       sender: msg.sender?.role === "SELLER" ? "seller" : "buyer",
-      timestamp: new Date(msg.sentAt),
-      status: "sent",
+      timestamp: new Date(msg.sentAt || msg.createdAt || new Date()),
+      status: "sent" as const,
       attachments,
     };
   }, []);
 
-  // Upsert helper to avoid duplicates (by id or clientId)
   const upsertServerMessage = useCallback((incoming: LocalMessage) => {
     setMessages((prev) => {
-      // 1) Replace by server id if exists
-      const byServerId = prev.findIndex((m) => m.id === incoming.id);
+      const cleanBlobs = (msg: LocalMessage) => {
+        msg.attachments?.forEach((a) => {
+          if (a.url.startsWith("blob:")) {
+            URL.revokeObjectURL(a.url);
+          }
+        });
+      };
+
+      const updated = [...prev];
+      const byServerId = updated.findIndex((m) => m.id === incoming.id);
       if (byServerId >= 0) {
-        const copy = prev.slice();
-        const keptClientId = prev[byServerId].clientId ?? incoming.clientId;
-        copy[byServerId] = {
+        cleanBlobs(updated[byServerId]);
+        updated[byServerId] = {
           ...incoming,
-          clientId: keptClientId,
+          clientId: updated[byServerId].clientId ?? incoming.clientId,
           status: "sent",
         };
-        return copy;
+        return updated;
       }
 
-      // 2) Replace by clientId if echoed
       if (incoming.clientId) {
-        const byClientId = prev.findIndex(
+        const byClientId = updated.findIndex(
           (m) => m.clientId === incoming.clientId
         );
         if (byClientId >= 0) {
-          const copy = prev.slice();
-          copy[byClientId] = {
-            ...incoming,
-            clientId: incoming.clientId,
-            status: "sent",
-          };
-          return copy;
+          cleanBlobs(updated[byClientId]);
+          updated[byClientId] = { ...incoming, status: "sent" };
+          return updated;
         }
       }
 
-      // 3) Fallback: latest "sending" from same sender and same text
-      const candidateIndex = [...prev]
+      const candidateIndex = [...updated]
         .map((m, i) => ({ m, i }))
         .reverse()
         .find(
           ({ m }) =>
             m.status === "sending" &&
             m.sender === incoming.sender &&
-            m.text === incoming.text
+            Math.abs(m.timestamp.getTime() - incoming.timestamp.getTime()) <
+              5000
         )?.i;
 
       if (candidateIndex !== undefined) {
-        const copy = prev.slice();
-        const keptClientId = copy[candidateIndex].clientId;
-        // optional: revoke blob URLs from optimistic preview to free memory
-        // copy[candidateIndex].attachments?.forEach(a => a.url.startsWith("blob:") && URL.revokeObjectURL(a.url));
-        copy[candidateIndex] = {
+        cleanBlobs(updated[candidateIndex]);
+        updated[candidateIndex] = {
           ...incoming,
-          clientId: keptClientId,
+          clientId: updated[candidateIndex].clientId,
           status: "sent",
         };
-        return copy;
+        return updated;
       }
 
-      // 4) Append if truly new
-      return [...prev, { ...incoming, status: "sent" }];
+      return [...updated, { ...incoming, status: "sent" }];
     });
   }, []);
 
-  // Fetch messages lazily for better control
-  const [fetchMessages, { error: messageError }] = useLazyQuery(GET_MESSAGES, {
+  const [fetchMessages] = useLazyQuery(GET_MESSAGES, {
     fetchPolicy: FETCH_POLICY_NO_CACHE,
+    onError: (error) => {
+      console.error("Failed to fetch messages:", error);
+    },
   });
 
-  // Initial load + when conversation changes
-  useEffect(() => {
-    const run = async () => {
-      if (!conversationId) {
-        setMessages([]);
-        return;
-      }
-      setIsLoading(true);
-      setError(null);
-      try {
-        const { data } = await fetchMessages({
-          variables: { conversationId, limit: 50, offset: 0 },
-        });
-        const serverMsgs: LocalMessage[] =
-          data?.messages
-            ?.map(normalizeServerMessage)
-            .sort(
-              (a: LocalMessage, b: LocalMessage) =>
-                a.timestamp.getTime() - b.timestamp.getTime()
-            ) ?? [];
-        setMessages(serverMsgs);
-        setHasShownError(false);
-      } catch (e) {
-        const msg =
-          e instanceof ApolloError
-            ? e.message
-            : (e as Error)?.message || "Failed to load messages";
-        setError(msg);
-        if (!hasShownError) {
-          toast.error(msg);
-          setHasShownError(true);
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    void run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, fetchMessages, normalizeServerMessage]);
+  const loadMessages = useCallback(async () => {
+    if (!conversationId) {
+      setMessages([]);
+      return;
+    }
 
-  // Manual refresh
-  const refetchMessages = useCallback(async () => {
-    if (!conversationId) return;
+    setIsLoading(true);
+    setError(null);
+
     try {
       const { data } = await fetchMessages({
         variables: { conversationId, limit: 50, offset: 0 },
       });
-      const serverMsgs: LocalMessage[] =
-        data?.messages
-          ?.map(normalizeServerMessage)
+
+      if (data?.messages) {
+        const serverMsgs: LocalMessage[] = data.messages
+          .map(normalizeServerMessage)
           .sort(
             (a: LocalMessage, b: LocalMessage) =>
               a.timestamp.getTime() - b.timestamp.getTime()
-          ) ?? [];
-      setMessages(serverMsgs);
+          );
+        setMessages(serverMsgs);
+        setHasShownError(false);
+      }
     } catch (e) {
       const msg =
         e instanceof ApolloError
           ? e.message
-          : (e as Error)?.message || "Failed to refresh messages";
+          : (e as Error)?.message || "Failed to load messages";
       setError(msg);
       if (!hasShownError) {
         toast.error(msg);
         setHasShownError(true);
       }
+    } finally {
+      setIsLoading(false);
     }
   }, [conversationId, fetchMessages, normalizeServerMessage, hasShownError]);
 
-  // Send mutation (no onCompleted; we reconcile manually)
-  const [sendMessageMutation] = useMutation(SEND_MESSAGE);
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  const refetchMessages = useCallback(async () => {
+    await loadMessages();
+  }, [loadMessages]);
+
+  const [sendMessageMutation] = useMutation(SEND_MESSAGE, {
+    onError: (error) => {
+      console.error("Send message error:", error);
+    },
+  });
 
   const handleSend = useCallback(
     async (text: string, files?: File[]) => {
@@ -217,41 +201,51 @@ export const useSellerChat = (conversationId?: string | null) => {
 
       const clientId = crypto.randomUUID();
       const optimisticAttachments =
-        files?.map((file) => ({
+        (files?.map((file) => ({
           id: crypto.randomUUID(),
-          url: URL.createObjectURL(file), // preview; consider revoking later
-          type: file.type.includes("video") ? "VIDEO" : "IMAGE",
-        })) ?? [];
+          url: URL.createObjectURL(file),
+          type: file.type.startsWith("video/")
+            ? "VIDEO"
+            : file.type.startsWith("image/")
+            ? "IMAGE"
+            : "DOCUMENT",
+        })) as {
+          id: string;
+          url: string;
+          type: "IMAGE" | "VIDEO";
+        }[]) ?? [];
 
       const optimistic: LocalMessage = {
-        id: clientId, // temp id for keying
+        id: clientId,
         clientId,
         text: text.trim(),
         sender: "seller",
         timestamp: new Date(),
         status: "sending",
-        attachments: optimisticAttachments,
+        attachments:
+          optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
       };
 
       setMessages((prev) => [...prev, optimistic]);
       setError(null);
 
       try {
-        // TODO: Upload files to storage and return [{ url, type }]
-        let uploadedAttachments:
-          | { url: string; type: "IMAGE" | "VIDEO" }[]
-          | undefined;
+        const tooBig = files?.find((f) => f.size > 10 * 1024 * 1024);
+        if (tooBig) throw new Error(`"${tooBig.name}" exceeds 10MB limit`);
 
-        if (files?.length) {
-          // uploadedAttachments = await uploadFilesToStorage(files);
-          uploadedAttachments = undefined; // placeholder
+        const uploadedAttachments = files?.length
+          ? await uploadFilesToStorage(files)
+          : undefined;
+
+        let msgType: "TEXT" | "IMAGE" | "VIDEO"  = "TEXT";
+
+        if (uploadedAttachments?.length) {
+          if (uploadedAttachments.some((a) => a.type === "VIDEO")) {
+            msgType = "VIDEO";
+          }  else {
+            msgType = "IMAGE";
+          }
         }
-
-        const msgType: "TEXT" | "IMAGE" | "VIDEO" = files?.length
-          ? files[0].type.includes("video")
-            ? "VIDEO"
-            : "IMAGE"
-          : "TEXT";
 
         const { data } = await sendMessageMutation({
           variables: {
@@ -260,27 +254,29 @@ export const useSellerChat = (conversationId?: string | null) => {
               content: text.trim() || undefined,
               type: msgType,
               attachments: uploadedAttachments,
-              clientId, // echo back from server to reconcile
+              clientId,
             },
           },
         });
 
         const serverMsg = data?.sendMessage;
-        if (!serverMsg) return;
+        if (!serverMsg) throw new Error("No server response");
 
-        const normalized = normalizeServerMessage(serverMsg);
-        if (!normalized.clientId) normalized.clientId = clientId; // fallback if server doesn’t echo
+        if (
+          uploadedAttachments &&
+          (!serverMsg.attachments || !serverMsg.attachments.length)
+        ) {
+          serverMsg.attachments = uploadedAttachments;
+        }
+
+        const normalized = normalizeServerMessage({ ...serverMsg, clientId });
         upsertServerMessage(normalized);
 
-        // Optional: revoke optimistic blob URLs after reconciliation
-        // optimisticAttachments.forEach((a) => a.url.startsWith("blob:") && URL.revokeObjectURL(a.url));
+        optimisticAttachments.forEach((a) => URL.revokeObjectURL(a.url));
       } catch (e: any) {
-        const msg = e?.message || "Failed to send message";
+        const msg = e?.message || "Failed to send";
         setError(msg);
-        if (!hasShownError) {
-          toast.error(msg);
-          setHasShownError(true);
-        }
+        toast.error(msg);
         setMessages((prev) =>
           prev.map((m) =>
             m.clientId === clientId ? { ...m, status: "failed" } : m
@@ -293,15 +289,12 @@ export const useSellerChat = (conversationId?: string | null) => {
       sendMessageMutation,
       normalizeServerMessage,
       upsertServerMessage,
-      hasShownError,
     ]
   );
 
-  // Realtime: upsert and dedupe
   const handleRealtimeNewMessage = useCallback(
     (payload: RealtimeEvents["message"]["newMessage"]) => {
       if (!payload) return;
-      // If your realtime payload includes clientId, it will reconcile cleanly
       const normalized = normalizeServerMessage(payload);
       upsertServerMessage(normalized);
     },
@@ -327,6 +320,6 @@ export const useSellerChat = (conversationId?: string | null) => {
     handleSend,
     isLoading,
     error,
-    refetchMessages, // manual refresh
+    refetchMessages,
   };
 };

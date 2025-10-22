@@ -1,8 +1,9 @@
+// client/message/message.query.ts
 import gql from "graphql-tag";
 
 export const GET_MESSAGES = gql`
-  query GetMessages($conversationId: ID!) {
-    messages(conversationId: $conversationId) {
+  query GetMessages($conversationId: ID!, $limit: Int = 50, $offset: Int = 0) {
+    messages(conversationId: $conversationId, limit: $limit, offset: $offset) {
       id
       content
       type
@@ -15,6 +16,11 @@ export const GET_MESSAGES = gql`
         firstName
         lastName
         role
+      }
+      attachments {
+        id
+        url
+        type
       }
     }
   }

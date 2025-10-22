@@ -19,6 +19,7 @@ const schema = {
       fileUrl: z.string().nullable().optional(),
       isRead: z.boolean(),
       clientId: z.string().optional(),
+      conversationId: z.string().optional(),
       sentAt: z.string(),
       sender: z.object({
         id: z.string(),

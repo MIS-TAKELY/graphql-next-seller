@@ -1,69 +1,75 @@
 // components/customers/MessageBubble.tsx
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { LocalMessage } from "@/hooks/chat/useSellerChat";
+import { LocalMessage } from "@/hooks/chat/useChat";
 import { cn } from "@/lib/utils";
-import React from "react";
+import { FileText } from "lucide-react";
 
 interface MessageBubbleProps {
   message: LocalMessage;
 }
 
-const MessageBubble: React.FC<MessageBubbleProps> = React.memo(({ message }) => (
-  <div
-    className={cn(
-      "flex gap-2",
-      message.sender === "seller" ? "justify-end" : "justify-start"
-    )}
-  >
-    {message.sender === "buyer" && (
-      <Avatar className="w-7 h-7 sm:w-8 sm:h-8 shrink-0">
-        <AvatarFallback className="text-xs">B</AvatarFallback>
-      </Avatar>
-    )}
+export default function MessageBubble({ message }: MessageBubbleProps) {
+  const isSeller = message.sender === "seller";
 
-    <div
-      className={cn(
-        "max-w-[75%] sm:max-w-[70%] px-3 py-2 rounded-2xl break-words",
-        message.sender === "seller"
-          ? "bg-primary text-primary-foreground rounded-br-sm"
-          : "bg-muted rounded-bl-sm"
-      )}
-    >
-      <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
-
-      {message.attachments?.length ? (
-        <div className="mt-2 flex flex-wrap gap-1">
-          {message.attachments.map((att, i) => (
-            <div key={`${att.id}-${i}`} className="w-16 h-16 rounded">
-              {att.type === "VIDEO" ? (
-                <video src={att.url} className="w-full h-full object-cover rounded" controls />
-              ) : (
-                <img src={att.url} alt="" className="w-full h-full object-cover rounded" />
-              )}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <p
+  return (
+    <div className={cn("flex", isSeller ? "justify-end" : "justify-start")}>
+      <div
         className={cn(
-          "text-[10px] sm:text-xs mt-1",
-          message.sender === "seller" ? "text-primary-foreground/70" : "text-muted-foreground"
+          "max-w-[70%] rounded-lg px-3 py-2",
+          isSeller ? "bg-primary text-primary-foreground" : "bg-muted"
         )}
       >
-        {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-        {message.status === "sending" && " • Sending..."}
-        {message.status === "failed" && " • Failed"}
-      </p>
+        {message.text && (
+          <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
+        )}
+
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="mt-2 space-y-2">
+            {message.attachments.map((attachment) => (
+              <div key={attachment.id}>
+                {attachment.type === "IMAGE" ? (
+                  <img
+                    src={attachment.url}
+                    alt="Attachment"
+                    className="rounded-md max-w-full h-auto"
+                    loading="lazy"
+                  />
+                ) : attachment.type === "VIDEO" ? (
+                  <video
+                    src={attachment.url}
+                    controls
+                    className="rounded-md max-w-full h-auto"
+                  />
+                ) : (
+                  <a
+                    href={attachment.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-sm text-blue-500 hover:underline"
+                  >
+                    <FileText className="w-5 h-5" />
+                    {attachment.url.split("/").pop() || "Document"}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs opacity-70">
+            {new Date(message.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </span>
+          {message.status === "sending" && (
+            <span className="text-xs opacity-70">Sending...</span>
+          )}
+          {message.status === "failed" && (
+            <span className="text-xs text-destructive">Failed</span>
+          )}
+        </div>
+      </div>
     </div>
-
-    {message.sender === "seller" && (
-      <Avatar className="w-7 h-7 sm:w-8 sm:h-8 shrink-0">
-        <AvatarFallback className="text-xs">You</AvatarFallback>
-      </Avatar>
-    )}
-  </div>
-));
-
-MessageBubble.displayName = "MessageBubble";
-export default MessageBubble;
+  );
+};

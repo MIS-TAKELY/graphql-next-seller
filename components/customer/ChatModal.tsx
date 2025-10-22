@@ -10,18 +10,24 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import type { LocalMessage } from "@/hooks/chat/useSellerChat";
 import type { Conversation } from "@/types/customer/customer.types";
-import { MessageCircleMore, Send } from "lucide-react";
+import { MessageCircleMore, Send, Paperclip, X, File, FileText } from "lucide-react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
+import { LocalMessage } from "@/hooks/chat/useChat";
+
+interface SelectedFile {
+  file: File;
+  preview?: string;
+  name: string;
+}
 
 interface ChatModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   selectedConversationId: string | null;
   messages: LocalMessage[];
-  onSend: (text: string) => void;
+  onSend: (text: string, files?: File[]) => void;
   isLoading: boolean;
   error: string | null;
   recieverId: string;
@@ -39,19 +45,27 @@ export default function ChatModal({
   error,
 }: ChatModalProps) {
   const [inputValue, setInputValue] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const selectedConversation = selectedConversationId
     ? conversation.find((c) => c.id === selectedConversationId)
     : null;
 
-  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    return () => {
+      selectedFiles.forEach(({ preview }) => {
+        if (preview) URL.revokeObjectURL(preview);
+      });
+    };
+  }, [selectedFiles]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages.length]);
+  }, [messages]);
 
-  // Focus input when opened
   useEffect(() => {
     if (open && inputRef.current) {
       const timeout = setTimeout(() => inputRef.current?.focus(), 100);
@@ -59,12 +73,44 @@ export default function ChatModal({
     }
   }, [open]);
 
+  const handleAttachClick = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const newFilesWithPreview: SelectedFile[] = newFiles.map((file) => {
+        let preview: string | undefined = undefined;
+        if (file.type.startsWith("image/") || file.type.startsWith("video/")) {
+          preview = URL.createObjectURL(file);
+        }
+        return { file, preview, name: file.name };
+      });
+      setSelectedFiles((prev) => [...prev, ...newFilesWithPreview]);
+      e.target.value = "";
+    }
+  }, []);
+
+  const handleRemoveFile = useCallback((index: number) => {
+    const fileToRemove = selectedFiles[index];
+    if (fileToRemove.preview) {
+      URL.revokeObjectURL(fileToRemove.preview);
+    }
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  }, [selectedFiles]);
+
   const handleSendMessage = useCallback(() => {
     const trimmed = inputValue.trim();
-    if (!trimmed) return;
-    onSend(trimmed);
+    if (!trimmed && selectedFiles.length === 0) return;
+    const filesToSend = selectedFiles.map((sf) => sf.file);
+    onSend(trimmed, filesToSend);
+    selectedFiles.forEach(({ preview }) => {
+      if (preview) URL.revokeObjectURL(preview);
+    });
     setInputValue("");
-  }, [inputValue, onSend]);
+    setSelectedFiles([]);
+  }, [inputValue, selectedFiles, onSend]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -77,6 +123,16 @@ export default function ChatModal({
   );
 
   const disableComposer = isLoading || !selectedConversationId;
+  const hasContent = inputValue.trim() || selectedFiles.length > 0;
+
+  const getFileIcon = (sf: SelectedFile) => {
+    if (sf.preview) return null;
+    const nameLower = sf.name.toLowerCase();
+    if (nameLower.endsWith(".pdf") || nameLower.endsWith(".doc") || nameLower.endsWith(".docx")) {
+      return <FileText className="w-6 h-6 text-muted-foreground" />;
+    }
+    return <File className="w-6 h-6 text-muted-foreground" />;
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -120,21 +176,39 @@ export default function ChatModal({
 
         <div className="border-t px-4 sm:px-6 py-3 sm:py-4 shrink-0 bg-background">
           <div className="flex gap-2">
+            <Button
+              type="button"
+              onClick={handleAttachClick}
+              disabled={disableComposer}
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              aria-label="Attach file"
+            >
+              <Paperclip className="w-4 h-4" />
+            </Button>
             <Input
               ref={inputRef}
+              type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={
-                disableComposer ? "Loading..." : "Type your message..."
-              }
+              placeholder={disableComposer ? "Loading..." : "Type your message..."}
               className="flex-1 text-sm"
               maxLength={500}
               disabled={disableComposer}
             />
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleFileChange}
+              multiple
+              accept="image/*,video/*,application/pdf,.doc,.docx"
+              className="hidden"
+            />
             <Button
               onClick={handleSendMessage}
-              disabled={!inputValue.trim() || disableComposer}
+              disabled={!hasContent || disableComposer}
               size="icon"
               className="shrink-0"
               aria-label="Send message"
@@ -142,6 +216,44 @@ export default function ChatModal({
               <Send className="w-4 h-4" />
             </Button>
           </div>
+          {selectedFiles.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              {selectedFiles.map((sf, index) => (
+                <div
+                  key={index}
+                  className="flex items-center gap-1 bg-muted rounded-md px-2 py-1"
+                >
+                  {sf.preview ? (
+                    sf.file.type.startsWith("image/") ? (
+                      <img
+                        src={sf.preview}
+                        alt={sf.name}
+                        className="w-6 h-6 object-cover rounded"
+                      />
+                    ) : sf.file.type.startsWith("video/") ? (
+                      <video
+                        src={sf.preview}
+                        className="w-6 h-6 object-cover rounded"
+                      />
+                    ) : (
+                      getFileIcon(sf)
+                    )
+                  ) : (
+                    getFileIcon(sf)
+                  )}
+                  <span className="text-xs truncate max-w-20">{sf.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveFile(index)}
+                    className="h-4 w-4 p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
           {inputValue.length > 400 && (
             <p className="text-[10px] sm:text-xs text-muted-foreground mt-1">
               {500 - inputValue.length} characters remaining
@@ -151,4 +263,4 @@ export default function ChatModal({
       </DialogContent>
     </Dialog>
   );
-}
+};

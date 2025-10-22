@@ -1,5 +1,4 @@
 // servers/gql/messageResolvers.ts
-
 import { realtime } from "@/lib/realtime";
 import { GraphQLContext } from "../../context";
 
@@ -9,7 +8,7 @@ export const messageResolvers = {
       _parent: any,
       {
         conversationId,
-        limit = 20,
+        limit = 50,
         offset = 0,
       }: { conversationId: string; limit?: number; offset?: number },
       { prisma, user }: GraphQLContext
@@ -18,7 +17,6 @@ export const messageResolvers = {
         throw new Error("Unauthorized: User must be logged in.");
       }
 
-      // Verify user participation in the conversation
       const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
         select: { senderId: true, recieverId: true },
@@ -29,16 +27,12 @@ export const messageResolvers = {
       }
 
       const isParticipant =
-        conversation.senderId === user.id ||
-        conversation.recieverId === user.id;
+        conversation.senderId === user.id || conversation.recieverId === user.id;
 
       if (!isParticipant) {
-        throw new Error(
-          "Unauthorized: You are not a participant in this conversation."
-        );
+        throw new Error("Unauthorized: You are not a participant.");
       }
 
-      // Fetch messages with attachments and sender info
       const messages = await prisma.message.findMany({
         where: { conversationId },
         include: {
@@ -53,12 +47,16 @@ export const messageResolvers = {
           },
           MessageAttachment: true,
         },
-        orderBy: { sentAt: "asc" }, // old to new
+        orderBy: { sentAt: "asc" },
         skip: offset,
         take: limit,
       });
 
-      return messages;
+      // Map to match GraphQL schema field names
+      return messages.map((msg) => ({
+        ...msg,
+        attachments: msg.MessageAttachment || [],
+      }));
     },
   },
   Mutation: {
@@ -70,17 +68,15 @@ export const messageResolvers = {
         input: {
           conversationId: string;
           content?: string;
-          type?: string;
-          clientId?: string | undefined;
+          type: string;
+          clientId?: string;
           attachments?: Array<{ url: string; type: string }>;
         };
       },
-      { prisma, user }: GraphQLContext // Removed 'publish' since we'll use direct realtime emit
+      { prisma, user }: GraphQLContext
     ): Promise<any> => {
       if (!user) {
-        throw new Error(
-          "Unauthorized: User must be logged in to send a message."
-        );
+        throw new Error("Unauthorized: User must be logged in.");
       }
 
       const {
@@ -96,10 +92,8 @@ export const messageResolvers = {
           | "TEXT"
           | "IMAGE"
           | "VIDEO"
-          | "SYSTEM"
-          | undefined) ?? "TEXT";
+          | "SYSTEM") ?? "TEXT";
 
-      // Validate conversation and user's participation
       const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
         include: {
@@ -114,15 +108,11 @@ export const messageResolvers = {
       }
 
       const isParticipant =
-        conversation.senderId === user.id ||
-        conversation.recieverId === user.id;
+        conversation.senderId === user.id || conversation.recieverId === user.id;
       if (!isParticipant) {
-        throw new Error(
-          "Unauthorized: You are not a participant in this conversation."
-        );
+        throw new Error("Unauthorized: You are not a participant.");
       }
 
-      // Transaction to create message and attachments atomically
       const result = await prisma.$transaction(async (tx) => {
         const message = await tx.message.create({
           data: {
@@ -132,6 +122,8 @@ export const messageResolvers = {
             type: prismaType,
             clientId,
             fileUrl: attachments.length > 0 ? null : undefined,
+            isRead: false,
+            sentAt: new Date(),
           },
           include: {
             sender: {
@@ -143,11 +135,10 @@ export const messageResolvers = {
                 role: true,
               },
             },
-            MessageAttachment: true, // <-- Correct relation name
+            MessageAttachment: true,
           },
         });
 
-        // If you create attachments
         if (attachments.length > 0) {
           await tx.messageAttachment.createMany({
             data: attachments.map((att) => ({
@@ -169,7 +160,7 @@ export const messageResolvers = {
                   role: true,
                 },
               },
-              MessageAttachment: true, // <-- again, exact relation name
+              MessageAttachment: true,
             },
           });
 
@@ -178,47 +169,46 @@ export const messageResolvers = {
 
         return message;
       });
+
       if (!result) throw new Error("Unable to save message in database");
+
+      // Map for GraphQL response
+      const graphqlResult = {
+        ...result,
+        attachments: result.MessageAttachment || [],
+      };
+
       const channel = `conversation:${conversationId}`;
-      console.log("channel--------------->", channel);
-      console.log("result-->", result);
       try {
-        // Emit using the nested event path: realtime.message.newMessage.emit(payload)
-        // Payload matches the schema for message.newMessage (direct message object)
         await realtime.channel(channel).message.newMessage.emit({
           id: result.id,
+          conversationId,
           content: result.content || "",
           type: result.type,
           clientId,
-          fileUrl: result.fileUrl || "",
-          isRead: result.isRead || false,
+          fileUrl: result.fileUrl || null,
+          isRead: result.isRead,
           sentAt: result.sentAt.toISOString(),
           sender: result.sender,
-          attachments:
-            result.MessageAttachment?.map((att: any) => ({
-              id: att.id,
-              url: att.url,
-              type: att.type as "IMAGE" | "VIDEO",
-            })) || [],
+          attachments: (result.MessageAttachment || []).map((att) => ({
+            id: att.id,
+            url: att.url,
+            type: att.type as "IMAGE" | "VIDEO",
+          })),
         });
       } catch (error) {
-        console.error("Failed to publish message to Upstash Realtime:", error);
-        // Don't throw; DB write succeeded, real-time is best-effort
+        console.error("Failed to publish to Upstash Realtime:", error);
       }
 
-      // Mark as unread for the other participant (adjust logic if needed for your unreadCount)
       await prisma.conversationParticipant.updateMany({
         where: {
           conversationId,
-          userId: { not: user.id }, // Update the other participant's lastReadAt if needed
+          userId: { not: user.id },
         },
-        data: { lastReadAt: null }, // Reset to force unread status; adjust logic as needed
+        data: { lastReadAt: null },
       });
 
-      return { ...result, clientId };
+      return { ...graphqlResult, clientId };
     },
   },
 };
-
-// Merge into your main resolvers
-// e.g., const resolvers = { ...yourExistingResolvers, ...messageResolvers };
