@@ -36,26 +36,26 @@
 		{
 			"id": "pointer:pointer",
 			"typeName": "pointer",
-			"x": 675.0046906146044,
-			"y": 203.72852510175971,
-			"lastActivityTimestamp": 1760439622295,
+			"x": 383.3512063072791,
+			"y": 808.030122287512,
+			"lastActivityTimestamp": 1762360779215,
 			"meta": {}
 		},
 		{
-			"x": -66.33112300032147,
-			"y": -74.00598984572956,
-			"z": 1.5810051417394275,
+			"x": -71.9152321861853,
+			"y": -552.250108249426,
+			"z": 1,
 			"meta": {},
 			"id": "camera:page:page",
 			"typeName": "camera"
 		},
 		{
-			"editingShapeId": null,
+			"editingShapeId": "shape:bjsveTukGlfOAF63588zt",
 			"croppingShapeId": null,
 			"selectedShapeIds": [
-				"shape:slPYXUBGPhAmmC5htUAu6"
+				"shape:bjsveTukGlfOAF63588zt"
 			],
-			"hoveredShapeId": null,
+			"hoveredShapeId": "shape:bjsveTukGlfOAF63588zt",
 			"erasingShapeIds": [],
 			"hintingShapeIds": [],
 			"focusedGroupId": null,
@@ -143,6 +143,141 @@
 			"typeName": "shape"
 		},
 		{
+			"x": 377.77121973501346,
+			"y": 589.726068384191,
+			"rotation": 0,
+			"isLocked": false,
+			"opacity": 1,
+			"meta": {},
+			"id": "shape:bjsveTukGlfOAF63588zt",
+			"type": "text",
+			"props": {
+				"color": "black",
+				"size": "m",
+				"w": 427.7979736328125,
+				"font": "draw",
+				"textAlign": "start",
+				"autoSize": true,
+				"scale": 1,
+				"richText": {
+					"type": "doc",
+					"content": [
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "fashio✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "products✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "beauti✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "home and kitchen✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "laptop✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "mobile✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "man-fashion✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "health✅"
+								}
+							]
+						},
+						{
+							"type": "paragraph",
+							"attrs": {
+								"dir": "auto"
+							},
+							"content": [
+								{
+									"type": "text",
+									"text": "grocery✅ but all wrong category"
+								}
+							]
+						}
+					]
+				}
+			},
+			"parentId": "page:page",
+			"index": "a49jkluV",
+			"typeName": "shape"
+		},
+		{
 			"x": 193.3667590582656,
 			"y": 239.06806636589624,
 			"rotation": 0,
@@ -196,14 +331,7 @@
 		{
 			"followingUserId": null,
 			"opacityForNextShape": 1,
-			"stylesForNextShape": {
-				"tldraw:size": "s",
-				"tldraw:geo": "rectangle",
-				"tldraw:font": "mono",
-				"tldraw:fill": "none",
-				"tldraw:dash": "draw",
-				"tldraw:color": "black"
-			},
+			"stylesForNextShape": {},
 			"brush": null,
 			"scribbles": [],
 			"cursor": {
@@ -217,8 +345,8 @@
 			"screenBounds": {
 				"x": 0,
 				"y": 0,
-				"w": 1094.39990234375,
-				"h": 1243.0079345703125
+				"w": 935.4239501953125,
+				"h": 593.2799682617188
 			},
 			"insets": [
 				false,
@@ -235,9 +363,9 @@
 			"isFocused": true,
 			"devicePixelRatio": 0.8680555820465088,
 			"isCoarsePointer": false,
-			"isHoveringCanvas": false,
+			"isHoveringCanvas": true,
 			"openMenus": [],
-			"isChangingStyle": true,
+			"isChangingStyle": false,
 			"isReadonly": false,
 			"meta": {},
 			"duplicateProps": null,

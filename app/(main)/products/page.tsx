@@ -33,12 +33,14 @@ export default function ProductsPage() {
     }
   );
 
+  // console.log("productsData page---->",productsData)
+
   const filteredProducts = React.useMemo(() => {
-    if (!productsData?.getMyProducts || productsDataLoading) {
+    if (!productsData?.getMyProducts?.products || productsDataLoading) {
       return [];
     }
 
-    return productsData.getMyProducts.filter((product: Product) => {
+    return productsData.getMyProducts.products.filter((product: Product) => {
       const matchesSearch =
         product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (product.variants?.[0]?.sku || "")
@@ -90,7 +92,7 @@ export default function ProductsPage() {
       <ProductsPageHeader />
 
       <ProductStatsCards
-        products={productsData?.getMyProducts || []}
+        products={productsData?.getMyProducts?.products || []}
         isLoading={productsDataLoading}
       />
 

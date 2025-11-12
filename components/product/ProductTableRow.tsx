@@ -13,7 +13,7 @@ interface ProductTableRowProps {
 }
 
 export function ProductTableRow({ product, onDelete }: ProductTableRowProps) {
-  console.log("product-->", product);
+  // console.log("product-->", product);
   return (
     <TableRow key={product?.id}>
       <TableCell>

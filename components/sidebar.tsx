@@ -33,7 +33,7 @@ const sidebarNavItems = [
     children: [
       { title: "All Products", href: "/products" },
       { title: "Add Product", href: "/products/add" },
-      { title: "Categories", href: "/products/categories" },
+      // { title: "Categories", href: "/products/categories" },
       { title: "Inventory", href: "/products/inventory" },
     ],
   },

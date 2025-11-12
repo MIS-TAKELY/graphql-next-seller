@@ -24,6 +24,7 @@ export default async function EditProductPage(props: EditProductPageProps) {
       client.query({
         query: GET_PRODUCT,
         variables: { productId },
+        fetchPolicy:"no-cache"
       }),
       client.query({
         query: GET_PRODUCT_CATEGORIES,

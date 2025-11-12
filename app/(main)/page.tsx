@@ -1,17 +1,24 @@
-import { Suspense } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DashboardOverview } from "@/components/dashboard/dashboard-overview"
-import { RecentOrders } from "@/components/dashboard/recent-orders"
-import { SalesChart } from "@/components/dashboard/sales-chart"
-import { TopProducts } from "@/components/dashboard/top-products"
-import { QuickActions } from "@/components/dashboard/quick-actions"
+import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
+import { QuickActions } from "@/components/dashboard/quick-actions";
+import { RecentOrders } from "@/components/dashboard/recent-orders";
+import { SalesChart } from "@/components/dashboard/sales-chart";
+import { TopProducts } from "@/components/dashboard/top-products";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   return (
     <div className="flex-1 space-y-3 sm:space-y-4">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h2>
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
+          Dashboard
+        </h2>
       </div>
       <Tabs defaultValue="overview" className="space-y-3 sm:space-y-4">
         <TabsList className="grid w-full grid-cols-2">
@@ -25,20 +32,24 @@ export default function DashboardPage() {
         <TabsContent value="overview" className="space-y-3 sm:space-y-4">
           <DashboardOverview />
           <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-7">
-            <Card className="col-span-1 lg:col-span-4">
+            <Card className="col-span-1 lg:col-span-4 overflow-hidden">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">Sales Overview</CardTitle>
+                <CardTitle className="text-base sm:text-lg">
+                  Sales Overview
+                </CardTitle>
               </CardHeader>
-              <CardContent className="pl-2">
-                <Suspense fallback={<div className="text-sm">Loading chart...</div>}>
-                  <SalesChart />
-                </Suspense>
+              <CardContent className="p-0 sm:p-2">
+                <SalesChart />
               </CardContent>
             </Card>
             <Card className="col-span-1 lg:col-span-3">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">Recent Orders</CardTitle>
-                <CardDescription className="text-sm">You have 265 orders this month.</CardDescription>
+                <CardTitle className="text-base sm:text-lg">
+                  Recent Orders
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  You have 265 orders this month.
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <RecentOrders />
@@ -48,7 +59,9 @@ export default function DashboardPage() {
           <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-7">
             <Card className="col-span-1 lg:col-span-4">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">Top Products</CardTitle>
+                <CardTitle className="text-base sm:text-lg">
+                  Top Products
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <TopProducts />
@@ -56,8 +69,12 @@ export default function DashboardPage() {
             </Card>
             <Card className="col-span-1 lg:col-span-3">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">Quick Actions</CardTitle>
-                <CardDescription className="text-sm">Manage your store efficiently</CardDescription>
+                <CardTitle className="text-base sm:text-lg">
+                  Quick Actions
+                </CardTitle>
+                <CardDescription className="text-sm">
+                  Manage your store efficiently
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <QuickActions />
@@ -71,5 +88,5 @@ export default function DashboardPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

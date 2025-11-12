@@ -3,8 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm:dev:next\" \"npm:dev:server\"",
-    "dev:next": "next dev  --turbopack",
+    "dev": "next dev  --turbopack",
     "dev:server": "tsx watch index.ts",
     "build": "next build --turbopack",
     "start": "next start",

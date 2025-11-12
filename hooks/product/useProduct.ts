@@ -20,7 +20,12 @@ export interface ProductVariant {
 }
 
 export interface Product {
-  category: string | null;
+  category: {
+    __typename: string;
+    id: string;
+    name: string;
+    children: any[];
+  } | null;
   id: string;
   images: ProductImage[];
   name: string;
@@ -32,7 +37,11 @@ export interface Product {
 }
 
 export interface GetMyProductsData {
-  getMyProducts: Product[];
+  getMyProducts: {
+    __typename: string;
+    products: Product[];
+    percentChange: number;
+  };
 }
 
 export const useProduct = () => {
@@ -59,13 +68,21 @@ export const useProduct = () => {
           query: GET_MY_PRODUCTS,
         });
 
-        const updatedProducts = (existing?.getMyProducts || []).filter(
+        if (!existing?.getMyProducts) return;
+
+        const updatedProducts = existing.getMyProducts.products.filter(
           (p) => p.id !== productId
         );
 
         cache.writeQuery({
           query: GET_MY_PRODUCTS,
-          data: { getMyProducts: updatedProducts },
+          data: {
+            getMyProducts: {
+              __typename: "getMyProductsResponse",
+              products: updatedProducts,
+              percentChange: existing.getMyProducts.percentChange ?? 0,
+            },
+          },
         });
       } catch (error) {
         console.error("Error updating cache for delete:", error);
@@ -74,6 +91,9 @@ export const useProduct = () => {
     optimisticResponse: (vars) => ({
       deleteProduct: true,
     }),
+    onError: (error) => {
+      toast.error("Failed to delete product. Changes reverted.");
+    },
   });
 
   const [addProduct] = useMutation(ADD_PRODUCT, {
@@ -85,6 +105,8 @@ export const useProduct = () => {
         const existing: GetMyProductsData | null = cache.readQuery({
           query: GET_MY_PRODUCTS,
         });
+
+        if (!existing?.getMyProducts) return;
 
         const tempId = "temp-" + Date.now();
 
@@ -102,21 +124,18 @@ export const useProduct = () => {
             }
           : null;
 
-        const optimisticProduct = {
-          __typename: "Product",
+        // ✅ Get category with name field from existing data or don't include it
+        const existingCategory = existing.getMyProducts.products.find(
+          (p) => p.category?.id === actualInput.categoryId
+        )?.category;
+
+        const optimisticProduct: Product = {
           id: tempId,
           name: actualInput.name,
           slug,
           description: actualInput.description || "",
           brand: actualInput.brand || "",
-          category: actualInput.categoryId
-            ? {
-                __typename: "Category",
-                id: actualInput.categoryId,
-                parent: null,
-                children: [],
-              }
-            : null,
+          category: existingCategory || null,
           images:
             actualInput.images?.map((img, index) => ({
               __typename: "ProductImage",
@@ -129,7 +148,7 @@ export const useProduct = () => {
           status: "DRAFT",
         };
 
-        const productExists = existing?.getMyProducts?.some(
+        const productExists = existing.getMyProducts.products.some(
           (p) => p.id === optimisticProduct.id
         );
 
@@ -137,10 +156,14 @@ export const useProduct = () => {
           cache.writeQuery({
             query: GET_MY_PRODUCTS,
             data: {
-              getMyProducts: [
-                ...(existing?.getMyProducts || []),
-                optimisticProduct,
-              ],
+              getMyProducts: {
+                __typename: "getMyProductsResponse",
+                products: [
+                  ...existing.getMyProducts.products,
+                  optimisticProduct,
+                ],
+                percentChange: existing.getMyProducts.percentChange ?? 0,
+              },
             },
           });
         }
@@ -148,25 +171,66 @@ export const useProduct = () => {
         console.error("Error updating cache for add:", error);
       }
     },
-    optimisticResponse: (vars) => ({
-      addProduct: true,
-    }),
+    optimisticResponse: (vars) => {
+      const input = vars?.input;
+      const tempId = "temp-" + Date.now();
+      const slug = input?.name
+        ? input.name
+            .toLowerCase()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "")
+        : "temp-product";
+
+      return {
+        addProduct: {
+          __typename: "Product",
+          id: tempId,
+          name: input?.name || "",
+          slug,
+          description: input?.description || "",
+          brand: input?.brand || "",
+          category: null,
+          images:
+            input?.images?.map((img: Media, index: number) => ({
+              __typename: "ProductImage",
+              url: img.url,
+              altText: img.altText || null,
+              sortOrder: img.sortOrder ?? index,
+              mediaType: img.mediaType || "PRIMARY",
+            })) || [],
+          variants: input?.variants
+            ? [
+                {
+                  __typename: "ProductVariant",
+                  ...input.variants,
+                },
+              ]
+            : [],
+          status: "DRAFT",
+        },
+      };
+    },
+    onError: (error) => {
+      toast.error("Failed to create product. Please try again.");
+      router.push("/products"); // Stay on products page
+    },
   });
 
   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
     try {
-      toast.success("Product has been created successfully!");
-      router.push("/products");
       if (!productInput.name) throw new Error("Product name is required");
       if (!productInput.images || productInput.images.length === 0)
         throw new Error("At least one image is required");
       if (!productInput.variants?.sku)
         throw new Error("Product variant SKU is required");
 
-      const mutationVariables = { input: productInput };
+      // ✅ Show immediate feedback
+      toast.success("Creating product...");
+      router.push("/products"); // ✅ Navigate immediately
 
-      await addProduct({
-        variables: mutationVariables,
+      // Mutation happens in background
+      addProduct({
+        variables: { input: productInput },
       });
     } catch (error: any) {
       console.error("Error creating product:", error);
@@ -180,11 +244,13 @@ export const useProduct = () => {
     try {
       if (!productId) throw new Error("Product ID is required");
 
-      await deleteProduct({
+      // ✅ Show immediate feedback
+      toast.success("Deleting product...");
+
+      // Mutation happens with optimistic response
+      deleteProduct({
         variables: { productId },
       });
-
-      toast.success("Product has been deleted successfully!");
     } catch (error: any) {
       console.error("Error deleting product:", error);
       toast.error(
@@ -192,9 +258,8 @@ export const useProduct = () => {
       );
     }
   };
-  const [updateProduct] = useMutation(UPDATE_PRODUCT, {
-    // Before making optimistic update — store snapshot
 
+  const [updateProduct] = useMutation(UPDATE_PRODUCT, {
     update: (cache, { data }, { variables }) => {
       try {
         const actualInput: any = variables?.input;
@@ -204,7 +269,14 @@ export const useProduct = () => {
           query: GET_MY_PRODUCTS,
         });
 
-        const updatedProducts = (existing?.getMyProducts || []).map((p) => {
+        if (!existing?.getMyProducts) return;
+
+        // ✅ Get existing category with name field
+        const existingCategory = existing.getMyProducts.products.find(
+          (p) => p.category?.id === actualInput.categoryId
+        )?.category;
+
+        const updatedProducts = existing.getMyProducts.products.map((p) => {
           if (p.id !== actualInput.id) return p;
 
           const variant = actualInput.variants
@@ -220,15 +292,10 @@ export const useProduct = () => {
             description: actualInput.description ?? p.description,
             brand: actualInput.brand ?? p.brand,
             category: actualInput.categoryId
-              ? {
-                  __typename: "Category",
-                  id: actualInput.categoryId,
-                  parent: null,
-                  children: [],
-                }
+              ? existingCategory || p.category
               : p.category,
             images:
-              actualInput.images?.map((img:Media, index:number) => ({
+              actualInput.images?.map((img: Media, index: number) => ({
                 __typename: "ProductImage",
                 url: img.url,
                 altText: img.altText || null,
@@ -241,33 +308,73 @@ export const useProduct = () => {
 
         cache.writeQuery({
           query: GET_MY_PRODUCTS,
-          data: { getMyProducts: updatedProducts },
+          data: {
+            getMyProducts: {
+              __typename: "getMyProductsResponse",
+              products: updatedProducts,
+              percentChange: existing.getMyProducts.percentChange ?? 0,
+            },
+          },
         });
       } catch (error) {
         console.error("Error updating cache for update:", error);
       }
     },
-    optimisticResponse: (vars) => ({
-      updateProduct: true,
-    }),
-    onError: (error, options) => {
-      if (options?.context?.previous) {
-        client.cache.writeQuery({
-          query: GET_MY_PRODUCTS,
-          data: options.context.previous,
-        });
-      }
+    optimisticResponse: (vars) => {
+      const input = vars?.input;
+      
+      return {
+        updateProduct: {
+          __typename: "Product",
+          id: input?.id || "",
+          name: input?.name || "",
+          slug: input?.name
+            ? input.name
+                .toLowerCase()
+                .replace(/\s+/g, "-")
+                .replace(/[^a-z0-9-]/g, "")
+            : "",
+          description: input?.description || "",
+          brand: input?.brand || "",
+          category: null, // Will be merged from cache
+          images:
+            input?.images?.map((img: Media, index: number) => ({
+              __typename: "ProductImage",
+              url: img.url,
+              altText: img.altText || null,
+              sortOrder: img.sortOrder ?? index,
+              mediaType: img.mediaType || "PRIMARY",
+            })) || [],
+          variants: input?.variants
+            ? [
+                {
+                  __typename: "ProductVariant",
+                  ...input.variants,
+                },
+              ]
+            : [],
+          status: "ACTIVE",
+        },
+      };
+    },
+    onError: (error) => {
+      toast.error("Failed to update product. Changes reverted.");
+      router.push("/products"); // Navigate back on error
     },
   });
+
   const handleUpdateHandler = async (
     productInput: ICreateProductInput & { id: string }
   ) => {
     try {
       if (!productInput.id) throw new Error("Product ID is required");
 
-      toast.success("Product has been updated successfully!");
-      router.push("/products");
-      await updateProduct({
+      // ✅ Show immediate feedback
+      toast.success("Updating product...");
+      router.push("/products"); // ✅ Navigate immediately
+
+      // Mutation happens in background
+      updateProduct({
         variables: { input: productInput },
       });
     } catch (error: any) {

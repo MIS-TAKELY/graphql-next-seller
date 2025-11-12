@@ -59,7 +59,7 @@ export const productTypeDefs = gql`
     description: String
     categoryId: String
     brand: String
-    variants: CreateProductVariantInput
+    variants: UpdateProductVariantInput
     productOffers: [CreateProductOfferInput!]
     deliveryOptions: [CreateDeliveryOptionInput!]
     warranty: [CreateWarrantyInput!]
@@ -67,10 +67,17 @@ export const productTypeDefs = gql`
     images: [CreateProductImageInput!]
   }
 
+  type getMyProductsResponse {
+    products: [Product]
+    currentMonthCount: Float
+    previousMonthCount: Float
+    percentChange: Float
+  }
+
   type Query {
     getProducts: [Product!]!
     getProduct(productId: ID!): Product!
-    getMyProducts: [Product!]!
+    getMyProducts: getMyProductsResponse
   }
 
   type Mutation {

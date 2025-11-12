@@ -11,6 +11,8 @@ import { categorySpecificationsTypeDefs } from "./modules/categorySpecification/
 import { categorySpecificationResolvers } from "./modules/categorySpecification/categorySpecifications.resolvers";
 import { conversationResolvers } from "./modules/conversation/conversation.resolvers";
 import { conversationTypedefs } from "./modules/conversation/conversaton.typeDefs";
+import { dashboardResolvers } from "./modules/dashboard/dashboard.resolvers";
+import { dashboardTyprDefs } from "./modules/dashboard/dashboard.typeDefs";
 import { deliveryTypedefs } from "./modules/delivery/delivery.typeDefs";
 import { messageResolvers } from "./modules/message/message.resolvers";
 import { messageTypedefs } from "./modules/message/message.typeDefs";
@@ -27,6 +29,7 @@ import { productSpecificationTypeDefs } from "./modules/productSpecification/pro
 import { productVariantTypeDefs } from "./modules/productVariant/productVariant.typeDefs";
 import { returnTypedefs } from "./modules/return/return.typeDefs";
 import { reviewTypeDefs } from "./modules/review/review.typeDefs";
+import { sellerOrderResolver } from "./modules/sellerOrder/sellerOrder.resolvers";
 import { sellerOrderTypeDefs } from "./modules/sellerOrder/sellerOrder.typeDefs";
 import { sellerOrderItemTypeDefs } from "./modules/sellerOrderItem/sellerOrderItem.typeDefs";
 import { shipmentTypeDefs } from "./modules/shipment/shipment.typeDefs";
@@ -74,6 +77,7 @@ const typeDefs = mergeTypeDefs([
   warrentyTypeDefs,
   messageTypedefs,
   conversationTypedefs,
+  dashboardTyprDefs,
 ]);
 
 const resolvers = mergeResolvers([
@@ -83,6 +87,8 @@ const resolvers = mergeResolvers([
   categorySpecificationResolvers,
   messageResolvers,
   conversationResolvers,
+  dashboardResolvers,
+  sellerOrderResolver,
 ]);
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers });

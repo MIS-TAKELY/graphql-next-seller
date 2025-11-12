@@ -30,4 +30,22 @@ export const sellerOrderTypeDefs = gql`
     seller: User!
     items: [SellerOrderItem!]
   }
+
+  type getSellerOrdersResponse {
+    sellerOrder: [SellerOrder]
+    currentOrderCount: Float
+    previousOrderCount: Float
+    percentChange: Float
+  }
+
+  type getActiveUsersForSellerResponse {
+    currentActiveUsers: Float
+    previousActiveUsers: Float
+    percentChange: Float
+  }
+
+  type Query {
+    getSellerOrders: getSellerOrdersResponse
+    getActiveUsersForSeller: getActiveUsersForSellerResponse!
+  }
 `;

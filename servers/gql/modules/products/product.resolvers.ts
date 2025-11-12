@@ -67,13 +67,13 @@ export const productResolvers = {
       requireAuth(ctx);
 
       if (!productId) throw new Error("Product id is required");
-      const cacheKey = `products:${productId}`;
+      // const cacheKey = `products:${productId}`;
 
-      const cached = await getCache(cacheKey);
-      if (cached) {
-        console.log("⚡ returning product from cache");
-        return cached;
-      }
+      // const cached = await getCache(cacheKey);
+      // if (cached) {
+      //   console.log("⚡ returning product from cache");
+      //   return cached;
+      // }
 
       console.log("💾 caching product (miss)");
       const product = await prisma.product.findUnique({
@@ -111,10 +111,10 @@ export const productResolvers = {
         },
       });
 
-      if (product) {
-        // Only cache if fou  nd
-        await setCache(cacheKey, product);
-      }
+      // if (product) {
+      //   // Only cache if fou  nd
+      //   await setCache(cacheKey, product);
+      // }
 
       return product;
     },
@@ -126,47 +126,75 @@ export const productResolvers = {
 
         if (!userId) throw new Error("Invalid user");
 
-        const cacheKey = `products:${userId}`;
-
-        const cached = await getCache(cacheKey);
-        if (cached) {
-          console.log("⚡ returning my_product from cache");
-          return cached;
-        }
-
         console.log("💾 caching product (miss)");
+
+        const prisma = ctx.prisma;
+
+        // Fetch all products for this seller
         const products = await prisma.product.findMany({
           where: { sellerId: userId },
           include: {
-            variants: {
-              include: {
-                specifications: true,
-              },
-            },
+            variants: { include: { specifications: true } },
             images: true,
             category: {
               include: {
                 children: true,
-                parent: {
-                  include: {
-                    parent: true,
-                  },
-                },
+                parent: { include: { parent: true } },
               },
             },
-            productOffers: {
-              include: {
-                offer: true,
-              },
-            },
+            productOffers: { include: { offer: true } },
             deliveryOptions: true,
             warranty: true,
             returnPolicy: true,
           },
         });
 
-        await setCache(cacheKey, products);
-        return products;
+        // Get percentage change in products added compared to last month
+        const now = new Date();
+        const currentMonthStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1
+        );
+        const prevMonthStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1
+        );
+        const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+
+        const currentMonthCount = await prisma.product.count({
+          where: {
+            sellerId: userId,
+            createdAt: { gte: currentMonthStart, lt: now },
+          },
+        });
+
+        const prevMonthCount = await prisma.product.count({
+          where: {
+            sellerId: userId,
+            createdAt: { gte: prevMonthStart, lt: prevMonthEnd },
+          },
+        });
+
+        let percentChange = 0;
+        if (prevMonthCount > 0) {
+          percentChange =
+            ((currentMonthCount - prevMonthCount) / prevMonthCount) * 100;
+        } else if (currentMonthCount > 0) {
+          percentChange = 100;
+        }
+
+        // Cache the products
+        // await setCache(cacheKey, products);
+
+        // Return products + percentage change
+        return {
+          products,
+          currentMonthCount,
+          previousMonthCount: prevMonthCount,
+          percentChange: Number(percentChange.toFixed(2)),
+        };
       } catch (error: any) {
         console.error("Error while getting my products:", error);
         throw new Error(`Failed to fetch products: ${error.message}`);
@@ -425,25 +453,27 @@ export const productResolvers = {
 
     updateProduct: async (
       _: any,
-      { input }: { input: any },
+      { input }: { input: UpdateProductInput },
       ctx: GraphQLContext
     ) => {
       try {
+        // Validate user is a seller
         const user = requireSeller(ctx);
+        const sellerId = user.id;
 
+        // Validate input
         if (!input.id) {
           throw new Error("Product ID is required");
         }
 
-        const sellerId = user.id;
-
-        if (!user.id) throw new Error("Invalid user");
-
-        // Verify ownership
+        // Verify product exists and belongs to the seller
         const existingProduct = await prisma.product.findFirst({
           where: {
             id: input.id,
-            sellerId: user.id,
+            sellerId,
+          },
+          include: {
+            variants: true,
           },
         });
 
@@ -453,69 +483,31 @@ export const productResolvers = {
           );
         }
 
-        // Prepare product update data
-        let productData: any = {};
+        // Prepare product update data (only include provided fields)
+        const productData: any = {};
         if (input.name !== undefined) {
           productData.name = input.name;
-          // Regenerate slug if name changed
           if (input.name !== existingProduct.name) {
             productData.slug = await generateUniqueSlug(input.name);
           }
         }
-        if (input.description !== undefined)
+        if (input.description !== undefined) {
           productData.description = input.description;
-        if (input.status !== undefined) productData.status = input.status;
-        if (input.categoryId !== undefined)
+        }
+        if (input.status !== undefined) {
+          productData.status = input.status;
+        }
+        if (input.categoryId !== undefined) {
           productData.categoryId = input.categoryId;
-        if (input.brand !== undefined) productData.brand = input.brand;
-
-        // If no fields to update, return existing with full relations
-        if (
-          Object.keys(productData).length === 0 &&
-          !input.variants &&
-          input.images === undefined &&
-          input.productOffers === undefined &&
-          input.deliveryOptions === undefined &&
-          input.warranty === undefined &&
-          input.returnPolicy === undefined
-        ) {
-          return prisma.product.findUnique({
-            where: { id: input.id },
-            include: {
-              seller: true,
-              variants: {
-                include: {
-                  specifications: true,
-                },
-              },
-              images: true,
-              reviews: true,
-              category: {
-                include: {
-                  children: true,
-                  parent: {
-                    include: {
-                      parent: true,
-                    },
-                  },
-                },
-              },
-              wishlistItems: true,
-              productOffers: {
-                include: {
-                  offer: true,
-                },
-              },
-              deliveryOptions: true,
-              warranty: true,
-              returnPolicy: true,
-            },
-          });
+        }
+        if (input.brand !== undefined) {
+          productData.brand = input.brand;
         }
 
-        const updatedProduct = await prisma.$transaction(
+        // Use a transaction for atomic updates
+        await prisma.$transaction(
           async (tx) => {
-            // Update the product
+            // Update product table if there are fields to update
             if (Object.keys(productData).length > 0) {
               await tx.product.update({
                 where: { id: input.id },
@@ -523,20 +515,8 @@ export const productResolvers = {
               });
             }
 
-            if (input.variants) {
-              if (!input.variants.sku)
-                throw new Error("SKU is required for variant");
-              if (
-                input.variants.price == null ||
-                isNaN(Number(input.variants.price))
-              )
-                throw new Error("Valid price is required for variant");
-              if (
-                input.variants.stock == null ||
-                isNaN(Number(input.variants.stock))
-              )
-                throw new Error("Valid stock quantity is required for variant");
-
+            // Update variants if provided
+            if (input.variants !== undefined) {
               let defaultVariant = await tx.productVariant.findFirst({
                 where: {
                   productId: input.id,
@@ -545,38 +525,96 @@ export const productResolvers = {
               });
 
               if (defaultVariant) {
-                await tx.productVariant.update({
-                  where: { id: defaultVariant.id },
-                  data: {
-                    sku: input.variants.sku,
-                    price: input.variants.price,
-                    mrp: input.variants.mrp || input.variants.price,
-                    stock: input.variants.stock,
-                    attributes: input.variants.attributes || {},
-                    isDefault: input.variants.isDefault !== false,
-                  },
-                });
+                // Prepare variant update data (only include provided fields)
+                const variantData: any = {};
+                if (input.variants.sku !== undefined) {
+                  variantData.sku = input.variants.sku;
+                }
+                if (input.variants.price !== undefined) {
+                  if (
+                    input.variants.price == null ||
+                    isNaN(Number(input.variants.price))
+                  ) {
+                    throw new Error("Valid price is required for variant");
+                  }
+                  variantData.price = input.variants.price;
+                  // Only update mrp if explicitly provided, otherwise keep price
+                  variantData.mrp =
+                    input.variants.mrp !== undefined
+                      ? input.variants.mrp
+                      : input.variants.price;
+                }
+                if (input.variants.stock !== undefined) {
+                  if (
+                    input.variants.stock == null ||
+                    isNaN(Number(input.variants.stock))
+                  ) {
+                    throw new Error(
+                      "Valid stock quantity is required for variant"
+                    );
+                  }
+                  variantData.stock = input.variants.stock;
+                }
+                if (input.variants.attributes !== undefined) {
+                  variantData.attributes = input.variants.attributes;
+                }
+                if (input.variants.isDefault !== undefined) {
+                  variantData.isDefault = input.variants.isDefault;
+                }
 
-                await tx.productSpecification.deleteMany({
-                  where: { variantId: defaultVariant.id },
-                });
-                if (input.variants.specifications?.length > 0) {
-                  await tx.productSpecification.createMany({
-                    data: input.variants.specifications.map((spec: any) => ({
-                      variantId: defaultVariant.id,
-                      key: spec.key,
-                      value: spec.value,
-                    })),
+                // Update existing default variant if there are changes
+                if (Object.keys(variantData).length > 0) {
+                  await tx.productVariant.update({
+                    where: { id: defaultVariant.id },
+                    data: variantData,
                   });
                 }
-              } else {
-                // Create default variant if none exists
+
+                // Update specifications if provided
+                if (input.variants.specifications !== undefined) {
+                  await tx.productSpecification.deleteMany({
+                    where: { variantId: defaultVariant.id },
+                  });
+                  if (input.variants.specifications?.length > 0) {
+                    await tx.productSpecification.createMany({
+                      data: input.variants.specifications.map((spec: any) => ({
+                        variantId: defaultVariant.id,
+                        key: spec.key,
+                        value: spec.value,
+                      })),
+                    });
+                  }
+                }
+              } else if (input.variants !== undefined) {
+                // Validate required fields for new variant
+                if (!input.variants.sku) {
+                  throw new Error("SKU is required for variant");
+                }
+                if (
+                  input.variants.price == null ||
+                  isNaN(Number(input.variants.price))
+                ) {
+                  throw new Error("Valid price is required for variant");
+                }
+                if (
+                  input.variants.stock == null ||
+                  isNaN(Number(input.variants.stock))
+                ) {
+                  throw new Error(
+                    "Valid stock quantity is required for variant"
+                  );
+                }
+
+                // Create a new default variant
                 await tx.productVariant.create({
                   data: {
                     productId: input.id,
                     sku: input.variants.sku,
                     price: input.variants.price,
-                    mrp: input.variants.mrp || input.variants.price,
+                    mrp:
+                      input.variants.mrp !== undefined
+                        ? input.variants.mrp
+                        : input.variants.price,
                     stock: input.variants.stock,
                     attributes: input.variants.attributes || {},
                     isDefault: input.variants.isDefault !== false,
@@ -596,7 +634,7 @@ export const productResolvers = {
               }
             }
 
-            // Replace images if provided
+            // Update images if provided
             if (input.images !== undefined) {
               await tx.productImage.deleteMany({
                 where: { productId: input.id },
@@ -616,12 +654,11 @@ export const productResolvers = {
               }
             }
 
-            // Replace product offers if provided
+            // Update product offers if provided
             if (input.productOffers !== undefined) {
               await tx.productOffer.deleteMany({
                 where: { productId: input.id },
               });
-              // Optionally clean up orphaned offers, but skipping for now as they might be reused elsewhere
               if (input.productOffers?.length > 0) {
                 for (const offerInput of input.productOffers) {
                   const offer = await tx.offer.create({
@@ -647,7 +684,7 @@ export const productResolvers = {
               }
             }
 
-            // Replace delivery options if provided
+            // Update delivery options if provided
             if (input.deliveryOptions !== undefined) {
               await tx.deliveryOption.deleteMany({
                 where: { productId: input.id },
@@ -664,7 +701,7 @@ export const productResolvers = {
               }
             }
 
-            // Replace warranty if provided
+            // Update warranty if provided
             if (input.warranty !== undefined) {
               await tx.warranty.deleteMany({
                 where: { productId: input.id },
@@ -682,7 +719,7 @@ export const productResolvers = {
               }
             }
 
-            // Replace return policy if provided
+            // Update return policy if provided
             if (input.returnPolicy !== undefined) {
               await tx.returnPolicy.deleteMany({
                 where: { productId: input.id },
@@ -699,56 +736,18 @@ export const productResolvers = {
                 });
               }
             }
-
-            // Fetch the updated product with all relations
-            return await tx.product.findUnique({
-              where: { id: input.id },
-              include: {
-                seller: true,
-                variants: {
-                  include: {
-                    specifications: true,
-                  },
-                },
-                images: true,
-                reviews: true,
-                category: {
-                  include: {
-                    children: true,
-                    parent: {
-                      include: {
-                        parent: true,
-                      },
-                    },
-                  },
-                },
-                wishlistItems: true,
-                productOffers: {
-                  include: {
-                    offer: true,
-                  },
-                },
-                deliveryOptions: true,
-                warranty: true,
-                returnPolicy: true,
-              },
-            });
           },
           { timeout: 30000 }
         );
 
-        if (!updatedProduct) {
-          throw new Error("Failed to update product");
-        }
-
-        const productId = input.id;
+        // Clear Redis caches
         await Promise.all([
-          delCache(`product:${productId}`),
+          delCache(`product:${input.id}`),
           delCache("product:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
 
-        console.log("Product updated successfully:", updatedProduct);
+        console.log("Product updated successfully:", input.id);
         return true;
       } catch (error: any) {
         console.error("Error while updating product:", error);
