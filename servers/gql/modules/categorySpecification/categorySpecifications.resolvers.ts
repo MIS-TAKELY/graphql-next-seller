@@ -1,5 +1,5 @@
-import { PrismaClient } from "@/app/generated/prisma";
-const prisma = new PrismaClient();
+import { prisma } from "@/lib/db/prisma";
+
 
 export const categorySpecificationResolvers = {
   Query: {
