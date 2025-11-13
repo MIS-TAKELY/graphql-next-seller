@@ -2,7 +2,7 @@ import {
   DASHBOARD_ACTIVE_CUSTOMER,
   DASHBOARD_PRODUCTS,
   GET_REVENUE,
-  GET_SELLER_ORDER,
+  GET_SELLER_ORDER_FOR_DASHBOARD,
 } from "@/client/dashboard/dashboard.query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
@@ -15,7 +15,7 @@ export async function DashboardOverview() {
   const { data: activeUserData } = await client.query({
     query: DASHBOARD_ACTIVE_CUSTOMER,
   });
-  const { data: orderData } = await client.query({ query: GET_SELLER_ORDER });
+  const { data: orderData } = await client.query({ query: GET_SELLER_ORDER_FOR_DASHBOARD });
   const { data: productData } = await client.query({
     query: DASHBOARD_PRODUCTS,
   });

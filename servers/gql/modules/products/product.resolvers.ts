@@ -453,7 +453,7 @@ export const productResolvers = {
 
     updateProduct: async (
       _: any,
-      { input }: { input: UpdateProductInput },
+      { input }: { input: any },
       ctx: GraphQLContext
     ) => {
       try {

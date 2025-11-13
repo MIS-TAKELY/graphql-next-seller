@@ -10,16 +10,16 @@ export const GET_REVENUE = gql`
   }
 `;
 
-export const GET_SELLER_ORDER = gql`
-  query getSellerOrders {
+export const GET_SELLER_ORDER_FOR_DASHBOARD = gql`
+  query GetSellerOrders {
     getSellerOrders {
-      currentOrderCount
-      previousOrderCount
-      percentChange
-      sellerOrder {
-        id
-      }
+    currentOrderCount
+    previousOrderCount
+    percentChange
+    sellerOrders {
+      id
     }
+  }
   }
 `;
 

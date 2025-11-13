@@ -34,7 +34,8 @@ export const orderTypeDefs = gql`
     updatedAt: DateTime!
     buyer: User
     items: [OrderItem]
-    payments: [Payment]
+    payments: [Payment!]!
     shipments: [Shipment]
+    sellerOrders: [SellerOrder]
   }
 `;

@@ -1,37 +1,103 @@
-// types/pages/product.ts
-
 import { Category } from "../category.type";
 
-export interface Step {
-  id: number;
-  title: string;
-  description: string;
+// types/pages/product.ts
+export type ProductStatus = "DRAFT" | "ACTIVE" | "INACTIVE" | "DISCONTINUED";
+
+// export interface Category {
+//   __typename?: string;
+//   id: string;
+//   name: string;
+//   children?: Category[];
+// }
+
+export interface ProductImage {
+  url: string;
+  altText?: string;
+  mediaType?: "PRIMARY" | "PROMOTIONAL";
+  fileType?: "IMAGE" | "VIDEO";
+  sortOrder?: number;
 }
+
+export interface ProductVariant {
+  sku: string;
+  price: number;
+  stock: number;
+  mrp?: number;
+  attributes?: {
+    weight?: number;
+    height?: number;
+    length?: number;
+    width?: number;
+    shippingClass?: string;
+  };
+  isDefault?: boolean;
+  specifications?: Array<{
+    key: string;
+    value: string;
+  }>;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  status: ProductStatus;
+  images: ProductImage[];
+  variants: ProductVariant[];
+  category: Category | null;
+  description?: string;
+  brand?: string;
+}
+
+export interface InventoryVariant {
+  id: string;
+  sku: string;
+  stock: number;
+  soldCount: number;
+  price?: number;
+  mrp?: number;
+}
+
+export interface InventoryProduct {
+  id: string;
+  name: string;
+  status: ProductStatus;
+  variants: InventoryVariant[];
+}
+
+export interface GetMyProductsResponse {
+  getMyProducts: {
+    __typename?: string;
+    products: Product[];
+    percentChange?: number;
+  };
+}
+
+export interface GetInventoryResponse {
+  getMyProducts: {
+    __typename?: string;
+    products: InventoryProduct[];
+  };
+}
+
+export interface GetProductCategoriesResponse {
+  categories: Category[];
+}
+
+export type StatusFilter =
+  | "all"
+  | "active"
+  | "draft"
+  | "out_of_stock"
+  | "low_stock";
 
 export interface ICreateProductInput {
   id?: string;
   name: string;
-  description: string;
-  categoryId: string;
-  brand: string;
-  variants: {
-    sku: string;
-    price: number;
-    mrp: number;
-    stock: number;
-    attributes?: {
-      weight?: number;
-      height?: number;
-      length?: number;
-      width?: number;
-      shippingClass?: string;
-    };
-    isDefault: boolean;
-    specifications?: Array<{
-      key: string;
-      value: string;
-    }>;
-  };
+  description?: string;
+  categoryId?: string;
+  brand?: string;
+  variants: ProductVariant;
   productOffers?: Array<{
     productId?: string;
     offer: {
@@ -60,25 +126,29 @@ export interface ICreateProductInput {
     unit: string;
     conditions?: string;
   }>;
-  images?: Array<{
-    url: string;
-    altText?: string;
-    mediaType?: "PRIMARY" | "PROMOTIONAL";
-    fileType?: "IMAGE" | "VIDEO";
-    sortOrder: number;
-  }>;
+  images?: ProductImage[];
+}
+
+export interface Media {
+  url: string;
+  mediaType: "PRIMARY" | "PROMOTIONAL";
+  publicId?: string;
+  altText?: string;
+  fileType?: "IMAGE" | "VIDEO";
+  pending?: boolean;
+  isLocal?: boolean;
+  sortOrder?: number;
 }
 
 export interface FormData {
   // Basic Details
   name: string;
   description: string;
-  category?: Category;
   categoryId: string;
   subcategory: string;
   subSubcategory?: string;
+    category?: Category;
   brand: string;
-
   // Specifications
   features: string[];
   specifications: Array<{
@@ -87,7 +157,6 @@ export interface FormData {
     value: string;
   }>;
   specificationDisplayFormat: "bullet" | "table";
-
   // Pricing & Inventory
   price: string;
   mrp: string;
@@ -96,7 +165,6 @@ export interface FormData {
   sku: string;
   stock: string;
   trackQuantity: boolean;
-
   // Offers
   hasOffer: boolean;
   offerType: "PERCENTAGE" | "FIXED_AMOUNT";
@@ -104,14 +172,11 @@ export interface FormData {
   offerValue: string;
   offerStart: string;
   offerEnd: string;
-
   buyX: string;
   getY: string;
-
   // Media
   productMedia: Media[];
   promotionalMedia: Media[];
-
   // Shipping
   weight: string;
   length: string;
@@ -125,7 +190,6 @@ export interface FormData {
   freeDeliveryProvinces: string[];
   noInternationalShipping: boolean;
   restrictedStates: string[];
-
   // Policies
   returnType: string;
   returnDuration: string;
@@ -133,48 +197,20 @@ export interface FormData {
   returnConditions: string;
   returnPolicy: string;
   returnPeriod: string;
-
   warrantyType: string;
   warrantyDuration: string;
   warrantyUnit: string;
   warrantyDescription: string;
   warrantyConditions: string;
-  // warrantyPeriod: string;
   warranty: string;
 }
-
-export interface Media {
-  url: string;
-  mediaType: "PRIMARY" | "PROMOTIONAL";
-  publicId?: string;
-  altText?: string;
-  fileType?: "IMAGE" | "VIDEO";
-  pending?: boolean;
-  isLocal?: boolean;
-   sortOrder?: number;
+export interface Step {
+  id: number;
+  title: string;
+  description: string;
 }
+
 
 export interface Errors {
   [key: string]: string | undefined;
-}
-
-export interface ProductImage {
-  url: string;
-}
-
-export interface ProductVariant {
-  price: number;
-  sku: string;
-  stock: number;
-}
-
-export interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  status: string;
-  category: Category;
-  images: ProductImage[];
-  variants: ProductVariant[];
- 
 }

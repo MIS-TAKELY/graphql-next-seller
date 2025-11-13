@@ -11,15 +11,19 @@ import {
 import { Category } from "@/types/category.type";
 import { Search } from "lucide-react";
 
+import { StatusFilter } from "@/types/pages/product"; // ✅ import the correct type
+
 interface ProductFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
-  statusFilter: string;
-  onStatusChange: (value: string) => void;
+  statusFilter: StatusFilter;
+  onStatusChange: (value: StatusFilter) => void;
   categoryFilter: string;
   onCategoryChange: (value: string) => void;
   categories: Category[];
+  isCategoryLoading: boolean; // ✅ Add this
 }
+
 
 export function ProductFilters({
   searchTerm,

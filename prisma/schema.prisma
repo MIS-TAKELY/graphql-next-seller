@@ -510,13 +510,14 @@ model Order {
   updatedAt        DateTime    @updatedAt
   offerId          String?
 
-  offer     Offer?      @relation(fields: [offerId], references: [id], onDelete: SetNull)
-  buyer     User        @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade)
-  items     OrderItem[]
-  payments  Payment[]
-  shipments Shipment[]
+  offer        Offer?        @relation(fields: [offerId], references: [id], onDelete: SetNull)
+  buyer        User          @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade)
+  items        OrderItem[]
+  payments     Payment[]
+  shipments    Shipment[]
   // appliedDiscounts AppliedDiscount[] // Add this line
   // discountUsage    DiscountUsage[]
+  sellerOrders SellerOrder[]
 
   @@index([buyerId, status])
   @@index([createdAt])
@@ -693,8 +694,10 @@ model SellerOrder {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
+  // Relations
   seller User              @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
   items  SellerOrderItem[]
+  order  Order             @relation(fields: [buyerOrderId], references: [id], onDelete: Cascade) // ✅ Add this line
 
   @@index([sellerId, status])
   @@map("seller_orders")

@@ -1,3 +1,4 @@
+// app/(main)/products/inventory/page.tsx
 import { GET_INVENTORY } from "@/client/product/product.queries";
 import { InventoryTableRow } from "@/components/product/InventoryTableRow";
 import { Button } from "@/components/ui/button";
@@ -16,21 +17,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
+import { GetInventoryResponse, InventoryProduct } from "@/types/pages/product";
 import { AlertTriangle, Package, TrendingDown } from "lucide-react";
 
 export default async function InventoryPage() {
   const client = await getServerApolloClient();
-  const data = await client.query({
+  const { data } = await client.query<GetInventoryResponse>({
     query: GET_INVENTORY,
-    fetchPolicy:"no-cache"
+    fetchPolicy: "no-cache",
   });
-  const inventoryItems = data?.data?.getMyProducts?.products;
-  console.log("data-->", inventoryItems);
 
-  const totalSoldCount = inventoryItems?.reduce((total, item) => {
-    return total + (item?.variants?.[0]?.soldCount || 0);
+  const inventoryItems: InventoryProduct[] = data?.getMyProducts?.products ?? [];
+
+  const totalSoldCount = inventoryItems.reduce((total, item) => {
+    return total + (item.variants[0]?.soldCount ?? 0);
   }, 0);
-  console.log("sold count total", totalSoldCount);
 
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -41,13 +42,11 @@ export default async function InventoryPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Products
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Products</CardTitle>
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{inventoryItems?.length}</div>
+            <div className="text-2xl font-bold">{inventoryItems.length}</div>
             <p className="text-xs text-muted-foreground">In inventory</p>
           </CardContent>
         </Card>
@@ -58,11 +57,7 @@ export default async function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {
-                inventoryItems?.filter(
-                  (item) => item?.variants?.[0]?.stock < 10
-                ).length
-              }
+              {inventoryItems.filter((item) => (item.variants[0]?.stock ?? 0) < 10).length}
             </div>
             <p className="text-xs text-muted-foreground">Need reorder</p>
           </CardContent>
@@ -74,10 +69,7 @@ export default async function InventoryPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {
-                inventoryItems?.filter((item) => item?.variants?.[0]?.stock < 5)
-                  .length
-              }
+              {inventoryItems.filter((item) => (item.variants[0]?.stock ?? 0) === 0).length}
             </div>
             <p className="text-xs text-muted-foreground">Urgent restock</p>
           </CardContent>
@@ -114,7 +106,7 @@ export default async function InventoryPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inventoryItems?.map((item) => (
+              {inventoryItems.map((item) => (
                 <InventoryTableRow key={item.id} item={item} />
               ))}
             </TableBody>

@@ -23,10 +23,47 @@ export const sellerOrderResolver = {
         const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
         // Fetch orders for seller
+
+        //   id
+        // status
+        // createdAt
+        // items {
+        //   totalPrice
+        //   unitPrice
+        //   variant {
+        //     price
+        //   }
+        // }
         const orders = await prisma.sellerOrder.findMany({
           where: { sellerId },
-          select: {
-            id: true,
+          include: {
+            order: {
+              include: {
+                buyer: true,
+                payments: true,
+                items: {
+                  include: {
+                    variant: {
+                      include: { product: { include: { images: true } } },
+                    },
+                  },
+                },
+                shipments: true,
+              },
+            },
+            items: {
+              include: {
+                variant: {
+                  include: {
+                    product: {
+                      include: {
+                        images: true,
+                      },
+                    },
+                  },
+                },
+              },
+            },
           },
         });
 
@@ -63,7 +100,7 @@ export const sellerOrderResolver = {
 
         // Return orders + percentage change
         return {
-          orders: orders ? orders : [],
+          sellerOrders: orders,
           currentOrderCount,
           previousOrderCount: prevOrderCount,
           percentChange: Number(percentChange.toFixed(2)),

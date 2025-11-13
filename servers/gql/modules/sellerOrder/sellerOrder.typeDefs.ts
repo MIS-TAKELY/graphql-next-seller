@@ -29,10 +29,11 @@ export const sellerOrderTypeDefs = gql`
 
     seller: User!
     items: [SellerOrderItem!]
+    order: Order
   }
 
   type getSellerOrdersResponse {
-    sellerOrder: [SellerOrder]
+    sellerOrders: [SellerOrder!]!
     currentOrderCount: Float
     previousOrderCount: Float
     percentChange: Float
