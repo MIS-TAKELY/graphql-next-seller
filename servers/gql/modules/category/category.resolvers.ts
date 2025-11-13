@@ -1,7 +1,6 @@
-import { PrismaClient } from "@/app/generated/prisma";
+import { prisma } from "@/lib/db/prisma";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
 
-const prisma = new PrismaClient();
 
 export const categoryResolvers = {
   Query: {
