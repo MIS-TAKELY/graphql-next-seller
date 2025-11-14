@@ -1,3 +1,4 @@
+import { ApolloError } from "@apollo/client";
 import { requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
@@ -41,6 +42,7 @@ export const sellerOrderResolver = {
               include: {
                 buyer: true,
                 payments: true,
+                
                 items: {
                   include: {
                     variant: {
@@ -183,5 +185,403 @@ export const sellerOrderResolver = {
     },
   },
 
-  Mutation: {},
+  Mutation: {
+    confirmOrder: async (
+      _: any,
+      { input }: { input: any },
+      context: GraphQLContext
+    ) => {
+      const { sellerOrderId } = input;
+
+      // Authorization check: Ensure user is authenticated and has SELLER role
+
+      requireSeller(context);
+      const prisma = context.prisma;
+
+      // Fetch the SellerOrder with its parent Order
+      const sellerOrder = await prisma.sellerOrder.findUnique({
+        where: { id: sellerOrderId },
+        include: {
+          order: {
+            include: {
+              sellerOrders: true, // Fetch all SellerOrders for the parent Order
+            },
+          },
+        },
+      });
+
+      if (!sellerOrder) {
+        throw new ApolloError({
+          errorMessage: "Seller order not found",
+          extraInfo: { code: "NOT_FOUND" },
+        });
+      }
+
+      // Check if SellerOrder is in PENDING status
+      if (sellerOrder.status !== "PENDING") {
+        throw new ApolloError({
+          errorMessage: `Seller order is already in ${sellerOrder.status} status`,
+          extraInfo: { code: "INVALID_STATE" },
+        });
+      }
+
+      try {
+        // Start a transaction to ensure atomic updates
+        const [updatedSellerOrder] = await prisma.$transaction([
+          // Update the SellerOrder to CONFIRMED
+          prisma.sellerOrder.update({
+            where: { id: sellerOrderId },
+            data: {
+              status: "PROCESSING",
+              updatedAt: new Date(),
+            },
+            include: {
+              order: true,
+            },
+          }),
+        ]);
+
+        // Check if all SellerOrders for the parent Order are CONFIRMED
+        const allSellerOrdersConfirmed = sellerOrder.order.sellerOrders.every(
+          (so) =>
+            so.id === sellerOrderId || // Skip the current SellerOrder (it’s updated)
+            so.status === "CONFIRMED" // Check other SellerOrders
+        );
+
+        let updatedOrder = sellerOrder.order;
+
+        if (allSellerOrdersConfirmed && updatedOrder.status === "PENDING") {
+          // Update the parent Order to CONFIRMED
+          updatedOrder = await prisma.order.update({
+            where: { id: sellerOrder.buyerOrderId },
+            data: {
+              status: "CONFIRMED",
+              updatedAt: new Date(),
+            },
+            include: {
+              sellerOrders: true,
+            },
+          });
+        }
+
+        return true;
+      } catch (error) {
+        console.error("Error confirming order:", error);
+        throw new ApolloError({
+          errorMessage: "Failed to confirm order",
+          extraInfo: { code: "INTERNAL_SERVER_ERROR" },
+        });
+      }
+    },
+
+    // confirmOrder: async (
+    //   _: any,
+    //   { input }: { input: { sellerOrderId: string } },
+    //   context: GraphQLContext
+    // ) => {
+    //   const { sellerOrderId } = input;
+
+    //   // Authorization check: Ensure user is authenticated and has SELLER role
+    //   requireSeller(context);
+    //   const prisma = context.prisma;
+
+    //   // Fetch the SellerOrder with its parent Order
+    //   const sellerOrder = await prisma.sellerOrder.findUnique({
+    //     where: { id: sellerOrderId },
+    //     include: {
+    //       order: {
+    //         include: {
+    //           sellerOrders: true, // Fetch all SellerOrders for the parent Order
+    //         },
+    //       },
+    //     },
+    //   });
+
+    //   if (!sellerOrder) {
+    //     throw new ApolloError({
+    //       errorMessage: "Seller order not found",
+    //       extraInfo: { code: "NOT_FOUND" },
+    //     });
+    //   }
+
+    //   // Verify the authenticated user is the seller for this SellerOrder
+    //   if (sellerOrder.sellerId !== context.user.id) {
+    //     throw new ApolloError({
+    //       errorMessage: "Unauthorized: You can only confirm your own orders",
+    //       extraInfo: { code: "FORBIDDEN" },
+    //     });
+    //   }
+
+    //   // Check if SellerOrder is in PENDING status
+    //   if (sellerOrder.status !== "PENDING") {
+    //     throw new ApolloError({
+    //       errorMessage: `Seller order is already in ${sellerOrder.status} status`,
+    //       extraInfo: { code: "INVALID_STATE" },
+    //     });
+    //   }
+
+    //   try {
+    //     // Start a transaction to ensure atomic updates
+    //     const [updatedSellerOrder] = await prisma.$transaction([
+    //       // Update the SellerOrder to CONFIRMED
+    //       prisma.sellerOrder.update({
+    //         where: { id: sellerOrderId },
+    //         data: {
+    //           status: "CONFIRMED",
+    //           updatedAt: new Date(),
+    //         },
+    //         include: {
+    //           order: true,
+    //           seller: true,
+    //           items: true,
+    //         },
+    //       }),
+    //     ]);
+
+    //     // Check if all SellerOrders for the parent Order are CONFIRMED
+    //     const allSellerOrdersConfirmed = sellerOrder.order.sellerOrders.every(
+    //       (so) =>
+    //         so.id === sellerOrderId || // Skip the current SellerOrder (it’s updated)
+    //         so.status === "CONFIRMED" // Check other SellerOrders
+    //     );
+
+    //     let updatedOrder = sellerOrder.order;
+
+    //     if (allSellerOrdersConfirmed && updatedOrder.status === "PENDING") {
+    //       // Update the parent Order to CONFIRMED
+    //       updatedOrder = await prisma.order.update({
+    //         where: { id: sellerOrder.buyerOrderId },
+    //         data: {
+    //           status: "CONFIRMED",
+    //           updatedAt: new Date(),
+    //         },
+    //         include: {
+    //           sellerOrders: true,
+    //         },
+    //       });
+    //     }
+
+    //     return {
+    //       sellerOrder: {
+    //         ...updatedSellerOrder,
+    //         subtotal: parseFloat(updatedSellerOrder.subtotal),
+    //         tax: parseFloat(updatedSellerOrder.tax),
+    //         shippingFee: parseFloat(updatedSellerOrder.shippingFee),
+    //         commission: parseFloat(updatedSellerOrder.commission),
+    //         total: parseFloat(updatedSellerOrder.total),
+    //       },
+    //       order: {
+    //         ...updatedOrder,
+    //         subtotal: parseFloat(updatedOrder.subtotal),
+    //         tax: parseFloat(updatedOrder.tax),
+    //         shippingFee: parseFloat(updatedOrder.shippingFee),
+    //         discount: parseFloat(updatedOrder.discount),
+    //         total: parseFloat(updatedOrder.total),
+    //       },
+    //     };
+    //   } catch (error) {
+    //     console.error("Error confirming order:", error);
+    //     throw new ApolloError({
+    //       errorMessage: "Failed to confirm order",
+    //       extraInfo: { code: "INTERNAL_SERVER_ERROR" },
+    //     });
+    //   }
+    // },
+
+    updateSellerOrderStatus: async (
+      _: any,
+      { sellerOrderId, status }: { sellerOrderId: string; status: string },
+      context: GraphQLContext
+    ) => {
+      // Authorization check: Ensure user is authenticated and has SELLER role
+      requireSeller(context);
+      const prisma = context.prisma;
+
+      // Validate status
+      const validStatuses = [
+        "PENDING",
+        "CONFIRMED",
+        "PROCESSING",
+        "SHIPPED",
+        "DELIVERED",
+        "CANCELLED",
+        "RETURNED",
+      ];
+      if (!validStatuses.includes(status)) {
+        throw new ApolloError({
+          errorMessage: `Invalid status: ${status}`,
+          extraInfo: { code: "INVALID_INPUT" },
+        });
+      }
+
+      // Fetch the SellerOrder
+      const sellerOrder = await prisma.sellerOrder.findUnique({
+        where: { id: sellerOrderId },
+        include: {
+          seller: true,
+          items: true,
+          order: true,
+        },
+      });
+
+      if (!sellerOrder) {
+        throw new ApolloError({
+          errorMessage: "Seller order not found",
+          extraInfo: { code: "NOT_FOUND" },
+        });
+      }
+
+      // Verify the authenticated user is the seller for this SellerOrder
+      if (sellerOrder.sellerId !== context.user.id) {
+        throw new ApolloError({
+          errorMessage: "Unauthorized: You can only update your own orders",
+          extraInfo: { code: "FORBIDDEN" },
+        });
+      }
+
+      // Optional: Add status transition validation
+      // Example: Can't move to SHIPPED if not CONFIRMED or PROCESSING
+      const validTransitions = {
+        PENDING: ["CONFIRMED", "CANCELLED"],
+        CONFIRMED: ["PROCESSING", "CANCELLED"],
+        PROCESSING: ["SHIPPED", "CANCELLED"],
+        SHIPPED: ["DELIVERED", "RETURNED"],
+        DELIVERED: ["RETURNED"],
+        CANCELLED: [],
+        RETURNED: [],
+      };
+      if (!validTransitions[sellerOrder.status].includes(status)) {
+        throw new ApolloError({
+          errorMessage: `Cannot transition from ${sellerOrder.status} to ${status}`,
+          extraInfo: { code: "INVALID_STATE" },
+        });
+      }
+
+      try {
+        // Update the SellerOrder status
+        const updatedSellerOrder = await prisma.sellerOrder.update({
+          where: { id: sellerOrderId },
+          data: {
+            status,
+            updatedAt: new Date(),
+          },
+          include: {
+            seller: true,
+            items: true,
+            order: true,
+          },
+        });
+
+        return {
+          ...updatedSellerOrder,
+          subtotal: parseFloat(updatedSellerOrder.subtotal),
+          tax: parseFloat(updatedSellerOrder.tax),
+          shippingFee: parseFloat(updatedSellerOrder.shippingFee),
+          commission: parseFloat(updatedSellerOrder.commission),
+          total: parseFloat(updatedSellerOrder.total),
+        };
+      } catch (error) {
+        console.error("Error updating seller order status:", error);
+        throw new ApolloError({
+          errorMessage: "Failed to update seller order status",
+          extraInfo: { code: "INTERNAL_SERVER_ERROR" },
+        });
+      }
+    },
+
+    createShipment: async (
+      _: any,
+      {
+        orderId,
+        trackingNumber,
+        carrier,
+      }: // status,
+      {
+        orderId: string;
+        trackingNumber: string;
+        carrier: string;
+        // status: string;
+      },
+      context: GraphQLContext
+    ) => {
+      // Authorization check: Ensure user is authenticated and has SELLER role
+      requireSeller(context);
+      const prisma = context.prisma;
+
+      // Validate status
+      const validShipmentStatuses = [
+        "PENDING",
+        "PROCESSING",
+        "SHIPPED",
+        "IN_TRANSIT",
+        "OUT_FOR_DELIVERY",
+        "DELIVERED",
+        "RETURNED",
+        "LOST",
+      ];
+      const status = "SHIPPED";
+      if (!validShipmentStatuses.includes(status)) {
+        throw new ApolloError({
+          errorMessage: `Invalid shipment status: ${status}`,
+          extraInfo: { code: "INVALID_INPUT" },
+        });
+      }
+
+      // Fetch the Order and verify the seller has a SellerOrder
+      const order = await prisma.order.findUnique({
+        where: { id: orderId },
+        include: {
+          sellerOrders: true,
+        },
+      });
+
+      if (!order) {
+        throw new ApolloError({
+          errorMessage: "Order not found",
+          extraInfo: { code: "NOT_FOUND" },
+        });
+      }
+
+      // Verify the authenticated user has a SellerOrder for this Order
+      const sellerOrder = order.sellerOrders.find(
+        (so) => so.sellerId === context.user.id
+      );
+      if (!sellerOrder) {
+        throw new ApolloError({
+          errorMessage: "Unauthorized: You are not associated with this order",
+          extraInfo: { code: "FORBIDDEN" },
+        });
+      }
+
+      try {
+        // Create the Shipment
+        const shipment = await prisma.shipment.create({
+          data: {
+            orderId,
+            trackingNumber,
+            carrier,
+            status,
+            shippedAt: status === "SHIPPED" ? new Date() : null,
+            estimatedDelivery: null, // Optionally calculate based on carrier
+          },
+        });
+
+        return {
+          ...shipment,
+          shippedAt: shipment.shippedAt
+            ? shipment.shippedAt.toISOString()
+            : null,
+          estimatedDelivery: shipment.estimatedDelivery
+            ? shipment.estimatedDelivery.toISOString()
+            : null,
+        };
+      } catch (error) {
+        console.error("Error creating shipment:", error);
+        throw new ApolloError({
+          errorMessage: "Failed to create shipment",
+          extraInfo: { code: "INTERNAL_SERVER_ERROR" },
+        });
+      }
+    },
+  },
 };

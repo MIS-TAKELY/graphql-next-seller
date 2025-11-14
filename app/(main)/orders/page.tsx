@@ -1,4 +1,3 @@
-// pages/orders/index.tsx
 import { GET_SELLER_ORDER } from "@/client/order/order.query";
 import { OrdersAllPage } from "@/components/orders/OrdersAllPage";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
@@ -10,5 +9,6 @@ export default async function OrdersPage() {
     query: GET_SELLER_ORDER,
   });
 
+  console.log("orderes data-->",data)
   return <OrdersAllPage orders={data?.getSellerOrders?.sellerOrders || []} />;
 }

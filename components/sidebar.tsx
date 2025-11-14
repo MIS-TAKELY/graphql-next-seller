@@ -41,13 +41,13 @@ const sidebarNavItems = [
     title: "Orders",
     href: "/orders",
     icon: ShoppingCart,
-    children: [
-      { title: "All Orders", href: "/orders" },
-      { title: "New Orders", href: "/orders/new" },
-      { title: "Processing", href: "/orders/processing" },
-      { title: "Shipped", href: "/orders/shipped" },
-      { title: "Returns", href: "/orders/returns" },
-    ],
+    // children: [
+    //   { title: "All Orders", href: "/orders" },
+    //   { title: "New Orders", href: "/orders/new" },
+    //   { title: "Processing", href: "/orders/processing" },
+    //   { title: "Shipped", href: "/orders/shipped" },
+    //   { title: "Returns", href: "/orders/returns" },
+    // ],
   },
   {
     title: "Analytics",

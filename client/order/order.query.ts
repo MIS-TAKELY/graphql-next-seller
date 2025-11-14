@@ -6,6 +6,7 @@ export const GET_SELLER_ORDER = gql`
     getSellerOrders {
       sellerOrders {
         id
+        buyerOrderId
         status
         subtotal
         tax

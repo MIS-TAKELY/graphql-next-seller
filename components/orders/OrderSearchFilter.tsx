@@ -1,4 +1,5 @@
 // components/orders/OrderSearchFilter.tsx
+
 "use client";
 import { Input } from "@/components/ui/input";
 import {
@@ -8,11 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  OrderFilters,
-  OrderPriority,
-  OrderStatus,
-} from "@/types/pages/order.types";
+import { OrderFilters, OrderStatus } from "@/types/pages/order.types";
 import { Search } from "lucide-react";
 
 interface OrderSearchFilterProps {
@@ -26,10 +23,6 @@ export function OrderSearchFilter({
 }: OrderSearchFilterProps) {
   const handleStatusChange = (value: string) => {
     onFiltersChange({ status: value as OrderStatus | "all" });
-  };
-
-  const handlePriorityChange = (value: string) => {
-    onFiltersChange({ priority: value as OrderPriority | "all" });
   };
 
   return (
@@ -50,23 +43,13 @@ export function OrderSearchFilter({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Orders</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="processing">Processing</SelectItem>
-            <SelectItem value="shipped">Shipped</SelectItem>
-            <SelectItem value="delivered">Delivered</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-            <SelectItem value="returned">Returned</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={filters.priority} onValueChange={handlePriorityChange}>
-          <SelectTrigger className="w-full sm:w-[120px] text-xs sm:text-sm">
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Priority</SelectItem>
-            <SelectItem value="high">High</SelectItem>
-            <SelectItem value="normal">Normal</SelectItem>
-            <SelectItem value="low">Low</SelectItem>
+            <SelectItem value="PENDING">Pending</SelectItem>
+            <SelectItem value="CONFIRMED">Confirmed</SelectItem>
+            <SelectItem value="PROCESSING">Processing</SelectItem>
+            <SelectItem value="SHIPPED">Shipped</SelectItem>
+            <SelectItem value="DELIVERED">Delivered</SelectItem>
+            <SelectItem value="CANCELLED">Cancelled</SelectItem>
+            <SelectItem value="RETURNED">Returned</SelectItem>
           </SelectContent>
         </Select>
       </div>

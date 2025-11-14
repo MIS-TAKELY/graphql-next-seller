@@ -1,22 +1,30 @@
-"use client";
-import { Button } from "@/components/ui/button";
+// components/orders/OrderStatusTab.tsx
+'use client';
+
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { toast } from "sonner";
-import { OrderTable } from "./OrderTable";
-import { getStatusIcon } from "@/lib/orders/utils";
-import { SellerOrder, OrderFilters } from "@/types/pages/order.types";
+} from '@/components/ui/card';
+import { getStatusIcon } from '@/lib/orders/utils';
+import { OrderFilters, SellerOrder } from '@/types/pages/order.types';
+import { toast } from 'sonner';
+import { OrderTable } from './OrderTable';
+import { CreateShipmentDialog } from './CreateShipmentDialog';
+import { useOrder } from '@/hooks/order/useOrder';
 
 interface OrderStatusTabProps {
   status: string;
   orders: SellerOrder[];
   tabValue: string;
   filters: OrderFilters;
+  onShipmentSuccess?: (orderId: string) => void;
+  onOrderConfirmed?: (orderId: string) => void;
+  onProcessingStarted?: (orderId: string) => void;
+  onOrderDelivered?: (orderId: string) => void;
 }
 
 export function OrderStatusTab({
@@ -24,13 +32,21 @@ export function OrderStatusTab({
   orders,
   tabValue,
   filters,
+  onShipmentSuccess,
+  onOrderConfirmed,
+  onProcessingStarted,
+  onOrderDelivered,
 }: OrderStatusTabProps) {
+  const { confirmSingleOrder, updateOrderStatus } = useOrder();
+
   const getTitle = () => {
     switch (tabValue) {
-      case "new":
-        return "New Orders";
-      case "returns":
-        return "Returns & Refunds";
+      case 'new':
+        return 'New Orders';
+      case 'confirmed':
+        return 'Confirmed Orders';
+      case 'returns':
+        return 'Returns';
       default:
         return `${tabValue.charAt(0).toUpperCase() + tabValue.slice(1)} Orders`;
     }
@@ -38,77 +54,134 @@ export function OrderStatusTab({
 
   const getDescription = () => {
     switch (tabValue) {
-      case "new":
-        return "Orders that require immediate attention.";
-      case "processing":
-        return "Orders currently being prepared for shipment.";
-      case "shipped":
-        return "Orders that have been shipped and are in transit.";
-      case "delivered":
-        return "Orders that have been successfully delivered.";
-      case "returns":
-        return "Manage return requests and refund processing.";
+      case 'new':
+        return 'Orders pending confirmation by the seller.';
+      case 'confirmed':
+        return 'Orders confirmed by the seller, ready for processing.';
+      case 'processing':
+        return 'Orders being packed and prepared for shipment.';
+      case 'shipped':
+        return 'Orders that have been shipped and are in transit.';
+      case 'delivered':
+        return 'Orders successfully delivered to the customer.';
+      case 'returns':
+        return 'Orders with return requests.';
       default:
-        return "";
+        return '';
     }
   };
 
   const customActions = (order: SellerOrder) => {
     switch (tabValue) {
-      case "new":
+      case 'new':
         return (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => toast.success(`Processing order ${order.order.orderNumber}...`)}
+            onClick={async () => {
+              try {
+                await confirmSingleOrder(order.id);
+                // Call the callback after successful confirmation
+                if (onOrderConfirmed) {
+                  setTimeout(() => {
+                    onOrderConfirmed(order.id);
+                  }, 100);
+                }
+              } catch (error) {
+                // Error handling is managed by the hook
+                console.error('Failed to confirm order:', error);
+              }
+            }}
+            className="text-xs"
+          >
+            Confirm Order
+          </Button>
+        );
+      case 'confirmed':
+        return (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              try {
+                await updateOrderStatus(order.id, 'PROCESSING');
+                // Call the callback after successful status update
+                if (onProcessingStarted) {
+                  setTimeout(() => {
+                    onProcessingStarted(order.id);
+                  }, 100);
+                }
+              } catch (error) {
+                // Error handling is managed by the hook
+                console.error('Failed to start processing:', error);
+              }
+            }}
             className="text-xs"
           >
             Start Processing
           </Button>
         );
-      case "processing":
+      case 'processing':
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              toast.success(`Marking order ${order.order.orderNumber} as shipped...`)
-            }
-            className="text-xs"
-          >
-            Mark as Shipped
-          </Button>
+          <CreateShipmentDialog
+            order={order}
+            onSuccess={(orderId) => {
+              if (onShipmentSuccess) {
+                setTimeout(() => {
+                  onShipmentSuccess(orderId);
+                }, 100);
+              }
+            }}
+          />
         );
-      case "shipped":
+      case 'shipped':
         return (
           <Button
             variant="outline"
             size="sm"
-            onClick={() =>
-              toast.success(`Marking order ${order.order.orderNumber} as delivered...`)
-            }
+            onClick={async () => {
+              try {
+                await updateOrderStatus(order.id, 'DELIVERED');
+                // Call the callback after successful status update
+                if (onOrderDelivered) {
+                  setTimeout(() => {
+                    onOrderDelivered(order.id);
+                  }, 100);
+                }
+              } catch (error) {
+                // Error handling is managed by the hook
+                console.error('Failed to mark as delivered:', error);
+              }
+            }}
             className="text-xs"
           >
             Mark as Delivered
           </Button>
         );
-      case "delivered":
+      case 'delivered':
         return (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => toast.success("Feedback request sent!")}
+            onClick={() => toast.success('Contacting customer for feedback...')}
             className="text-xs"
           >
             Request Feedback
           </Button>
         );
-      case "returns":
+      case 'returns':
         return (
           <Button
             variant="outline"
             size="sm"
-            onClick={() => toast.success("Processing return...")}
+            onClick={async () => {
+              try {
+                await updateOrderStatus(order.id, 'RETURNED');
+              } catch (error) {
+                // Error handling is managed by the hook
+                console.error('Failed to process return:', error);
+              }
+            }}
             className="text-xs"
           >
             Process Return
@@ -133,22 +206,25 @@ export function OrderStatusTab({
         {orders.length > 0 ? (
           <OrderTable
             orders={orders}
-            showCheckbox={tabValue === "all"}
-            showTracking={tabValue === "shipped"}
+            showCheckbox={tabValue === 'all'}
+            showTracking={tabValue === 'shipped'}
             customActions={customActions}
             filters={filters}
+            onShipmentSuccess={onShipmentSuccess}
           />
         ) : (
           <div className="text-center py-6 sm:py-8">
             <Icon className={className} />
             <h3 className="mt-4 text-base sm:text-lg font-semibold">
-              No {tabValue === "new" ? "new" : tabValue} orders
+              No {tabValue === 'new' ? 'new' : tabValue} orders
             </h3>
             <p className="text-sm text-muted-foreground">
-              {tabValue === "new"
-                ? "New orders will appear here when received."
-                : tabValue === "returns"
-                ? "Return requests will appear here."
+              {tabValue === 'new'
+                ? 'New orders will appear here when received.'
+                : tabValue === 'confirmed'
+                ? 'Confirmed orders will appear here.'
+                : tabValue === 'returns'
+                ? 'Return requests will appear here.'
                 : `${
                     tabValue.charAt(0).toUpperCase() + tabValue.slice(1)
                   } orders will appear here.`}

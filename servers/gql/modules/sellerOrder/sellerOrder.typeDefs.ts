@@ -45,8 +45,31 @@ export const sellerOrderTypeDefs = gql`
     percentChange: Float
   }
 
+  input ConfirmOrderInput {
+    sellerOrderId: ID!
+  }
+
+  type ConfirmOrderResponse {
+    sellerOrder: SellerOrder!
+    order: Order!
+  }
+
   type Query {
     getSellerOrders: getSellerOrdersResponse
     getActiveUsersForSeller: getActiveUsersForSellerResponse!
+  }
+
+  type Mutation {
+    confirmOrder(input: ConfirmOrderInput!): Boolean
+    updateSellerOrderStatus(
+      sellerOrderId: String!
+      status: String!
+    ): SellerOrder
+    createShipment(
+      orderId: String!
+      trackingNumber: String!
+      carrier: String!
+      #status: String!
+    ): Shipment
   }
 `;
