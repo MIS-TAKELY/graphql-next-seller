@@ -61,8 +61,8 @@ const sidebarNavItems = [
     children: [
       { title: "All Customers", href: "/customers" },
       { title: "Messages", href: "/customers/messages" },
-      { title: "Reviews", href: "/customers/reviews" },
-      { title: "Disputes", href: "/customers/disputes" },
+      // { title: "Reviews", href: "/customers/reviews" },
+      // { title: "Disputes", href: "/customers/disputes" },
     ],
   },
   {

@@ -228,27 +228,29 @@ export const sellerOrderResolver = {
       try {
         // Start a transaction to ensure atomic updates
         const [updatedSellerOrder] = await prisma.$transaction([
-          // Update the SellerOrder to CONFIRMED
+          // Update the SellerOrder to CONFIRMED (not PROCESSING)
           prisma.sellerOrder.update({
             where: { id: sellerOrderId },
             data: {
-              status: "PROCESSING",
+              status: "CONFIRMED",
               updatedAt: new Date(),
             },
             include: {
-              order: true,
+              order: {
+                include: {
+                  sellerOrders: true,
+                },
+              },
             },
           }),
         ]);
 
         // Check if all SellerOrders for the parent Order are CONFIRMED
-        const allSellerOrdersConfirmed = sellerOrder.order.sellerOrders.every(
-          (so) =>
-            so.id === sellerOrderId || // Skip the current SellerOrder (it’s updated)
-            so.status === "CONFIRMED" // Check other SellerOrders
+        const allSellerOrdersConfirmed = updatedSellerOrder.order.sellerOrders.every(
+          (so) => so.status === "CONFIRMED"
         );
 
-        let updatedOrder = sellerOrder.order;
+        let updatedOrder = updatedSellerOrder.order;
 
         if (allSellerOrdersConfirmed && updatedOrder.status === "PENDING") {
           // Update the parent Order to CONFIRMED

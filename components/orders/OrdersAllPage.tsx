@@ -13,9 +13,10 @@ import { OrderTabs } from "./OrderTabs";
 
 interface OrdersAllPageProps {
   orders: SellerOrder[];
+  onRefetch?: () => void;
 }
 
-export function OrdersAllPage({ orders }: OrdersAllPageProps) {
+export function OrdersAllPage({ orders, onRefetch }: OrdersAllPageProps) {
   const [isPending, startTransition] = useTransition();
   const [orderFilters, setOrderFilters] = useState<OrderFilters>({
     search: "",
@@ -201,31 +202,33 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
   };
 
   return (
-    <div className="flex-1 space-y-3 sm:space-y-4">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
+    <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6 transition-all duration-300 ease-in-out">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 transition-all duration-300">
+        <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight transition-all duration-300">
           Orders
         </h2>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2 transition-all duration-300">
           <Button
             variant="outline"
             size="sm"
             onClick={handleExport}
             disabled={isPending}
-            className="text-xs sm:text-sm"
+            className="text-xs sm:text-sm transition-all duration-300"
           >
             <Download className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            Export
+            <span className="hidden sm:inline">Export</span>
+            <span className="sm:hidden">Exp</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={handleFilterClick}
             disabled={isPending}
-            className="text-xs sm:text-sm bg-transparent"
+            className="text-xs sm:text-sm bg-transparent transition-all duration-300"
           >
             <Filter className="mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4" />
-            Filter
+            <span className="hidden sm:inline">Filter</span>
+            <span className="sm:hidden">Filt</span>
           </Button>
         </div>
       </div>
@@ -261,7 +264,7 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
 
       {/* Optional loading indicator for transitions */}
       {isPending && (
-        <div className="fixed bottom-4 right-4 bg-background/80 backdrop-blur-sm rounded-lg p-2 shadow-lg">
+        <div className="fixed bottom-4 right-4 bg-background/80 backdrop-blur-sm rounded-lg p-2 sm:p-3 shadow-lg transition-all duration-300 ease-in-out z-50">
           <div className="flex items-center space-x-2">
             <div className="h-2 w-2 bg-primary rounded-full animate-pulse" />
             <span className="text-xs text-muted-foreground">Updating...</span>

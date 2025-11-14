@@ -1,14 +1,9 @@
-import { GET_SELLER_ORDER } from "@/client/order/order.query";
-import { OrdersAllPage } from "@/components/orders/OrdersAllPage";
-import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
-import { GetSellerOrdersResponse } from "@/types/pages/order.types";
+import OrdersClient from "@/components/orders/OrdersClient";
 
 export default async function OrdersPage() {
-  const client = await getServerApolloClient();
-  const { data } = await client.query<GetSellerOrdersResponse>({
-    query: GET_SELLER_ORDER,
-  });
-
-  console.log("orderes data-->",data)
-  return <OrdersAllPage orders={data?.getSellerOrders?.sellerOrders || []} />;
+  return (
+    <div className="flex-1 space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6 lg:p-8 pt-4 sm:pt-6 transition-all duration-300 ease-in-out">
+      <OrdersClient />
+    </div>
+  );
 }

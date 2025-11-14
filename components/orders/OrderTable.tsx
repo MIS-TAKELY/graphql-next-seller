@@ -100,8 +100,8 @@ export function OrderTable({
   };
 
   return (
-    <div className="overflow-x-auto">
-      <Table>
+    <div className="overflow-x-auto transition-all duration-300 ease-in-out">
+      <Table className="transition-all duration-300">
         <TableHeader>
           <TableRow>
             {showCheckbox && (

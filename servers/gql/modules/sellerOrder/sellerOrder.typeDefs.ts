@@ -60,16 +60,15 @@ export const sellerOrderTypeDefs = gql`
   }
 
   type Mutation {
-    confirmOrder(input: ConfirmOrderInput!): Boolean
+    confirmOrder(input: ConfirmOrderInput!): Boolean!
     updateSellerOrderStatus(
       sellerOrderId: String!
       status: String!
-    ): SellerOrder
+    ): SellerOrder!
     createShipment(
       orderId: String!
       trackingNumber: String!
       carrier: String!
-      #status: String!
-    ): Shipment
+    ): Shipment!
   }
 `;

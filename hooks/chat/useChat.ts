@@ -142,13 +142,15 @@ export const useSellerChat = (conversationId?: string | null) => {
     },
   });
 
-  const loadMessages = useCallback(async () => {
+  const loadMessages = useCallback(async (silent: boolean = false) => {
     if (!conversationId) {
       setMessages([]);
       return;
     }
 
-    setIsLoading(true);
+    if (!silent) {
+      setIsLoading(true);
+    }
     setError(null);
 
     try {
@@ -172,21 +174,34 @@ export const useSellerChat = (conversationId?: string | null) => {
           ? e.message
           : (e as Error)?.message || "Failed to load messages";
       setError(msg);
-      if (!hasShownError) {
+      if (!hasShownError && !silent) {
         toast.error(msg);
         setHasShownError(true);
       }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
     }
   }, [conversationId, fetchMessages, normalizeServerMessage, hasShownError]);
 
   useEffect(() => {
-    loadMessages();
+    loadMessages(false); // Initial load - show loading
   }, [loadMessages]);
 
-  const refetchMessages = useCallback(async () => {
-    await loadMessages();
+  // Poll for new messages every 10 seconds when conversation is open (silent updates)
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const interval = setInterval(() => {
+      loadMessages(true); // Silent polling - don't show loading
+    }, 10000); // Poll every 10 seconds (realtime should handle most updates)
+
+    return () => clearInterval(interval);
+  }, [conversationId, loadMessages]);
+
+  const refetchMessages = useCallback(async (silent: boolean = false) => {
+    await loadMessages(silent);
   }, [loadMessages]);
 
   const [sendMessageMutation] = useMutation(SEND_MESSAGE, {

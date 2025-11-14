@@ -11,6 +11,10 @@ import { categorySpecificationsTypeDefs } from "./modules/categorySpecification/
 import { categorySpecificationResolvers } from "./modules/categorySpecification/categorySpecifications.resolvers";
 import { conversationResolvers } from "./modules/conversation/conversation.resolvers";
 import { conversationTypedefs } from "./modules/conversation/conversaton.typeDefs";
+import { customerResolvers } from "./modules/customer/customer.resolvers";
+import { customerTypeDefs } from "./modules/customer/customer.typeDefs";
+import { analyticsResolvers } from "./modules/analytics/analytics.resolvers";
+import { analyticsTypeDefs } from "./modules/analytics/analytics.typeDefs";
 import { dashboardResolvers } from "./modules/dashboard/dashboard.resolvers";
 import { dashboardTyprDefs } from "./modules/dashboard/dashboard.typeDefs";
 import { deliveryTypedefs } from "./modules/delivery/delivery.typeDefs";
@@ -78,6 +82,8 @@ const typeDefs = mergeTypeDefs([
   messageTypedefs,
   conversationTypedefs,
   dashboardTyprDefs,
+  analyticsTypeDefs,
+  customerTypeDefs,
 ]);
 
 const resolvers = mergeResolvers([
@@ -89,6 +95,8 @@ const resolvers = mergeResolvers([
   conversationResolvers,
   dashboardResolvers,
   sellerOrderResolver,
+  analyticsResolvers,
+  customerResolvers,
 ]);
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers });

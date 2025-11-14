@@ -34,13 +34,9 @@ export const useOrder = () => {
       const { data } = await confirmOrder({
         variables: { input: { sellerOrderId } },
         optimisticResponse: {
-          confirmOrder: {
-            id: sellerOrderId,
-            status: "CONFIRMED",
-            __typename: "SellerOrder",
-          },
+          confirmOrder: true,
         },
-        update: (cache, { data }) => {
+        update: (cache) => {
           try {
             // Read the existing cache
             const existing = cache.readQuery({
@@ -57,7 +53,7 @@ export const useOrder = () => {
                     sellerOrders: existing.getSellerOrders.sellerOrders.map(
                       (order: SellerOrder) =>
                         order.id === sellerOrderId
-                          ? { ...order, status: "CONFIRMED" }
+                          ? { ...order, status: "CONFIRMED", updatedAt: new Date().toISOString() }
                           : order
                     ),
                   },
@@ -72,8 +68,8 @@ export const useOrder = () => {
 
       toast.success(`Order confirmed successfully`);
       return data?.confirmOrder;
-    } catch (error) {
-      toast.error("Failed to confirm order");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to confirm order");
       console.error(error);
       throw error;
     }
@@ -121,8 +117,8 @@ export const useOrder = () => {
 
       toast.success(`Order updated to ${status}`);
       return data.updateSellerOrderStatus;
-    } catch (error) {
-      toast.error("Failed to update order status");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update order status");
       console.error(error);
       throw error;
     }

@@ -1,108 +1,37 @@
-// const createSingleShipment = async ({ orderId, trackingNumber, carrier, status }: ShipmentInput) => {
-//     if (!orderId) {
-//       const error = new Error('Order ID is required');
-//       toast.error(error.message);
-//       throw error;
-//     }
+// // //makeing this ISR component because this component is mostly statcic and no to none client/user interaction , Data and graph gets changed after buyer actions(i.e buy,cart,etc..)
 
-//     try {
-//       const { data } = await createShipment({
-//         variables: { orderId, trackingNumber, carrier, status },
-//         update: (cache, { data }) => {
-//           const newShipment = data?.createShipment;
-//           if (newShipment) {
-//             cache.modify({
-//               fields: {
-//                 getSellerOrders(existing = { sellerOrders: [] }) {
-//                   return {
-//                     ...existing,
-//                     sellerOrders: existing.sellerOrders.map((o: SellerOrder) =>
-//                       o.buyerOrderId === orderId
-//                         ? {
-//                             ...o,
-//                             order: {
-//                               ...o.order,
-//                               shipments: [...(o.order.shipments || []), newShipment],
-//                             },
-//                           }
-//                         : o
-//                     ),
-//                   };
-//                 },
-//               },
-//             });
-//           }
-//         },
-//       });
-//       return data.createShipment;
-//     } catch (error: any) {
-//       toast.error(error.message || 'Failed to create shipment');
-//       console.error('Create shipment error:', error);
-//       throw error;
-//     }
+// import { AnalyticsContent } from "@/components/analytics/AnalyticsContent";
+// import { AnalyticsHeader } from "@/components/analytics/AnalyticsHeader";
+
+// // Mock data - replace with actual data fetching
+// const salesData = [
+//   { name: "Jan", sales: 4000, revenue: 2400, orders: 240 },
+//   { name: "Feb", sales: 3000, revenue: 1398, orders: 221 },
+//   { name: "Mar", sales: 2000, revenue: 9800, orders: 229 },
+//   { name: "Apr", sales: 2780, revenue: 3908, orders: 200 },
+//   { name: "May", sales: 1890, revenue: 4800, orders: 218 },
+//   { name: "Jun", sales: 2390, revenue: 3800, orders: 250 },
+//   { name: "Jul", sales: 3490, revenue: 4300, orders: 210 },
+// ];
+
+// const productData = [
+//   { name: "Wireless Headphones", value: 400, color: "#0088FE" },
+//   { name: "Smart Watch", value: 300, color: "#00C49F" },
+//   { name: "Laptop Stand", value: 300, color: "#FFBB28" },
+//   { name: "USB-C Cable", value: 200, color: "#FF8042" },
+//   { name: "Phone Case", value: 150, color: "#8884D8" },
+// ];
+
+// export default async function AnalyticsPage() {
+//   const data = {
+//     salesData,
+//     productData,
 //   };
 
-//   const updateOrderStatus = async (sellerOrderId: string, status: string) => {
-//     try {
-//       const { data } = await updateSellerOrderStatus({
-//         variables: { sellerOrderId, status },
-//         update: (cache, { data }) => {
-//           const updatedOrder = data?.updateSellerOrderStatus;
-//           if (updatedOrder) {
-//             cache.modify({
-//               fields: {
-//                 getSellerOrders(existing = { sellerOrders: [] }) {
-//                   return {
-//                     ...existing,
-//                     sellerOrders: existing.sellerOrders.map((o: SellerOrder) =>
-//                       o.id === sellerOrderId
-//                         ? { ...o, status: updatedOrder.status }
-//                         : o
-//                     ),
-//                   };
-//                 },
-//               },
-//             });
-//           }
-//         },
-//       });
-//       toast.success(`Order status updated to ${status}`);
-//       return data.updateSellerOrderStatus;
-//     } catch (error: any) {
-//       toast.error(error.message || 'Failed to update order status');
-//       console.error('Update order status error:', error);
-//       throw error;
-//     }
-//   };
-
-//   const confirmSingleOrder = async (sellerOrderId: string) => {
-//     try {
-//       const { data } = await confirmOrder({
-//         variables: { input: { sellerOrderId } },
-//         update: (cache, { data }) => {
-//           if (data?.confirmOrder) {
-//             cache.modify({
-//               fields: {
-//                 getSellerOrders(existing = { sellerOrders: [] }) {
-//                   return {
-//                     ...existing,
-//                     sellerOrders: existing.sellerOrders.map((order: SellerOrder) =>
-//                       order.id === sellerOrderId
-//                         ? { ...order, status: 'CONFIRMED', order: data.confirmOrder.order }
-//                         : order
-//                     ),
-//                   };
-//                 },
-//               },
-//             });
-//           }
-//         },
-//       });
-//       toast.success(`Order ${data?.confirmOrder.order.orderNumber} confirmed`);
-//       return data.confirmOrder;
-//     } catch (error: any) {
-//       toast.error(error.message || 'Failed to confirm order');
-//       console.error('Confirm order error:', error);
-//       throw error;
-//     }
-//   };
+//   return (
+//     <div className="flex-1 space-y-4 p-2 sm:p-4 md:p-6 lg:p-8">
+//       <AnalyticsHeader />
+//       <AnalyticsContent initialData={data} />
+//     </div>
+//   );
+// }

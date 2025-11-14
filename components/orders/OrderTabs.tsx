@@ -37,16 +37,19 @@ export function OrderTabs({ activeTab, orders, filters, onTabChange }: OrderTabs
   ];
 
   return (
-    <Tabs value={activeTab} className="space-y-3 sm:space-y-4">
-      <TabsList className="grid w-full grid-cols-3 lg:grid-cols-7 text-xs sm:text-sm">
+    <Tabs value={activeTab} className="space-y-3 sm:space-y-4 md:space-y-6 transition-all duration-300 ease-in-out">
+      <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-1 sm:gap-2 text-xs sm:text-sm transition-all duration-300">
         {tabs.map((tab) => (
           <TabsTrigger
             key={tab.value}
             value={tab.value}
-            className="px-2"
+            className="px-2 sm:px-3 transition-all duration-300"
             onClick={() => onTabChange(tab.value as any)}
           >
-            {tab.label}
+            <span className="hidden sm:inline">{tab.label}</span>
+            <span className="sm:hidden">
+              {tab.value === "all" ? "All" : tab.value === "new" ? "New" : tab.value === "confirmed" ? "Conf" : tab.value === "processing" ? "Proc" : tab.value === "shipped" ? "Ship" : tab.value === "delivered" ? "Del" : "Ret"}
+            </span>
           </TabsTrigger>
         ))}
       </TabsList>

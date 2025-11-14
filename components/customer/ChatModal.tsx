@@ -66,6 +66,16 @@ export default function ChatModal({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Auto-scroll when new messages arrive
+  useEffect(() => {
+    if (open && messages.length > 0) {
+      const timer = setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, open]);
+
   useEffect(() => {
     if (open && inputRef.current) {
       const timeout = setTimeout(() => inputRef.current?.focus(), 100);
@@ -153,7 +163,7 @@ export default function ChatModal({
         <div className="flex-1 overflow-hidden">
           <ScrollArea className="h-full px-4 sm:px-6">
             <div className="py-4 space-y-3 sm:space-y-4">
-              {isLoading ? (
+              {isLoading && messages.length === 0 ? (
                 <p className="text-center text-muted-foreground">
                   Loading messages...
                 </p>

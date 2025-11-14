@@ -1,84 +1,96 @@
-// components/customers/AnalyticsCards.tsx (Client or Server; no hooks needed)
+// components/customers/AnalyticsCards.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useDashboardStore } from "@/lib/store";
-import { Conversation } from "@/types/customer/customer.types";
 import { AlertTriangle, Star, TrendingUp, Users } from "lucide-react";
 import React from "react";
 
 interface AnalyticsCardsProps {
-  conversations: Conversation[];
+  totalCustomers: number;
+  totalRevenue: number;
+  averageRating: number;
+  activeCustomers: number;
   disputes: any[];
 }
 
 const AnalyticsCards: React.FC<AnalyticsCardsProps> = ({
-  conversations,
+  totalCustomers,
+  totalRevenue,
+  averageRating,
+  activeCustomers,
   disputes,
 }) => {
-  const { customers } = useDashboardStore();
-
-  const totalCustomers = customers.length;
-  const vipCustomers = customers.filter((c: any) => c.status === "vip").length;
-  const activeCustomers = customers.filter(
-    (c: any) => c.status === "active"
-  ).length;
-  const avgRating =
-    customers.reduce((sum: number, c: any) => sum + c.rating, 0) /
-    (customers.length || 1);
-  const totalSpent = customers.reduce(
-    (sum: number, c: any) =>
-      sum + Number.parseFloat(c.spent.replace("$", "").replace(",", "")),
-    0
-  );
-  const unreadCount = conversations.reduce(
-    (sum: number, c: any) => sum + (c.unreadCount || 0),
-    0
-  );
   const openDisputes = disputes.filter((d: any) => d.status === "open").length;
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(amount);
+  };
+
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Customers</CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+    <div className="grid gap-3 sm:gap-4 md:gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 transition-all duration-300 ease-in-out">
+      <Card className="transition-all duration-300 ease-in-out hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 transition-all duration-300">
+          <CardTitle className="text-xs sm:text-sm font-medium transition-all duration-300">
+            Total Customers
+          </CardTitle>
+          <Users className="h-4 w-4 text-muted-foreground transition-all duration-300" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{totalCustomers}</div>
-          <p className="text-xs text-muted-foreground">
-            {vipCustomers} VIP customers
+        <CardContent className="transition-all duration-300">
+          <div className="text-lg sm:text-xl md:text-2xl font-bold transition-all duration-300">
+            {totalCustomers.toLocaleString()}
+          </div>
+          <p className="text-xs text-muted-foreground transition-all duration-300">
+            {activeCustomers} active customers
           </p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Average Rating</CardTitle>
-          <Star className="h-4 w-4 text-muted-foreground" />
+      <Card className="transition-all duration-300 ease-in-out hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 transition-all duration-300">
+          <CardTitle className="text-xs sm:text-sm font-medium transition-all duration-300">
+            Average Rating
+          </CardTitle>
+          <Star className="h-4 w-4 text-muted-foreground transition-all duration-300" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{avgRating.toFixed(1)}</div>
-          <p className="text-xs text-muted-foreground">Customer satisfaction</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
-            ${totalSpent.toLocaleString()}
+        <CardContent className="transition-all duration-300">
+          <div className="text-lg sm:text-xl md:text-2xl font-bold transition-all duration-300">
+            {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
           </div>
-          <p className="text-xs text-muted-foreground">From all customers</p>
+          <p className="text-xs text-muted-foreground transition-all duration-300">
+            Customer satisfaction
+          </p>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Issues</CardTitle>
-          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+      <Card className="transition-all duration-300 ease-in-out hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 transition-all duration-300">
+          <CardTitle className="text-xs sm:text-sm font-medium transition-all duration-300">
+            Total Revenue
+          </CardTitle>
+          <TrendingUp className="h-4 w-4 text-muted-foreground transition-all duration-300" />
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{unreadCount + openDisputes}</div>
-          <p className="text-xs text-muted-foreground">Require attention</p>
+        <CardContent className="transition-all duration-300">
+          <div className="text-lg sm:text-xl md:text-2xl font-bold transition-all duration-300">
+            {formatCurrency(totalRevenue)}
+          </div>
+          <p className="text-xs text-muted-foreground transition-all duration-300">
+            From all customers
+          </p>
+        </CardContent>
+      </Card>
+      <Card className="transition-all duration-300 ease-in-out hover:shadow-md">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 transition-all duration-300">
+          <CardTitle className="text-xs sm:text-sm font-medium transition-all duration-300">
+            Active Issues
+          </CardTitle>
+          <AlertTriangle className="h-4 w-4 text-muted-foreground transition-all duration-300" />
+        </CardHeader>
+        <CardContent className="transition-all duration-300">
+          <div className="text-lg sm:text-xl md:text-2xl font-bold transition-all duration-300">
+            {openDisputes}
+          </div>
+          <p className="text-xs text-muted-foreground transition-all duration-300">
+            Require attention
+          </p>
         </CardContent>
       </Card>
     </div>

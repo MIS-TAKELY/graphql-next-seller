@@ -195,14 +195,14 @@ export function OrderStatusTab({
   const { Icon, className } = getStatusIcon(status);
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base sm:text-lg">{getTitle()}</CardTitle>
-        <CardDescription className="text-sm">
+    <Card className="transition-all duration-300 ease-in-out hover:shadow-md">
+      <CardHeader className="pb-3 sm:pb-4 transition-all duration-300">
+        <CardTitle className="text-base sm:text-lg md:text-xl transition-all duration-300">{getTitle()}</CardTitle>
+        <CardDescription className="text-xs sm:text-sm transition-all duration-300">
           {getDescription()}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="transition-all duration-300">
         {orders.length > 0 ? (
           <OrderTable
             orders={orders}
