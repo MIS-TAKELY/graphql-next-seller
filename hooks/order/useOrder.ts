@@ -6,7 +6,13 @@ import {
   UPDATE_SELLER_ORDER_STATUS,
 } from "@/client/order/order.mutation";
 import { GET_SELLER_ORDER } from "@/client/order/order.query";
-import { SellerOrder } from "@/types/pages/order.types";
+import {
+  SellerOrder,
+  GetSellerOrdersResponse,
+  OrderStatus,
+  ShipmentStatus,
+  Shipment,
+} from "@/types/pages/order.types";
 import { useMutation } from "@apollo/client";
 import { toast } from "sonner";
 
@@ -14,19 +20,50 @@ interface ShipmentInput {
   orderId: string;
   trackingNumber: string;
   carrier: string;
-  status: string;
+  status: ShipmentStatus;
+}
+
+interface ConfirmOrderInput {
+  sellerOrderId: string;
+}
+
+interface UpdateOrderStatusInput {
+  sellerOrderId: string;
+  status: OrderStatus;
+}
+
+interface CreateShipmentResponse {
+  createShipment: Shipment;
+}
+
+interface UpdateSellerOrderStatusResponse {
+  updateSellerOrderStatus: SellerOrder;
+}
+
+interface ConfirmOrderResponse {
+  confirmOrder: boolean;
 }
 
 export const useOrder = () => {
-  const [updateSellerOrderStatus] = useMutation(UPDATE_SELLER_ORDER_STATUS, {
+  const [updateSellerOrderStatus] = useMutation<
+    UpdateSellerOrderStatusResponse,
+    UpdateOrderStatusInput
+  >(UPDATE_SELLER_ORDER_STATUS, {
     refetchQueries: [{ query: GET_SELLER_ORDER }],
     awaitRefetchQueries: true,
   });
-  const [createShipment] = useMutation(CREATE_SHIPMENT);
-  const [confirmOrder] = useMutation(CONFIRM_ORDER, {
-    refetchQueries: [{ query: GET_SELLER_ORDER }],
-    awaitRefetchQueries: true,
-  });
+
+  const [createShipment] = useMutation<CreateShipmentResponse, ShipmentInput>(
+    CREATE_SHIPMENT
+  );
+
+  const [confirmOrder] = useMutation<ConfirmOrderResponse, { input: ConfirmOrderInput }>(
+    CONFIRM_ORDER,
+    {
+      refetchQueries: [{ query: GET_SELLER_ORDER }],
+      awaitRefetchQueries: true,
+    }
+  );
 
   // Confirm a single SellerOrder
   const confirmSingleOrder = async (sellerOrderId: string) => {
@@ -39,21 +76,21 @@ export const useOrder = () => {
         update: (cache) => {
           try {
             // Read the existing cache
-            const existing = cache.readQuery({
+            const existing = cache.readQuery<GetSellerOrdersResponse>({
               query: GET_SELLER_ORDER,
-            }) as any;
+            });
 
             if (existing?.getSellerOrders?.sellerOrders) {
               // Write back to cache with updated status
-              cache.writeQuery({
+              cache.writeQuery<GetSellerOrdersResponse>({
                 query: GET_SELLER_ORDER,
                 data: {
                   getSellerOrders: {
                     ...existing.getSellerOrders,
                     sellerOrders: existing.getSellerOrders.sellerOrders.map(
-                      (order: SellerOrder) =>
+                      (order) =>
                         order.id === sellerOrderId
-                          ? { ...order, status: "CONFIRMED", updatedAt: new Date().toISOString() }
+                          ? { ...order, status: "CONFIRMED" as const, updatedAt: new Date().toISOString() }
                           : order
                     ),
                   },
@@ -68,15 +105,16 @@ export const useOrder = () => {
 
       toast.success(`Order confirmed successfully`);
       return data?.confirmOrder;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to confirm order");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to confirm order";
+      toast.error(message);
       console.error(error);
       throw error;
     }
   };
 
   // Update status for a single SellerOrder
-  const updateOrderStatus = async (sellerOrderId: string, status: string) => {
+  const updateOrderStatus = async (sellerOrderId: string, status: OrderStatus) => {
     try {
       const { data } = await updateSellerOrderStatus({
         variables: { sellerOrderId, status },
@@ -85,22 +123,22 @@ export const useOrder = () => {
             id: sellerOrderId,
             status,
             __typename: "SellerOrder",
-          },
+          } as unknown as SellerOrder,
         },
         update: (cache) => {
           try {
-            const existing = cache.readQuery({
+            const existing = cache.readQuery<GetSellerOrdersResponse>({
               query: GET_SELLER_ORDER,
-            }) as any;
+            });
 
             if (existing?.getSellerOrders?.sellerOrders) {
-              cache.writeQuery({
+              cache.writeQuery<GetSellerOrdersResponse>({
                 query: GET_SELLER_ORDER,
                 data: {
                   getSellerOrders: {
                     ...existing.getSellerOrders,
                     sellerOrders: existing.getSellerOrders.sellerOrders.map(
-                      (order: SellerOrder) =>
+                      (order) =>
                         order.id === sellerOrderId
                           ? { ...order, status }
                           : order
@@ -116,9 +154,10 @@ export const useOrder = () => {
       });
 
       toast.success(`Order updated to ${status}`);
-      return data.updateSellerOrderStatus;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update order status");
+      return data?.updateSellerOrderStatus;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update order status";
+      toast.error(message);
       console.error(error);
       throw error;
     }
@@ -126,12 +165,8 @@ export const useOrder = () => {
 
   // Create a shipment for a single SellerOrder
 
-  const createSingleShipment = async ({
-    orderId,
-    trackingNumber,
-    carrier,
-    status,
-  }: ShipmentInput) => {
+  const createSingleShipment = async (input: ShipmentInput) => {
+    const { orderId, trackingNumber, carrier, status } = input;
     if (!orderId) {
       const error = new Error("Order ID is required");
       toast.error(error.message);
@@ -146,7 +181,12 @@ export const useOrder = () => {
           if (newShipment) {
             cache.modify({
               fields: {
-                getSellerOrders(existing = { sellerOrders: [] }) {
+                getSellerOrders(
+                  existing: any = { sellerOrders: [] }
+                ) {
+                  if (!existing || !existing.sellerOrders) {
+                    return { sellerOrders: [] };
+                  }
                   return {
                     ...existing,
                     sellerOrders: existing.sellerOrders.map((o: SellerOrder) =>
@@ -155,10 +195,7 @@ export const useOrder = () => {
                             ...o,
                             order: {
                               ...o.order,
-                              shipments: [
-                                ...(o.order.shipments || []),
-                                newShipment,
-                              ],
+                              shipments: [...(o.order.shipments || []), newShipment],
                             },
                           }
                         : o
@@ -171,16 +208,17 @@ export const useOrder = () => {
         },
       });
       toast.success("Shipment created");
-      return data.createShipment;
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create shipment");
+      return data?.createShipment;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create shipment";
+      toast.error(message);
       console.error(error);
       throw error;
     }
   };
 
   // Bulk update order statuses
-  const bulkUpdateOrders = async (orderIds: string[], status: string) => {
+  const bulkUpdateOrders = async (orderIds: string[], status: OrderStatus) => {
     if (orderIds.length === 0) {
       toast.error("Please select orders first");
       return;
@@ -195,18 +233,21 @@ export const useOrder = () => {
               updateSellerOrderStatus: {
                 id: orderId,
                 status,
-                __typename: "SellerOrder",
-              },
+              } as unknown as SellerOrder,
             },
             update: (cache) => {
               cache.modify({
                 fields: {
-                  getSellerOrders(existing = { sellerOrders: [] }) {
+                  getSellerOrders(
+                    existing: any = { sellerOrders: [] }
+                  ) {
+                    if (!existing || !existing.sellerOrders) {
+                      return { sellerOrders: [] };
+                    }
                     return {
                       ...existing,
-                      sellerOrders: existing.sellerOrders.map(
-                        (order: SellerOrder) =>
-                          order.id === orderId ? { ...order, status } : order
+                      sellerOrders: existing.sellerOrders.map((order: SellerOrder) =>
+                        order.id === orderId ? { ...order, status } : order
                       ),
                     };
                   },
@@ -230,7 +271,7 @@ export const useOrder = () => {
     orderIds: string[],
     trackingNumber: string,
     carrier: string,
-    status: string
+    status: OrderStatus
   ) => {
     if (orderIds.length === 0) {
       toast.error("Please select orders first");
@@ -249,30 +290,31 @@ export const useOrder = () => {
                 orderId: order.buyerOrderId,
                 trackingNumber,
                 carrier,
-                status,
+                status: "SHIPPED" as const, // createShipment expects ShipmentStatus
               },
               update: (cache, { data }) => {
                 const newShipment = data?.createShipment;
                 if (newShipment) {
                   cache.modify({
                     fields: {
-                      getSellerOrders(existing = { sellerOrders: [] }) {
+                      getSellerOrders(
+                        existing: any = { sellerOrders: [] }
+                      ) {
+                        if (!existing || !existing.sellerOrders) {
+                          return { sellerOrders: [] };
+                        }
                         return {
                           ...existing,
-                          sellerOrders: existing.sellerOrders.map(
-                            (o: SellerOrder) =>
-                              o.id === orderId
-                                ? {
-                                    ...o,
-                                    order: {
-                                      ...o.order,
-                                      shipments: [
-                                        ...(o.order.shipments || []),
-                                        newShipment,
-                                      ],
-                                    },
-                                  }
-                                : o
+                          sellerOrders: existing.sellerOrders.map((o: SellerOrder) =>
+                            o.id === orderId
+                              ? {
+                                  ...o,
+                                  order: {
+                                    ...o.order,
+                                    shipments: [...(o.order.shipments || []), newShipment],
+                                  },
+                                }
+                              : o
                           ),
                         };
                       },
@@ -287,18 +329,21 @@ export const useOrder = () => {
                 updateSellerOrderStatus: {
                   id: orderId,
                   status,
-                  __typename: "SellerOrder",
-                },
+                } as unknown as SellerOrder,
               },
               update: (cache) => {
                 cache.modify({
                   fields: {
-                    getSellerOrders(existing = { sellerOrders: [] }) {
+                    getSellerOrders(
+                      existing: any = { sellerOrders: [] }
+                    ) {
+                      if (!existing || !existing.sellerOrders) {
+                        return { sellerOrders: [] };
+                      }
                       return {
                         ...existing,
-                        sellerOrders: existing.sellerOrders.map(
-                          (order: SellerOrder) =>
-                            order.id === orderId ? { ...order, status } : order
+                        sellerOrders: existing.sellerOrders.map((order: SellerOrder) =>
+                          order.id === orderId ? { ...order, status } : order
                         ),
                       };
                     },

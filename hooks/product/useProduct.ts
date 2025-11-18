@@ -10,6 +10,100 @@ import {
 import { GET_MY_PRODUCTS } from "@/client/product/product.queries";
 import { ICreateProductInput, GetMyProductsResponse, Product } from "@/types/pages/product";
 
+const slugifyProductName = (value?: string, fallback = "temp-product") =>
+  value
+    ?.toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "") || fallback;
+
+type OptimisticProductOptions = Partial<
+  Pick<Product, "id" | "category" | "sellerId" | "status">
+>;
+
+const buildOptimisticProduct = (
+  input: ICreateProductInput,
+  options: OptimisticProductOptions = {}
+): Product => {
+  const timestamp = Date.now();
+  const productId = options.id ?? `temp-${timestamp}`;
+  const variantInput = input.variants;
+  const baseVariantId = `${productId}-variant`;
+
+  return {
+    id: productId,
+    sellerId: options.sellerId ?? "temp-seller",
+    name: input.name ?? "",
+    slug: slugifyProductName(input.name),
+    description: input.description ?? "",
+    status: options.status ?? "DRAFT",
+    brand: input.brand ?? "",
+    categoryId: input.categoryId,
+    category: options.category ?? null,
+    images: (input.images ?? []).map((img, index) => ({
+      id: `${productId}-image-${index}`,
+      productId,
+      variantId: undefined,
+      url: img.url,
+      altText: img.altText,
+      sortOrder: img.sortOrder ?? index,
+      mediaType: img.mediaType ?? "PRIMARY",
+      fileType: img.fileType ?? "IMAGE",
+    })),
+    variants: [
+      {
+        id: baseVariantId,
+        productId,
+        sku: variantInput.sku,
+        price: variantInput.price,
+        mrp: variantInput.mrp,
+        stock: variantInput.stock,
+        soldCount: variantInput.soldCount ?? 0,
+        attributes: variantInput.attributes,
+        isDefault: variantInput.isDefault ?? true,
+        specifications: variantInput.specifications?.map((spec, specIndex) => ({
+          id: `${baseVariantId}-spec-${specIndex}`,
+          key: spec.key,
+          value: spec.value,
+        })),
+      },
+    ],
+    deliveryOptions: (input.deliveryOptions ?? []).map((option, index) => ({
+      id: `${productId}-delivery-${index}`,
+      title: option.title,
+      description: option.description,
+      isDefault: option.isDefault,
+    })),
+    warranty: (input.warranty ?? []).map((item, index) => ({
+      id: `${productId}-warranty-${index}`,
+      type: item.type,
+      duration: item.duration,
+      unit: item.unit,
+      description: item.description,
+    })),
+    returnPolicy: (input.returnPolicy ?? []).map((policy, index) => ({
+      id: `${productId}-return-${index}`,
+      type: policy.type,
+      duration: policy.duration,
+      unit: policy.unit,
+      conditions: policy.conditions,
+    })),
+    productOffers: (input.productOffers ?? []).map((offer, index) => ({
+      id: `${productId}-offer-${index}`,
+      offerId: `${productId}-offer-${index}`,
+      offer: {
+        id: `${productId}-offer-${index}`,
+        title: offer.offer.title,
+        description: offer.offer.description,
+        type: offer.offer.type,
+        value: offer.offer.value,
+        startDate: offer.offer.startDate,
+        endDate: offer.offer.endDate,
+        isActive: offer.offer.isActive ?? true,
+      },
+    })),
+  };
+};
+
 export const useProduct = () => {
   const router = useRouter();
 
@@ -66,31 +160,17 @@ export const useProduct = () => {
           const existing = cache.readQuery<GetMyProductsResponse>({ query: GET_MY_PRODUCTS });
           if (!existing?.getMyProducts) return;
           const tempId = "temp-" + Date.now();
-          const slug = actualInput.name
-            .toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "") || "temp-product";
           const existingCategory = existing.getMyProducts.products.find(
             (p) => p.category?.id === actualInput.categoryId
           )?.category;
-          const optimisticProduct: Product = {
+          const optimisticProduct = buildOptimisticProduct(actualInput, {
             id: tempId,
-            name: actualInput.name,
-            slug,
-            description: actualInput.description || "",
-            brand: actualInput.brand || "",
-            category: existingCategory || null,
-            images: actualInput.images?.map((img, index) => ({
-              __typename: "ProductImage",
-              url: img.url,
-              altText: img.altText,
-              sortOrder: img.sortOrder ?? index,
-              mediaType: img.mediaType || "PRIMARY",
-              fileType: img.fileType,
-            })) || [],
-            variants: actualInput.variants ? [actualInput.variants] : [],
-            status: "DRAFT",
-          };
+            category: existingCategory ?? null,
+            sellerId:
+              existing.getMyProducts.products[0]?.sellerId ??
+              productsData?.getMyProducts.products[0]?.sellerId ??
+              "temp-seller",
+          });
           cache.writeQuery({
             query: GET_MY_PRODUCTS,
             data: {
@@ -106,28 +186,7 @@ export const useProduct = () => {
         }
       },
       optimisticResponse: (vars) => ({
-        addProduct: {
-          __typename: "Product",
-          id: "temp-" + Date.now(),
-          name: vars?.input?.name || "",
-          slug: vars?.input?.name
-            ?.toLowerCase()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "") || "temp-product",
-          description: vars?.input?.description || "",
-          brand: vars?.input?.brand || "",
-          category: null,
-          images: vars?.input?.images?.map((img, index) => ({
-            __typename: "ProductImage",
-            url: img.url,
-            altText: img.altText,
-            sortOrder: img.sortOrder ?? index,
-            mediaType: img.mediaType || "PRIMARY",
-            fileType: img.fileType,
-          })) || [],
-          variants: vars?.input?.variants ? [vars.input.variants] : [],
-          status: "DRAFT",
-        },
+        addProduct: buildOptimisticProduct(vars.input),
       }),
       onError: () => {
         toast.error("Failed to create product. Please try again.");
@@ -184,28 +243,10 @@ export const useProduct = () => {
       }
     },
     optimisticResponse: (vars) => ({
-      updateProduct: {
-        __typename: "Product",
-        id: vars?.input?.id || "",
-        name: vars?.input?.name || "",
-        slug: vars?.input?.name
-          ?.toLowerCase()
-          .replace(/\s+/g, "-")
-          .replace(/[^a-z0-9-]/g, "") || "",
-        description: vars?.input?.description || "",
-        brand: vars?.input?.brand || "",
-        category: null,
-        images: vars?.input?.images?.map((img, index) => ({
-          __typename: "ProductImage",
-          url: img.url,
-          altText: img.altText,
-          sortOrder: img.sortOrder ?? index,
-          mediaType: img.mediaType || "PRIMARY",
-          fileType: img.fileType,
-        })) || [],
-        variants: vars?.input?.variants ? [vars.input.variants] : [],
-        status: vars?.input?.variants?.stock === 0 ? "DISCONTINUED" : "ACTIVE",
-      },
+      updateProduct: buildOptimisticProduct(vars.input, {
+        id: vars.input.id,
+        status: vars.input.variants.stock === 0 ? "DISCONTINUED" : "ACTIVE",
+      }),
     }),
     onError: () => {
       toast.error("Failed to update product. Changes reverted.");

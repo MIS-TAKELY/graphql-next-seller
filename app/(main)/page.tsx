@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   return (
     <div className="flex-1 space-y-3 sm:space-y-4">

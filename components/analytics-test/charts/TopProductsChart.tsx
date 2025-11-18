@@ -80,8 +80,8 @@ export function TopProductsChart({ data }: TopProductsChartProps) {
               labelLine={false}
               label={({ name, percent }) =>
                 !showLegend
-                  ? `${name}: ${(percent * 100).toFixed(0)}%`
-                  : `${(percent * 100).toFixed(0)}%`
+                  ? `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
+                  : `${((percent ?? 0) * 100).toFixed(0)}%`
               }
               outerRadius={radius.outer}
               fill="#8884d8"

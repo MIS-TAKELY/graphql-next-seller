@@ -94,13 +94,17 @@ export function CreateShipmentDialog({
       setFormData({ trackingNumber: '', carrier: '' });
       setErrors({ trackingNumber: '', carrier: '', orderId: '' });
       if (onSuccess) onSuccess(order.id); // Pass orderId to parent
-    } catch (error: any) {
-      const message =
-        error.message.includes('NOT_FOUND')
-          ? 'Order not found'
-          : error.message.includes('FORBIDDEN')
-          ? 'Unauthorized to create shipment'
-          : 'Failed to create shipment';
+    } catch (error) {
+      let message = 'Failed to create shipment';
+      if (error instanceof Error) {
+        if (error.message.includes('NOT_FOUND')) {
+          message = 'Order not found';
+        } else if (error.message.includes('FORBIDDEN')) {
+          message = 'Unauthorized to create shipment';
+        } else {
+          message = error.message;
+        }
+      }
       toast.error(message);
       console.error('Shipment creation error:', error);
     } finally {

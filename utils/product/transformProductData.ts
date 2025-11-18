@@ -1,7 +1,7 @@
 // utils/product/transformProductData.ts
-import { FormData } from "@/types/pages/product";
+import { FormData, Product } from "@/types/pages/product";
 
-export const transformProductToFormData = (product: any): FormData => {
+export const transformProductToFormData = (product: Product): FormData => {
   if (!product) return {} as FormData;
 
   // Get the first variant for pricing info
@@ -13,31 +13,31 @@ export const transformProductToFormData = (product: any): FormData => {
   // Transform images to media format
   const productMedia =
     product.images
-      ?.filter((img: any) => img.mediaType === "PRIMARY")
-      .map((img: any) => ({
+      ?.filter((img) => img.mediaType === "PRIMARY")
+      .map((img) => ({
         url: img.url,
         altText: img.altText || "",
         mediaType: img.mediaType,
         fileType: img.fileType,
-        publicId: img.publicId || "",
+        publicId: (img as { publicId?: string }).publicId || "",
       })) || [];
 
   const promotionalMedia =
     product.images
-      ?.filter((img: any) => img.mediaType === "PROMOTIONAL")
-      .map((img: any) => ({
+      ?.filter((img) => img.mediaType === "PROMOTIONAL")
+      .map((img) => ({
         url: img.url,
         altText: img.altText || "",
         mediaType: img.mediaType,
         fileType: img.fileType,
-        publicId: img.publicId || "",
+        publicId: (img as { publicId?: string }).publicId || "",
       })) || [];
 
   console.log("varient---->", firstVariant.attributes);
 
   // Transform specifications
   const specifications =
-    firstVariant.specifications?.map((spec: any) => ({
+    firstVariant.specifications?.map((spec) => ({
       id: `spec_${Math.random()}`,
       key: spec.key,
       value: spec.value,
@@ -120,7 +120,7 @@ export const transformProductToFormData = (product: any): FormData => {
 };
 
 // Helper function to extract category hierarchy
-const getCategoryHierarchy = (category: any) => {
+const getCategoryHierarchy = (category: Product["category"]) => {
   if (!category) return { categoryId: "", subcategory: "", subSubcategory: "" };
 
   // If category has grandparent (3 levels)

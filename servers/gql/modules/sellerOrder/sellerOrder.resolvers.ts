@@ -1,10 +1,11 @@
 import { ApolloError } from "@apollo/client";
 import { requireSeller } from "../../auth/auth";
-import { GraphQLContext } from "../../context";
+import type { GraphQLContext as ResolverContext } from "../../context";
+import type { ConfirmOrderInput, UpdateSellerOrderStatusInput } from "../../types";
 
 export const sellerOrderResolver = {
   Query: {
-    getSellerOrders: async (_: any, __: any, ctx: GraphQLContext) => {
+    getSellerOrders: async (_: unknown, __: unknown, ctx: ResolverContext) => {
       try {
         const user = requireSeller(ctx);
         const sellerId = user.id;
@@ -107,12 +108,12 @@ export const sellerOrderResolver = {
           previousOrderCount: prevOrderCount,
           percentChange: Number(percentChange.toFixed(2)),
         };
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error occurred while fetching orders -->", error);
         throw error;
       }
     },
-    getActiveUsersForSeller: async (_: any, __: any, ctx: GraphQLContext) => {
+    getActiveUsersForSeller: async (_: unknown, __: unknown, ctx: ResolverContext) => {
       try {
         const user = requireSeller(ctx);
         const sellerId = user.id;
@@ -178,7 +179,7 @@ export const sellerOrderResolver = {
           previousActiveUsers: prevActiveUsers,
           percentChange: Number(percentChange.toFixed(2)),
         };
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error calculating active users change:", error);
         throw error;
       }
@@ -187,10 +188,10 @@ export const sellerOrderResolver = {
 
   Mutation: {
     confirmOrder: async (
-      _: any,
-      { input }: { input: any },
-      context: GraphQLContext
-    ) => {
+      _: unknown,
+      { input }: { input: ConfirmOrderInput },
+      context: ResolverContext
+    ): Promise<boolean> => {
       const { sellerOrderId } = input;
 
       // Authorization check: Ensure user is authenticated and has SELLER role
@@ -391,9 +392,9 @@ export const sellerOrderResolver = {
     // },
 
     updateSellerOrderStatus: async (
-      _: any,
-      { sellerOrderId, status }: { sellerOrderId: string; status: string },
-      context: GraphQLContext
+      _: unknown,
+      { sellerOrderId, status }: UpdateSellerOrderStatusInput,
+      context: ResolverContext
     ) => {
       // Authorization check: Ensure user is authenticated and has SELLER role
       requireSeller(context);
@@ -434,7 +435,7 @@ export const sellerOrderResolver = {
       }
 
       // Verify the authenticated user is the seller for this SellerOrder
-      if (sellerOrder.sellerId !== context.user.id) {
+      if (sellerOrder.sellerId !== context.user?.id) {
         throw new ApolloError({
           errorMessage: "Unauthorized: You can only update your own orders",
           extraInfo: { code: "FORBIDDEN" },
@@ -443,7 +444,9 @@ export const sellerOrderResolver = {
 
       // Optional: Add status transition validation
       // Example: Can't move to SHIPPED if not CONFIRMED or PROCESSING
-      const validTransitions = {
+      type OrderStatus = "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "RETURNED";
+      
+      const validTransitions: Record<OrderStatus, string[]> = {
         PENDING: ["CONFIRMED", "CANCELLED"],
         CONFIRMED: ["PROCESSING", "CANCELLED"],
         PROCESSING: ["SHIPPED", "CANCELLED"],
@@ -452,7 +455,9 @@ export const sellerOrderResolver = {
         CANCELLED: [],
         RETURNED: [],
       };
-      if (!validTransitions[sellerOrder.status].includes(status)) {
+      
+      const currentStatus = sellerOrder.status as OrderStatus;
+      if (!validTransitions[currentStatus]?.includes(status)) {
         throw new ApolloError({
           errorMessage: `Cannot transition from ${sellerOrder.status} to ${status}`,
           extraInfo: { code: "INVALID_STATE" },
@@ -460,27 +465,27 @@ export const sellerOrderResolver = {
       }
 
       try {
-        // Update the SellerOrder status
+        // Update the SellerOrder status                                                                              
         const updatedSellerOrder = await prisma.sellerOrder.update({
           where: { id: sellerOrderId },
           data: {
-            status,
+                                                                                                                                                                                                                                                    status,
             updatedAt: new Date(),
-          },
+          },                                                                                                                                                                                                                                                                                                        
           include: {
             seller: true,
             items: true,
-            order: true,
+            order: true,                                                                                                                                                                                                  
           },
         });
 
         return {
           ...updatedSellerOrder,
-          subtotal: parseFloat(updatedSellerOrder.subtotal),
-          tax: parseFloat(updatedSellerOrder.tax),
-          shippingFee: parseFloat(updatedSellerOrder.shippingFee),
-          commission: parseFloat(updatedSellerOrder.commission),
-          total: parseFloat(updatedSellerOrder.total),
+          subtotal: updatedSellerOrder.subtotal.toNumber(),
+          tax: updatedSellerOrder.tax.toNumber(),
+          shippingFee: updatedSellerOrder.shippingFee.toNumber(),
+          commission: updatedSellerOrder.commission.toNumber(),
+          total: updatedSellerOrder.total.toNumber(),
         };
       } catch (error) {
         console.error("Error updating seller order status:", error);
@@ -492,19 +497,17 @@ export const sellerOrderResolver = {
     },
 
     createShipment: async (
-      _: any,
+      _: unknown,                                                                                                                                                                                                                                                                                                                                                                                                               
       {
         orderId,
         trackingNumber,
         carrier,
-      }: // status,
-      {
+      }: {
         orderId: string;
         trackingNumber: string;
         carrier: string;
-        // status: string;
       },
-      context: GraphQLContext
+      context: ResolverContext
     ) => {
       // Authorization check: Ensure user is authenticated and has SELLER role
       requireSeller(context);
@@ -546,7 +549,7 @@ export const sellerOrderResolver = {
 
       // Verify the authenticated user has a SellerOrder for this Order
       const sellerOrder = order.sellerOrders.find(
-        (so) => so.sellerId === context.user.id
+        (so) => so.sellerId === context.user?.id
       );
       if (!sellerOrder) {
         throw new ApolloError({

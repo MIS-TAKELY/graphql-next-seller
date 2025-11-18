@@ -1,11 +1,25 @@
 // servers/gql/messageResolvers.ts
 import { realtime } from "@/lib/realtime";
-import { GraphQLContext } from "../../context";
+import type { GraphQLContext, SendMessageInput } from "../../types";
+import type { FileType as PrismaFileType } from "@/app/generated/prisma";
+import type {
+  MessageType,
+  FileType as CustomerFileType,
+} from "@/types/customer/customer.types";
+
+const toPrismaFileType = (type: CustomerFileType): PrismaFileType => {
+  const normalized = type.toUpperCase();
+  if (normalized === "IMAGE" || normalized === "VIDEO") {
+    return normalized as PrismaFileType;
+  }
+
+  throw new Error(`Unsupported attachment type: ${type}. Only IMAGE or VIDEO are allowed.`);
+};
 
 export const messageResolvers = {
   Query: {
     messages: async (
-      _parent: any,
+      _parent: unknown,
       {
         conversationId,
         limit = 50,
@@ -61,20 +75,10 @@ export const messageResolvers = {
   },
   Mutation: {
     sendMessage: async (
-      _parent: any,
-      {
-        input,
-      }: {
-        input: {
-          conversationId: string;
-          content?: string;
-          type: string;
-          clientId?: string;
-          attachments?: Array<{ url: string; type: string }>;
-        };
-      },
+      _parent: unknown,
+      { input }: { input: SendMessageInput },
       { prisma, user }: GraphQLContext
-    ): Promise<any> => {
+    ) => {
       if (!user) {
         throw new Error("Unauthorized: User must be logged in.");
       }
@@ -87,12 +91,7 @@ export const messageResolvers = {
         attachments = [],
       } = input;
 
-      const prismaType =
-        (type?.toUpperCase() as
-          | "TEXT"
-          | "IMAGE"
-          | "VIDEO"
-          | "SYSTEM") ?? "TEXT";
+      const prismaType = (type?.toUpperCase() as MessageType) ?? "TEXT";
 
       const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
@@ -144,7 +143,7 @@ export const messageResolvers = {
             data: attachments.map((att) => ({
               messageId: message.id,
               url: att.url,
-              type: att.type.toUpperCase() as "IMAGE" | "VIDEO",
+              type: toPrismaFileType(att.type),
             })),
           });
 
@@ -180,7 +179,7 @@ export const messageResolvers = {
 
       const channel = `conversation:${conversationId}`;
       try {
-        await realtime.channel(channel).message.newMessage.emit({
+        await realtime.channel(channel).emit("message.newMessage", {
           id: result.id,
           conversationId,
           content: result.content || "",
@@ -193,7 +192,7 @@ export const messageResolvers = {
           attachments: (result.MessageAttachment || []).map((att) => ({
             id: att.id,
             url: att.url,
-            type: att.type as "IMAGE" | "VIDEO",
+            type: att.type,
           })),
         });
       } catch (error) {

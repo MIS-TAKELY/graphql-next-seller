@@ -10,7 +10,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { useOrder } from '@/hooks/order/useOrder';
-import { SellerOrder } from '@/types/pages/order.types';
+import { OrderStatus, SellerOrder } from '@/types/pages/order.types';
 import { Eye, Mail, Package, Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { CreateShipmentDialog } from './CreateShipmentDialog';
@@ -28,7 +28,7 @@ export function OrderDetailsDialog({
 }: OrderDetailsDialogProps) {
   const { confirmSingleOrder, updateOrderStatus } = useOrder();
 
-  const handleStatusUpdate = async (newStatus: string) => {
+  const handleStatusUpdate = async (newStatus: OrderStatus) => {
     try {
       if (newStatus === 'CONFIRMED') {
         await confirmSingleOrder(order.id);
@@ -96,8 +96,8 @@ export function OrderDetailsDialog({
               </Button>
             )}
             {(order.status === 'DELIVERED' || order.status === 'SHIPPED') &&
-              order.items[0]?.variant?.product?.returnPolicy?.type !==
-                'NO_RETURN' && (
+              order.items[0]?.variant?.product?.returnPolicy?.type !== 'NO_RETURN' && (
+              // TODO: Add 'returnPolicy' to the 'Product' type in types/pages/order.types.ts
                 <Button
                   size="sm"
                   variant="destructive"

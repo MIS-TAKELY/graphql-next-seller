@@ -21,6 +21,7 @@ export function OrdersAllPage({ orders, onRefetch }: OrdersAllPageProps) {
   const [orderFilters, setOrderFilters] = useState<OrderFilters>({
     search: "",
     status: "all",
+    priority: "all",
   });
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<
@@ -59,7 +60,7 @@ export function OrdersAllPage({ orders, onRefetch }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "CONFIRMED" } : order
+          order.id === orderId ? { ...order, status: "CONFIRMED" as const } : order
         )
       );
 
@@ -80,7 +81,7 @@ export function OrdersAllPage({ orders, onRefetch }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "PROCESSING" } : order
+          order.id === orderId ? { ...order, status: "PROCESSING" as const } : order
         )
       );
 
@@ -101,7 +102,7 @@ export function OrdersAllPage({ orders, onRefetch }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "SHIPPED" } : order
+          order.id === orderId ? { ...order, status: "SHIPPED" as const } : order
         )
       );
 
@@ -122,7 +123,7 @@ export function OrdersAllPage({ orders, onRefetch }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "DELIVERED" } : order
+          order.id === orderId ? { ...order, status: "DELIVERED" as const } : order
         )
       );
 

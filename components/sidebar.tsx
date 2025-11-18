@@ -76,16 +76,16 @@ const sidebarNavItems = [
       { title: "Ads", href: "/marketing/ads" },
     ],
   },
-  {
-    title: "Finances",
-    href: "/finances",
-    icon: CreditCard,
-  },
-  {
-    title: "Reports",
-    href: "/reports",
-    icon: FileText,
-  },
+  // {
+  //   title: "Finances",
+  //   href: "/finances",
+  //   icon: CreditCard,
+  // },
+  // {
+  //   title: "Reports",
+  //   href: "/reports",
+  //   icon: FileText,
+  // },
   {
     title: "Settings",
     href: "/settings",

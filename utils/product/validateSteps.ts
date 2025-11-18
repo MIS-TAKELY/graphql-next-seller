@@ -3,9 +3,9 @@ import { FormData, ICreateProductInput } from "@/types/pages/product";
 export const validateStep = (
   step: number,
   formData: FormData,
-  setErrors: (errors: any) => void
+  setErrors: (errors: Record<string, string>) => void
 ): boolean => {
-  const newErrors: any = {};
+  const newErrors: Record<string, string> = {};
 
   switch (step) {
     case 1:
@@ -89,7 +89,7 @@ export const buildProductInput = (formData: FormData,id:string): ICreateProductI
                 : "Free Delivery in Selected Provinces",
             description:
               formData.freeDeliveryOption === "selected_provinces"
-                ? formData.freeDeliveryProvinces.join(", ")
+                ? formData.freeDeliveryProvinces?.join(", ") || ""
                 : "Available across all provinces",
             isDefault: true,
           },
@@ -127,7 +127,7 @@ export const buildProductInput = (formData: FormData,id:string): ICreateProductI
       url: media.url,
       altText: media.altText || "",
       mediaType: "PRIMARY" as const, // Fixed: Use literal, not media.mediaType (which is role)
-      fileType: media.fileType, // Already "IMAGE" | "VIDEO"
+      fileType: media.fileType ?? "IMAGE", // Already "IMAGE" | "VIDEO"
       sortOrder: index,
     })),
     // Promotional media: PROMOTIONAL
@@ -135,7 +135,7 @@ export const buildProductInput = (formData: FormData,id:string): ICreateProductI
       url: media.url,
       altText: media.altText || "",
       mediaType: "PROMOTIONAL" as const, // Fixed: Use mediaType, not type
-      fileType: media.fileType, // Add: Was missing
+      fileType: media.fileType ?? "IMAGE", // Add: Was missing
       sortOrder: formData.productMedia.length + index,
     })),
   ],

@@ -5,10 +5,12 @@ import { redis } from "./redis"; // Ensure this is your Upstash Redis instance
 // Expanded schema for chat events, aligned with Prisma Message model and resolver payload
 // lib/realtime.ts
 const schema = {
-  notification: z.object({
-    alert: z.string(),
-  }),
-  message: z.object({
+  notification: {
+    alert: z.object({
+      alert: z.string(),
+    }),
+  },
+  message: {
     newMessage: z.object({
       id: z.string(),
       content: z
@@ -38,7 +40,7 @@ const schema = {
         )
         .optional(),
     }),
-  }),
+  },
 };
 
 export const realtime = new Realtime({
@@ -48,3 +50,4 @@ export const realtime = new Realtime({
 });
 
 export type RealtimeEvents = InferRealtimeEvents<typeof realtime>;
+export type NewMessagePayload = z.infer<(typeof schema)["message"]["newMessage"]>;

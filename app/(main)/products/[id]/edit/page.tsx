@@ -1,19 +1,11 @@
-import {
-  GET_PRODUCT,
-  GET_PRODUCT_CATEGORIES,
-} from "@/client/product/product.queries";
+import { GET_PRODUCT, GET_PRODUCT_CATEGORIES } from "@/client/product/product.queries";
 import EditProductClient from "@/components/product/EditProductClient";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
-interface EditProductPageProps {
-  params: Promise<{ id: string }>; // Updated: params is now a Promise
-}
-
-export default async function EditProductPage(props: EditProductPageProps) {
+export default async function EditProductPage({ params }: { params: { id: string } }) {
   const client = await getServerApolloClient(); // Switch to auth client
-  const params = await props.params; // Await params
   const productId = params.id;
 
   let productData;

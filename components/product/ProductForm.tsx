@@ -91,7 +91,7 @@ export function ProductForm({
       width: "",
       height: "",
       isFragile: false,
-      shippingMethod: "",
+      shippingMethod: undefined,
       carrier: "",
       estimatedDelivery: "",
       freeDeliveryOption: "none",

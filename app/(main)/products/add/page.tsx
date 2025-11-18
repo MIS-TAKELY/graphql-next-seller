@@ -3,8 +3,7 @@ import AddProductClient from "@/components/pages/AddProductClient";
 import { getPublicServerApolloClient } from "@/lib/apollo/apollo-public-server-client";
 import { Category } from "@/types/category.type";
 
-// Remove or comment out the dynamic export to enable SSG
-// export const dynamic = "force-dynamic";
+export const dynamic = "force-dynamic";
 
 export default async function AddProductPage() {
   const client = await getPublicServerApolloClient();

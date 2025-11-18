@@ -26,7 +26,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { CreateShipmentDialog } from './CreateShipmentDialog';
-import { SellerOrder, OrderFilters } from '@/types/pages/order.types';
+import { SellerOrder, OrderFilters, OrderStatus } from '@/types/pages/order.types';
 
 interface OrderTableProps {
   orders: SellerOrder[];
@@ -66,7 +66,7 @@ export function OrderTable({
     }
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     try {
       if (newStatus === 'CONFIRMED') {
         await confirmSingleOrder(orderId);

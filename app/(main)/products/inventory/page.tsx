@@ -20,6 +20,8 @@ import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
 import { GetInventoryResponse, InventoryProduct } from "@/types/pages/product";
 import { AlertTriangle, Package, TrendingDown } from "lucide-react";
 
+// export const dynamic = "force-dynamic";
+
 export default async function InventoryPage() {
   const client = await getServerApolloClient();
   const { data } = await client.query<GetInventoryResponse>({

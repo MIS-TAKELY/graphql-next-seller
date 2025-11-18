@@ -48,6 +48,8 @@ export interface ProductVariant {
   sku: string;
   price: number; // Decimal in Prisma, represented as number for simplicity
   mrp?: number; // Decimal in Prisma
+  comparePrice?: number;
+  costPrice?: number;
   stock: number;
   soldCount: number;
   attributes?: {
@@ -76,13 +78,20 @@ export interface Product {
   brand?: string;
   categoryId?: string;
   category?: Category | null;
+  features?: string[];
   images: ProductImage[];
   variants: ProductVariant[];
+  isFragile?: boolean;
+  noInternationalShipping?: boolean;
+  restrictedStates?: string[];
   deliveryOptions?: Array<{
     id: string;
     title: string;
     description?: string;
     isDefault: boolean;
+    carrier?: string;
+    estimatedDelivery?: string;
+    freeDeliveryProvinces?: string[];
   }>;
   warranty?: Array<{
     id: string;
@@ -90,6 +99,7 @@ export interface Product {
     duration?: number;
     unit?: string;
     description?: string;
+    conditions?: string;
   }>;
   returnPolicy?: Array<{
     id: string;
@@ -97,6 +107,8 @@ export interface Product {
     duration?: number;
     unit?: string;
     conditions?: string;
+    description?: string;
+    period?: string;
   }>;
   productOffers?: Array<{
     id: string;
@@ -110,6 +122,8 @@ export interface Product {
       startDate: string;
       endDate: string;
       isActive: boolean;
+      buyX?: number;
+      getY?: number;
     };
   }>;
 }
@@ -165,7 +179,7 @@ export interface ICreateProductInput {
   description?: string;
   categoryId?: string;
   brand?: string;
-  variants: Array<{
+  variants: {
     sku: string;
     price: number;
     mrp?: number;
@@ -183,7 +197,7 @@ export interface ICreateProductInput {
       key: string;
       value: string;
     }>;
-  }>;
+  };
   images?: Array<{
     url: string;
     altText?: string;
@@ -239,7 +253,11 @@ export interface FormData {
   name: string;
   description: string;
   categoryId: string;
+  subcategory?: string;
+  subSubcategory?: string;
+  category?: Category;
   brand: string;
+  features?: string[];
   // Specifications
   specifications: Array<{
     id?: string;
@@ -250,6 +268,8 @@ export interface FormData {
   // Pricing & Inventory
   price: string;
   mrp: string;
+  comparePrice?: string;
+  costPrice?: string;
   sku: string;
   stock: string;
   trackQuantity: boolean;
@@ -260,6 +280,8 @@ export interface FormData {
   offerValue: string;
   offerStart: string;
   offerEnd: string;
+  buyX?: string;
+  getY?: string;
   // Media
   productMedia: Media[];
   promotionalMedia: Media[];
@@ -268,18 +290,27 @@ export interface FormData {
   length: string;
   width: string;
   height: string;
-  shippingMethod: ShippingMethod;
+  isFragile?: boolean;
+  shippingMethod?: ShippingMethod;
   carrier: string;
   estimatedDelivery: string;
+  freeDeliveryOption?: string;
+  freeDeliveryProvinces?: string[];
+  noInternationalShipping?: boolean;
+  restrictedStates?: string[];
   // Policies
   returnType: ReturnType;
   returnDuration: string;
   returnUnit: string;
   returnConditions: string;
+  returnPolicy?: string;
+  returnPeriod?: string;
   warrantyType: WarrantyType;
   warrantyDuration: string;
   warrantyUnit: string;
   warrantyDescription: string;
+  warrantyConditions?: string;
+  warranty?: string;
 }
 
 // Step interface for multi-step form
