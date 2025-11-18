@@ -16,7 +16,7 @@ interface OrdersAllPageProps {
   onRefetch?: () => void;
 }
 
-export function OrdersAllPage({ orders, onRefetch }: OrdersAllPageProps) {
+export function OrdersAllPage({ orders }: OrdersAllPageProps) {
   const [isPending, startTransition] = useTransition();
   const [orderFilters, setOrderFilters] = useState<OrderFilters>({
     search: "",

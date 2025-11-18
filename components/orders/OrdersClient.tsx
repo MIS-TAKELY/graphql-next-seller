@@ -1,14 +1,21 @@
-"use client";
+// "use client";
 
 import { GET_SELLER_ORDER } from "@/client/order/order.query";
-import { useQuery } from "@apollo/client";
+import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
 import { OrdersAllPage } from "./OrdersAllPage";
 
-export default function OrdersClient() {
-  const { data, loading, error, refetch } = useQuery(GET_SELLER_ORDER, {
-    fetchPolicy: "cache-and-network",
-    pollInterval: 30000, // Poll every 30 seconds for new orders
+export default async function OrdersClient() {
+  const client =await getServerApolloClient();
+
+  const {data,loading,error} = await client.query({
+    query: GET_SELLER_ORDER,
+    fetchPolicy: "no-cache",
   });
+
+  // console.log("data-->",data)
+  // console.log("loading-->",loading)
+
+  
 
   if (loading && !data) {
     return (
@@ -34,6 +41,5 @@ export default function OrdersClient() {
 
   const orders = data?.getSellerOrders?.sellerOrders || [];
 
-  return <OrdersAllPage orders={orders} onRefetch={refetch} />;
+  return <OrdersAllPage orders={orders} />;
 }
-
