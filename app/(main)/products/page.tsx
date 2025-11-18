@@ -16,8 +16,8 @@ import {
 import { useProduct } from "@/hooks/product/useProduct";
 import { Category } from "@/types/category.type";
 import {
-  Product,
   GetProductCategoriesResponse,
+  Product,
   StatusFilter,
 } from "@/types/pages/product";
 import { useQuery } from "@apollo/client";
@@ -69,7 +69,9 @@ export default function ProductsPage() {
       const matchesCategory =
         categoryFilter === "all" ||
         product.category?.name === categoryFilter ||
-        product.category?.children?.some((child) => child.name === categoryFilter);
+        product.category?.children?.some(
+          (child) => child.name === categoryFilter
+        );
 
       return matchesSearch && matchesStatus && matchesCategory;
     });
