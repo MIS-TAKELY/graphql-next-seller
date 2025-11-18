@@ -11,6 +11,10 @@ export default async function OrdersClient() {
     query: GET_SELLER_ORDER,
     fetchPolicy: "no-cache",
   });
+
+  // console.log("data-->",data)
+  // console.log("loading-->",loading)
+
   
 
   if (loading && !data) {
