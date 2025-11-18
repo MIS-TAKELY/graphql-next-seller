@@ -12,8 +12,6 @@ export default async function OrdersClient() {
     fetchPolicy: "no-cache",
   });
 
-  // console.log("data-->",data)
-  // console.log("loading-->",loading)
 
   
 
