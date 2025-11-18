@@ -39,5 +39,7 @@ export default async function OrdersClient() {
 
   const orders = data?.getSellerOrders?.sellerOrders || [];
 
+  console.log("orders-->",orders)
+
   return <OrdersAllPage orders={orders} />;
 }

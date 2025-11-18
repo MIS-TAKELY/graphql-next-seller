@@ -1,7 +1,10 @@
 import { ApolloError } from "@apollo/client";
 import { requireSeller } from "../../auth/auth";
 import type { GraphQLContext as ResolverContext } from "../../context";
-import type { ConfirmOrderInput, UpdateSellerOrderStatusInput } from "../../types";
+import type {
+  ConfirmOrderInput,
+  UpdateSellerOrderStatusInput,
+} from "../../types";
 
 export const sellerOrderResolver = {
   Query: {
@@ -43,7 +46,7 @@ export const sellerOrderResolver = {
               include: {
                 buyer: true,
                 payments: true,
-                
+
                 items: {
                   include: {
                     variant: {
@@ -69,7 +72,7 @@ export const sellerOrderResolver = {
             },
           },
         });
-
+        console.log("orders--->", orders);
         // Count orders for current month
         const currentOrderCount = await prisma.sellerOrder.count({
           where: {
@@ -113,7 +116,11 @@ export const sellerOrderResolver = {
         throw error;
       }
     },
-    getActiveUsersForSeller: async (_: unknown, __: unknown, ctx: ResolverContext) => {
+    getActiveUsersForSeller: async (
+      _: unknown,
+      __: unknown,
+      ctx: ResolverContext
+    ) => {
       try {
         const user = requireSeller(ctx);
         const sellerId = user.id;
@@ -247,9 +254,10 @@ export const sellerOrderResolver = {
         ]);
 
         // Check if all SellerOrders for the parent Order are CONFIRMED
-        const allSellerOrdersConfirmed = updatedSellerOrder.order.sellerOrders.every(
-          (so) => so.status === "CONFIRMED"
-        );
+        const allSellerOrdersConfirmed =
+          updatedSellerOrder.order.sellerOrders.every(
+            (so) => so.status === "CONFIRMED"
+          );
 
         let updatedOrder = updatedSellerOrder.order;
 
@@ -276,120 +284,6 @@ export const sellerOrderResolver = {
         });
       }
     },
-
-    // confirmOrder: async (
-    //   _: any,
-    //   { input }: { input: { sellerOrderId: string } },
-    //   context: GraphQLContext
-    // ) => {
-    //   const { sellerOrderId } = input;
-
-    //   // Authorization check: Ensure user is authenticated and has SELLER role
-    //   requireSeller(context);
-    //   const prisma = context.prisma;
-
-    //   // Fetch the SellerOrder with its parent Order
-    //   const sellerOrder = await prisma.sellerOrder.findUnique({
-    //     where: { id: sellerOrderId },
-    //     include: {
-    //       order: {
-    //         include: {
-    //           sellerOrders: true, // Fetch all SellerOrders for the parent Order
-    //         },
-    //       },
-    //     },
-    //   });
-
-    //   if (!sellerOrder) {
-    //     throw new ApolloError({
-    //       errorMessage: "Seller order not found",
-    //       extraInfo: { code: "NOT_FOUND" },
-    //     });
-    //   }
-
-    //   // Verify the authenticated user is the seller for this SellerOrder
-    //   if (sellerOrder.sellerId !== context.user.id) {
-    //     throw new ApolloError({
-    //       errorMessage: "Unauthorized: You can only confirm your own orders",
-    //       extraInfo: { code: "FORBIDDEN" },
-    //     });
-    //   }
-
-    //   // Check if SellerOrder is in PENDING status
-    //   if (sellerOrder.status !== "PENDING") {
-    //     throw new ApolloError({
-    //       errorMessage: `Seller order is already in ${sellerOrder.status} status`,
-    //       extraInfo: { code: "INVALID_STATE" },
-    //     });
-    //   }
-
-    //   try {
-    //     // Start a transaction to ensure atomic updates
-    //     const [updatedSellerOrder] = await prisma.$transaction([
-    //       // Update the SellerOrder to CONFIRMED
-    //       prisma.sellerOrder.update({
-    //         where: { id: sellerOrderId },
-    //         data: {
-    //           status: "CONFIRMED",
-    //           updatedAt: new Date(),
-    //         },
-    //         include: {
-    //           order: true,
-    //           seller: true,
-    //           items: true,
-    //         },
-    //       }),
-    //     ]);
-
-    //     // Check if all SellerOrders for the parent Order are CONFIRMED
-    //     const allSellerOrdersConfirmed = sellerOrder.order.sellerOrders.every(
-    //       (so) =>
-    //         so.id === sellerOrderId || // Skip the current SellerOrder (it’s updated)
-    //         so.status === "CONFIRMED" // Check other SellerOrders
-    //     );
-
-    //     let updatedOrder = sellerOrder.order;
-
-    //     if (allSellerOrdersConfirmed && updatedOrder.status === "PENDING") {
-    //       // Update the parent Order to CONFIRMED
-    //       updatedOrder = await prisma.order.update({
-    //         where: { id: sellerOrder.buyerOrderId },
-    //         data: {
-    //           status: "CONFIRMED",
-    //           updatedAt: new Date(),
-    //         },
-    //         include: {
-    //           sellerOrders: true,
-    //         },
-    //       });
-    //     }
-
-    //     return {
-    //       sellerOrder: {
-    //         ...updatedSellerOrder,
-    //         subtotal: parseFloat(updatedSellerOrder.subtotal),
-    //         tax: parseFloat(updatedSellerOrder.tax),
-    //         shippingFee: parseFloat(updatedSellerOrder.shippingFee),
-    //         commission: parseFloat(updatedSellerOrder.commission),
-    //         total: parseFloat(updatedSellerOrder.total),
-    //       },
-    //       order: {
-    //         ...updatedOrder,
-    //         subtotal: parseFloat(updatedOrder.subtotal),
-    //         tax: parseFloat(updatedOrder.tax),
-    //         shippingFee: parseFloat(updatedOrder.shippingFee),
-    //         discount: parseFloat(updatedOrder.discount),
-    //         total: parseFloat(updatedOrder.total),
-    //       },
-    //     };
-    //   } catch (error) {
-    //     console.error("Error confirming order:", error);
-    //     throw new ApolloError({
-    //       errorMessage: "Failed to confirm order",
-    //       extraInfo: { code: "INTERNAL_SERVER_ERROR" },
-    //     });
-    //   }
-    // },
 
     updateSellerOrderStatus: async (
       _: unknown,
@@ -444,8 +338,15 @@ export const sellerOrderResolver = {
 
       // Optional: Add status transition validation
       // Example: Can't move to SHIPPED if not CONFIRMED or PROCESSING
-      type OrderStatus = "PENDING" | "CONFIRMED" | "PROCESSING" | "SHIPPED" | "DELIVERED" | "CANCELLED" | "RETURNED";
-      
+      type OrderStatus =
+        | "PENDING"
+        | "CONFIRMED"
+        | "PROCESSING"
+        | "SHIPPED"
+        | "DELIVERED"
+        | "CANCELLED"
+        | "RETURNED";
+
       const validTransitions: Record<OrderStatus, string[]> = {
         PENDING: ["CONFIRMED", "CANCELLED"],
         CONFIRMED: ["PROCESSING", "CANCELLED"],
@@ -455,7 +356,7 @@ export const sellerOrderResolver = {
         CANCELLED: [],
         RETURNED: [],
       };
-      
+
       const currentStatus = sellerOrder.status as OrderStatus;
       if (!validTransitions[currentStatus]?.includes(status)) {
         throw new ApolloError({
@@ -465,17 +366,17 @@ export const sellerOrderResolver = {
       }
 
       try {
-        // Update the SellerOrder status                                                                              
+        // Update the SellerOrder status
         const updatedSellerOrder = await prisma.sellerOrder.update({
           where: { id: sellerOrderId },
           data: {
-                                                                                                                                                                                                                                                    status,
+            status,
             updatedAt: new Date(),
-          },                                                                                                                                                                                                                                                                                                        
+          },
           include: {
             seller: true,
             items: true,
-            order: true,                                                                                                                                                                                                  
+            order: true,
           },
         });
 
@@ -497,7 +398,7 @@ export const sellerOrderResolver = {
     },
 
     createShipment: async (
-      _: unknown,                                                                                                                                                                                                                                                                                                                                                                                                               
+      _: unknown,
       {
         orderId,
         trackingNumber,
