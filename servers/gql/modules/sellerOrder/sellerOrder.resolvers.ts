@@ -1,10 +1,39 @@
 import { ApolloError } from "@apollo/client";
+import { realtime, OrderStatusChangedPayload } from "@/lib/realtime";
 import { requireSeller } from "../../auth/auth";
 import type { GraphQLContext as ResolverContext } from "../../context";
 import type {
   ConfirmOrderInput,
   UpdateSellerOrderStatusInput,
 } from "../../types";
+
+type SellerOrderStatus =
+  | "PENDING"
+  | "CONFIRMED"
+  | "PROCESSING"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED"
+  | "RETURNED";
+
+const emitOrderStatusChanged = async (
+  clerkIds: Array<string | null | undefined>,
+  payload: OrderStatusChangedPayload
+) => {
+  const recipients = Array.from(
+    new Set(clerkIds.filter((id): id is string => Boolean(id)))
+  );
+
+  await Promise.all(
+    recipients.map(async (clerkId) => {
+      try {
+        await realtime.channel(`user:${clerkId}`).emit("order.statusChanged", payload);
+      } catch (error) {
+        console.error("Failed to dispatch order status notification:", error);
+      }
+    })
+  );
+};
 
 export const sellerOrderResolver = {
   Query: {
@@ -72,7 +101,7 @@ export const sellerOrderResolver = {
             },
           },
         });
-        console.log("orders--->", orders);
+        // console.log("orders--->", orders);
         // Count orders for current month
         const currentOrderCount = await prisma.sellerOrder.count({
           where: {
@@ -210,8 +239,10 @@ export const sellerOrderResolver = {
       const sellerOrder = await prisma.sellerOrder.findUnique({
         where: { id: sellerOrderId },
         include: {
+          seller: { select: { id: true, clerkId: true } },
           order: {
             include: {
+              buyer: { select: { id: true, clerkId: true } },
               sellerOrders: true, // Fetch all SellerOrders for the parent Order
             },
           },
@@ -244,8 +275,10 @@ export const sellerOrderResolver = {
               updatedAt: new Date(),
             },
             include: {
+              seller: { select: { id: true, clerkId: true } },
               order: {
                 include: {
+                  buyer: { select: { id: true, clerkId: true } },
                   sellerOrders: true,
                 },
               },
@@ -274,6 +307,22 @@ export const sellerOrderResolver = {
             },
           });
         }
+
+        await emitOrderStatusChanged(
+          [
+            updatedSellerOrder.seller?.clerkId,
+            updatedSellerOrder.order.buyer?.clerkId,
+          ],
+          {
+            sellerId: updatedSellerOrder.sellerId,
+            sellerOrderId,
+            buyerOrderId: updatedSellerOrder.buyerOrderId,
+            status: updatedSellerOrder.status as SellerOrderStatus,
+            total: updatedSellerOrder.total.toNumber(),
+            updatedAt: updatedSellerOrder.updatedAt.toISOString(),
+            previousStatus: sellerOrder.status as SellerOrderStatus,
+          }
+        );
 
         return true;
       } catch (error) {
@@ -317,7 +366,11 @@ export const sellerOrderResolver = {
         include: {
           seller: true,
           items: true,
-          order: true,
+          order: {
+            include: {
+              buyer: { select: { id: true, clerkId: true } },
+            },
+          },
         },
       });
 
@@ -338,16 +391,7 @@ export const sellerOrderResolver = {
 
       // Optional: Add status transition validation
       // Example: Can't move to SHIPPED if not CONFIRMED or PROCESSING
-      type OrderStatus =
-        | "PENDING"
-        | "CONFIRMED"
-        | "PROCESSING"
-        | "SHIPPED"
-        | "DELIVERED"
-        | "CANCELLED"
-        | "RETURNED";
-
-      const validTransitions: Record<OrderStatus, string[]> = {
+      const validTransitions: Record<SellerOrderStatus, string[]> = {
         PENDING: ["CONFIRMED", "CANCELLED"],
         CONFIRMED: ["PROCESSING", "CANCELLED"],
         PROCESSING: ["SHIPPED", "CANCELLED"],
@@ -357,7 +401,7 @@ export const sellerOrderResolver = {
         RETURNED: [],
       };
 
-      const currentStatus = sellerOrder.status as OrderStatus;
+      const currentStatus = sellerOrder.status as SellerOrderStatus;
       if (!validTransitions[currentStatus]?.includes(status)) {
         throw new ApolloError({
           errorMessage: `Cannot transition from ${sellerOrder.status} to ${status}`,
@@ -376,9 +420,29 @@ export const sellerOrderResolver = {
           include: {
             seller: true,
             items: true,
-            order: true,
+            order: {
+              include: {
+                buyer: { select: { id: true, clerkId: true } },
+              },
+            },
           },
         });
+
+        await emitOrderStatusChanged(
+          [
+            updatedSellerOrder.seller?.clerkId,
+            updatedSellerOrder.order.buyer?.clerkId,
+          ],
+          {
+            sellerId: updatedSellerOrder.sellerId,
+            sellerOrderId,
+            buyerOrderId: updatedSellerOrder.buyerOrderId,
+            status: updatedSellerOrder.status as SellerOrderStatus,
+            total: updatedSellerOrder.total.toNumber(),
+            updatedAt: updatedSellerOrder.updatedAt.toISOString(),
+            previousStatus: sellerOrder.status as SellerOrderStatus,
+          }
+        );
 
         return {
           ...updatedSellerOrder,

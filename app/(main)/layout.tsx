@@ -2,6 +2,7 @@ import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { RealtimeNotifications } from "@/components/notifications/RealtimeNotifications";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import type React from "react";
@@ -40,6 +41,7 @@ export default function RootLayout({
               </main>
             </div>
           </div>
+          <RealtimeNotifications />
           <Toaster position="top-right" />
         </ThemeProvider>
       </body>

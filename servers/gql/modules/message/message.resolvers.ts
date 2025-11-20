@@ -96,9 +96,13 @@ export const messageResolvers = {
       const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
         include: {
-          sender: { select: { id: true } },
-          reciever: { select: { id: true } },
-          ConversationParticipant: true,
+          sender: { select: { id: true, clerkId: true } },
+          reciever: { select: { id: true, clerkId: true } },
+          ConversationParticipant: {
+            select: {
+              user: { select: { id: true, clerkId: true } },
+            },
+          },
         },
       });
 
@@ -177,26 +181,51 @@ export const messageResolvers = {
         attachments: result.MessageAttachment || [],
       };
 
+      const realtimePayload = {
+        id: result.id,
+        conversationId,
+        content: result.content || "",
+        type: result.type,
+        clientId,
+        fileUrl: result.fileUrl || null,
+        isRead: result.isRead,
+        sentAt: result.sentAt.toISOString(),
+        sender: result.sender,
+        attachments: (result.MessageAttachment || []).map((att) => ({
+          id: att.id,
+          url: att.url,
+          type: att.type,
+        })),
+      };
+
       const channel = `conversation:${conversationId}`;
       try {
-        await realtime.channel(channel).emit("message.newMessage", {
-          id: result.id,
-          conversationId,
-          content: result.content || "",
-          type: result.type,
-          clientId,
-          fileUrl: result.fileUrl || null,
-          isRead: result.isRead,
-          sentAt: result.sentAt.toISOString(),
-          sender: result.sender,
-          attachments: (result.MessageAttachment || []).map((att) => ({
-            id: att.id,
-            url: att.url,
-            type: att.type,
-          })),
-        });
+        await realtime.channel(channel).emit("message.newMessage", realtimePayload);
       } catch (error) {
         console.error("Failed to publish to Upstash Realtime:", error);
+      }
+
+      const participantClerkIds = new Set<string>();
+      if (conversation.sender?.clerkId) {
+        participantClerkIds.add(conversation.sender.clerkId);
+      }
+      if (conversation.reciever?.clerkId) {
+        participantClerkIds.add(conversation.reciever.clerkId);
+      }
+      conversation.ConversationParticipant?.forEach((participant) => {
+        const clerkId = participant.user?.clerkId;
+        if (clerkId) participantClerkIds.add(clerkId);
+      });
+
+      for (const clerkId of participantClerkIds) {
+        if (!clerkId || clerkId === user.clerkId) continue;
+        try {
+          await realtime
+            .channel(`user:${clerkId}`)
+            .emit("message.newMessage", realtimePayload);
+        } catch (error) {
+          console.error("Failed to publish user-level message notification:", error);
+        }
       }
 
       await prisma.conversationParticipant.updateMany({

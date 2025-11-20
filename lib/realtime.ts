@@ -1,27 +1,28 @@
+// lib/realtime.ts (shared between both apps)
 import { InferRealtimeEvents, Realtime } from "@upstash/realtime";
 import { z } from "zod";
-import { redis } from "./redis"; // Ensure this is your Upstash Redis instance
+import { redis } from "./redis";
 
-// Expanded schema for chat events, aligned with Prisma Message model and resolver payload
-// lib/realtime.ts
+const orderStatusEnum = z.enum([
+  "PENDING",
+  "CONFIRMED",
+  "PROCESSING",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+  "RETURNED",
+]);
+
 const schema = {
-  notification: {
-    alert: z.object({
-      alert: z.string(),
-    }),
-  },
   message: {
     newMessage: z.object({
       id: z.string(),
-      content: z
-        .string()
-        .nullable()
-        .transform((val) => val || ""), // Handle null content
+      conversationId: z.string(),
+      content: z.string().nullable(),
       type: z.enum(["TEXT", "IMAGE", "VIDEO", "SYSTEM"]),
+      clientId: z.string().optional(),
       fileUrl: z.string().nullable().optional(),
       isRead: z.boolean(),
-      clientId: z.string().optional(),
-      conversationId: z.string().optional(),
       sentAt: z.string(),
       sender: z.object({
         id: z.string(),
@@ -41,13 +42,46 @@ const schema = {
         .optional(),
     }),
   },
+
+  notification: {
+    newNotification: z.object({
+      id: z.string(),
+      title: z.string(),
+      body: z.string(),
+      type: z.string(),
+      data: z.record(z.string(), z.any()).nullable(),
+      createdAt: z.string(),
+      isRead: z.boolean(),
+    }),
+  },
+
+  order: {
+    newOrder: z.object({
+      sellerId: z.string(),
+      sellerOrderId: z.string(),
+      buyerOrderId: z.string(),
+      status: orderStatusEnum,
+      total: z.number(),
+      createdAt: z.string(),
+      customerName: z.string().optional(),
+      summary: z.string().optional(),
+    }),
+    statusChanged: z.object({
+      sellerId: z.string(),
+      sellerOrderId: z.string(),
+      buyerOrderId: z.string(),
+      status: orderStatusEnum,
+      previousStatus: orderStatusEnum,
+      total: z.number(),
+      updatedAt: z.string(),
+    }),
+  },
 };
 
 export const realtime = new Realtime({
   schema,
   redis,
-  maxDurationSecs: 300, // Adjust if needed for long convos
+  maxDurationSecs: 300,
 });
 
 export type RealtimeEvents = InferRealtimeEvents<typeof realtime>;
-export type NewMessagePayload = z.infer<(typeof schema)["message"]["newMessage"]>;
