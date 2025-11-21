@@ -304,6 +304,7 @@ export const sellerOrderResolver = {
             },
             include: {
               sellerOrders: true,
+              buyer: { select: { id: true, clerkId: true } },
             },
           });
         }

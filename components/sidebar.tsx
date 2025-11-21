@@ -1,25 +1,24 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { useState } from "react"
+import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import siteLogo from "@/public/final_blue_logo_500by500.svg";
 import {
   BarChart3,
-  Package,
-  ShoppingCart,
-  Users,
-  Settings,
-  TrendingUp,
-  CreditCard,
-  FileText,
-  Store,
-  Home,
   ChevronDown,
   ChevronRight,
-} from "lucide-react"
-
+  Home,
+  Package,
+  Settings,
+  ShoppingCart,
+  Store,
+  TrendingUp,
+  Users,
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useState } from "react";
 const sidebarNavItems = [
   {
     title: "Dashboard",
@@ -65,17 +64,17 @@ const sidebarNavItems = [
       // { title: "Disputes", href: "/customers/disputes" },
     ],
   },
-  {
-    title: "Marketing",
-    href: "/marketing",
-    icon: TrendingUp,
-    children: [
-      { title: "Campaigns", href: "/marketing/campaigns" },
-      { title: "Discounts", href: "/marketing/discounts" },
-      { title: "Promotions", href: "/marketing/promotions" },
-      { title: "Ads", href: "/marketing/ads" },
-    ],
-  },
+  // {
+  //   title: "Marketing",
+  //   href: "/marketing",
+  //   icon: TrendingUp,
+  //   children: [
+  //     { title: "Campaigns", href: "/marketing/campaigns" },
+  //     { title: "Discounts", href: "/marketing/discounts" },
+  //     { title: "Promotions", href: "/marketing/promotions" },
+  //     { title: "Ads", href: "/marketing/ads" },
+  //   ],
+  // },
   // {
   //   title: "Finances",
   //   href: "/finances",
@@ -91,25 +90,32 @@ const sidebarNavItems = [
     href: "/settings",
     icon: Settings,
   },
-]
+];
 
 export function Sidebar() {
-  const pathname = usePathname()
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
+  const pathname = usePathname();
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const toggleExpanded = (title: string) => {
-    setExpandedItems((prev) => (prev.includes(title) ? prev.filter((item) => item !== title) : [...prev, title]))
-  }
+    setExpandedItems((prev) =>
+      prev.includes(title)
+        ? prev.filter((item) => item !== title)
+        : [...prev, title]
+    );
+  };
 
-  const isExpanded = (title: string) => expandedItems.includes(title)
+  const isExpanded = (title: string) => expandedItems.includes(title);
 
   return (
     <div className="pb-12 w-full md:w-64 bg-card border-r h-full">
       <div className="space-y-4 py-4">
         <div className="px-3 py-2">
           <div className="flex items-center mb-2">
-            <Store className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
-            <h2 className="text-base sm:text-lg font-semibold">Seller Hub</h2>
+            {/* <Store className="h-5 w-5 sm:h-6 sm:w-6 mr-2" /> */}
+            <Image src={siteLogo} alt="site logo" width={32} height={32} className="h-5 w-5 sm:h-6 sm:w-6 mr-2"/>
+            <h2 className="text-base sm:text-lg font-semibold">
+              Vanijoy Seller
+            </h2>
           </div>
         </div>
         <div className="px-3">
@@ -138,7 +144,9 @@ export function Sidebar() {
                             <Button
                               key={childIndex}
                               asChild
-                              variant={pathname === child.href ? "secondary" : "ghost"}
+                              variant={
+                                pathname === child.href ? "secondary" : "ghost"
+                              }
                               size="sm"
                               className="w-full justify-start text-xs p-2"
                             >
@@ -169,5 +177,5 @@ export function Sidebar() {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -85,3 +85,9 @@ export const realtime = new Realtime({
 });
 
 export type RealtimeEvents = InferRealtimeEvents<typeof realtime>;
+
+// Export individual payload types for convenience
+export type NewMessagePayload = z.infer<typeof schema.message.newMessage>;
+export type NewNotificationPayload = z.infer<typeof schema.notification.newNotification>;
+export type NewOrderPayload = z.infer<typeof schema.order.newOrder>;
+export type OrderStatusChangedPayload = z.infer<typeof schema.order.statusChanged>;

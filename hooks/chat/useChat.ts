@@ -330,7 +330,11 @@ export const useSellerChat = (conversationId?: string | null) => {
   const handleRealtimeNewMessage = useCallback(
     (payload: NewMessagePayload) => {
       if (!payload) return;
-      const normalized = normalizeServerMessage(payload);
+      // Convert null to undefined for content to match ServerMessage type
+      const normalized = normalizeServerMessage({
+        ...payload,
+        content: payload.content ?? undefined,
+      });
       upsertServerMessage(normalized);
     },
     [normalizeServerMessage, upsertServerMessage]

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { generateEmbedding } from "@/lib/embemdind";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
 import { delCache, getCache, setCache } from "@/services/redis.services";
 import { requireAuth, requireSeller } from "../../auth/auth";
@@ -243,6 +244,24 @@ export const productResolvers = {
         // Use a transaction to ensure all related data is created together
         const product = await prisma.$transaction(
           async (tx) => {
+            const textToEmbed = `${input.name} ${input.description || ""} ${
+              input.brand || ""
+            }`.trim();
+
+            let embedding;
+
+            if (textToEmbed) {
+              try {
+                embedding = await generateEmbedding(textToEmbed);
+              } catch (err) {
+                console.log(
+                  "Failed to generate embedding for product:",
+                  input.name
+                );
+                console.error(err);
+              }
+            }
+
             // Create the product with variant and images
             const newProduct = await tx.product.create({
               data: {
@@ -287,18 +306,14 @@ export const productResolvers = {
                   })),
                 },
               },
-              // include: {
-              //   variants: {
-              //     include: {
-              //       specifications: true,
-              //     },
-              //   },
-              //   images: true,
-              //   seller: true,
-              //   category: true,
-              // },
             });
-
+            if (embedding) {
+              await tx.$executeRaw`
+    UPDATE "products"
+    SET embedding = ${embedding}::vector
+    WHERE id = ${newProduct.id}
+  `;
+            }
             // Create offers if provided
             if (input.productOffers?.length > 0) {
               for (const offerInput of input.productOffers) {

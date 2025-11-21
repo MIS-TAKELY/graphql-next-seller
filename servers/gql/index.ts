@@ -37,6 +37,8 @@ import { sellerOrderResolver } from "./modules/sellerOrder/sellerOrder.resolvers
 import { sellerOrderTypeDefs } from "./modules/sellerOrder/sellerOrder.typeDefs";
 import { sellerOrderItemTypeDefs } from "./modules/sellerOrderItem/sellerOrderItem.typeDefs";
 import { shipmentTypeDefs } from "./modules/shipment/shipment.typeDefs";
+import { sellerProfileResolvers } from "./modules/sellerProfile/sellerProfile.resolvers";
+import { sellerProfileTypeDefs } from "./modules/sellerProfile/sellerProfile.typeDefs";
 import { userTypeDefs } from "./modules/user/user.typeDefs";
 import { warrentyTypeDefs } from "./modules/warrenty/warrenty.typeDefs";
 import { wishlistTypeDefs } from "./modules/wishlist/wishlist.typeDefs";
@@ -84,6 +86,7 @@ const typeDefs = mergeTypeDefs([
   dashboardTyprDefs,
   analyticsTypeDefs,
   customerTypeDefs,
+  sellerProfileTypeDefs,
 ]);
 
 const resolvers = mergeResolvers([
@@ -97,6 +100,7 @@ const resolvers = mergeResolvers([
   sellerOrderResolver,
   analyticsResolvers,
   customerResolvers,
+  sellerProfileResolvers,
 ]);
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers });

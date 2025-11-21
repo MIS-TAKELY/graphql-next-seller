@@ -80,7 +80,6 @@ export function Header() {
         href,
       });
     },
-    onError: (err) => console.error("Realtime error:", err),
   });
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
@@ -133,7 +132,7 @@ export function Header() {
         }}
       >
         <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="icon" className="relative">
+          <Button variant="outline" size="icon" className="relative h-8 w-8">
             <Bell className="h-4 w-4" />
             {unreadCount > 0 && (
               <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
