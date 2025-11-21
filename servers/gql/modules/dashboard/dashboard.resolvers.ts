@@ -1,4 +1,5 @@
-import { requireSeller } from "../../auth/auth";
+// resolvers/dashboardResolvers.ts
+import { requireSeller } from "../../auth/auth"; // ← Now async & correct
 import { GraphQLContext } from "../../context";
 
 interface GetMonthlySalesArgs {
@@ -18,34 +19,23 @@ interface MonthlySales {
 
 export const dashboardResolvers = {
   Query: {
-    // ✅ getTotalRevenue — type safe
+    // Total Revenue (Current vs Previous Month)
     getTotalRevenue: async (
       _: unknown,
       __: unknown,
       ctx: GraphQLContext
     ): Promise<RevenueResponse> => {
-      const user = requireSeller(ctx);
+      // This now checks UserRole table under the hood
+      const user = await requireSeller(ctx);
       const prisma = ctx.prisma;
       const sellerId = user.id;
-
-      if (!sellerId) throw new Error("Seller ID not found");
-
-      console.log("Seller id -->", sellerId);
-
-      const seller = await prisma.user.findUnique({
-        where: { id: sellerId },
-        select: { id: true, role: true },
-      });
-
-      if (!seller) throw new Error("Seller not found");
-      if (seller.role !== "SELLER") throw new Error("User is not a seller");
 
       const now = new Date();
       const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
       const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of prev month
 
-      // ✅ Use Prisma’s aggregate type inference
+      // Current month revenue
       const currentRevenue = await prisma.sellerOrder.aggregate({
         where: {
           sellerId,
@@ -58,6 +48,7 @@ export const dashboardResolvers = {
         _sum: { total: true },
       });
 
+      // Previous month revenue
       const prevRevenue = await prisma.sellerOrder.aggregate({
         where: {
           sellerId,
@@ -77,48 +68,44 @@ export const dashboardResolvers = {
       if (prevTotal > 0) {
         percentChange = ((currentTotal - prevTotal) / prevTotal) * 100;
       } else if (currentTotal > 0) {
-        percentChange = 100;
+        percentChange = 100; // From 0 to something = 100% growth
       }
 
       return {
-        currentRevenue: Number(currentTotal),
-        previousRevenue: Number(prevTotal),
+        currentRevenue: Number(currentTotal.toFixed(2)),
+        previousRevenue: Number(prevTotal.toFixed(2)),
         percentChange: Number(percentChange.toFixed(2)),
       };
     },
 
-    // ✅ getMonthlySales — type safe
+    // Monthly Sales Chart Data
     getMonthlySales: async (
       _: unknown,
       args: GetMonthlySalesArgs,
       ctx: GraphQLContext
     ): Promise<MonthlySales[]> => {
-      const user = requireSeller(ctx);
+      const user = await requireSeller(ctx); // ← Now async!
       const prisma = ctx.prisma;
       const sellerId = user.id;
 
-      if (!sellerId) throw new Error("Seller ID not found");
-
       const { year } = args;
       if (!year || year < 1900 || year > 3000) {
-        throw new Error(
-          "Invalid year. Please provide a 4-digit year (e.g., 2024)."
-        );
+        throw new Error("Invalid year. Please provide a valid 4-digit year.");
       }
 
       const startOfYear = new Date(Date.UTC(year, 0, 1));
       const endOfYear = new Date(Date.UTC(year + 1, 0, 1));
 
-      // ✅ Explicit type inference from Prisma
       const orders = await prisma.sellerOrder.findMany({
         where: {
-          sellerId, // make sure your schema supports this field
+          sellerId,
           createdAt: { gte: startOfYear, lt: endOfYear },
           status: { in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"] },
         },
         select: { total: true, createdAt: true },
       });
 
+      // Initialize 12 months
       const monthlyTotals: MonthlySales[] = Array.from(
         { length: 12 },
         (_, i) => ({
@@ -128,11 +115,15 @@ export const dashboardResolvers = {
       );
 
       for (const order of orders) {
-        const monthIndex = order.createdAt.getMonth();
-        monthlyTotals[monthIndex].total += Number(order.total);
+        const monthIndex = order.createdAt.getUTCMonth(); // Use UTC to avoid timezone bugs
+        monthlyTotals[monthIndex].total += Number(order.total ?? 0);
       }
 
-      return monthlyTotals;
+      // Round to 2 decimals
+      return monthlyTotals.map((m) => ({
+        ...m,
+        total: Number(m.total.toFixed(2)),
+      }));
     },
   },
 };

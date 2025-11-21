@@ -147,17 +147,17 @@ enum VerificationStatus {
 }
 
 model User {
-    id        String    @id @default(cuid())
-    clerkId   String    @unique
-    email     String    @unique @db.VarChar(255)
-    firstName String?
-    lastName  String?
-    phone     String?   @db.VarChar(20)
-    gender    Gender?
-    dob       DateTime?
-    role      Role      @default(BUYER)
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
+    id             String    @id @default(cuid())
+    clerkId        String    @unique
+    email          String    @unique @db.VarChar(255)
+    firstName      String?
+    lastName       String?
+    avatarImageUrl String?
+    phone          String?   @db.VarChar(20)
+    gender         Gender?
+    dob            DateTime?
+    createdAt      DateTime  @default(now())
+    updatedAt      DateTime  @updatedAt
 
     addresses               Address[]                 @relation("UserAddresses")
     paymentMethods          PaymentMethod[]           @relation("UserPayments")
@@ -176,9 +176,25 @@ model User {
     ConversationParticipant ConversationParticipant[]
     notifications           Notification[]
     sellerProfile           SellerProfile?
+    roles                   UserRole[]
 
-    @@index([email, role])
+    @@index([email])
     @@map("users")
+}
+
+model UserRole {
+    id        String   @id @default(cuid())
+    userId    String
+    role      Role
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@unique([userId, role]) // One user can't have same role twice
+    @@index([userId])
+    @@index([role])
+    @@map("user_roles")
 }
 
 model SellerProfile {
@@ -235,11 +251,13 @@ model Notification {
     data      Json? // { orderId, conversationId, etc }
     isRead    Boolean  @default(false)
     createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([userId, createdAt])
     @@index([userId, isRead])
+    @@map("notifications")
 }
 
 model Conversation {
@@ -275,6 +293,8 @@ model Message {
     isRead         Boolean     @default(false)
     sentAt         DateTime    @default(now())
     clientId       String?
+    createdAt      DateTime    @default(now())
+    updatedAt      DateTime    @updatedAt
 
     // Relations
     conversation      Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
@@ -290,6 +310,8 @@ model MessageAttachment {
     messageId String
     url       String
     type      FileType
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
@@ -397,6 +419,7 @@ model ProductOffer {
     offerId   String
     productId String
     createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     offer   Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
     product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -410,6 +433,7 @@ model CategoryOffer {
     offerId    String
     categoryId String
     createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
 
     offer    Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
     category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
@@ -543,6 +567,8 @@ model ProductImage {
     sortOrder Int       @default(0)
     mediaType MediaType @default(PRIMARY)
     fileType  FileType
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
 
     product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -705,24 +731,31 @@ model Review {
 }
 
 model ReviewVote {
-    id       String  @id @default(cuid())
-    reviewId String
-    userId   String
-    vote     Boolean
+    id        String   @id @default(cuid())
+    reviewId  String
+    userId    String
+    vote      Boolean
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
     user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@unique([reviewId, userId])
+    @@map("review_votes")
 }
 
 model ReviewMedia {
-    id       String   @id @default(cuid())
-    reviewId String
-    type     FileType
-    url      String
+    id        String   @id @default(cuid())
+    reviewId  String
+    type      FileType
+    url       String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+    @@map("review_medias")
 }
 
 model Wishlist {
@@ -744,6 +777,7 @@ model WishlistItem {
     wishlistId String
     productId  String
     createdAt  DateTime @default(now())
+    updatedAt  DateTime @updatedAt
 
     wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
     product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)

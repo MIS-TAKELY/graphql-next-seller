@@ -13,13 +13,13 @@ export const GET_REVENUE = gql`
 export const GET_SELLER_ORDER_FOR_DASHBOARD = gql`
   query GetSellerOrders {
     getSellerOrders {
-    currentOrderCount
-    previousOrderCount
-    percentChange
-    sellerOrders {
-      id
+      currentOrderCount
+      previousOrderCount
+      percentChange
+      sellerOrders {
+        id
+      }
     }
-  }
   }
 `;
 
@@ -49,6 +49,24 @@ export const DASHBOARD_GET_MONTHLY_SALES = gql`
     getMonthlySales(year: $year) {
       name
       total
+    }
+  }
+`;
+
+export const GET_DASHBOARD_RECENT_ORDERS = gql`
+  query getRecentOrders {
+    getSellerOrders {
+      sellerOrders {
+        order {
+          buyer {
+            email
+            firstName
+            lastName
+          }
+          total
+          status
+        }
+      }
     }
   }
 `;

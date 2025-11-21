@@ -1,9 +1,10 @@
 // hooks/chat/useSellerChat.ts
 "use client";
 
+// import { Message, User, Role } from "@prisma/client";
 import { SEND_MESSAGE } from "@/client/message/message.mutation";
 import { GET_MESSAGES } from "@/client/message/message.query";
-import { RealtimeEvents, NewMessagePayload } from "@/lib/realtime";
+import { NewMessagePayload } from "@/lib/realtime";
 import { uploadFilesToStorage } from "@/utils/uploadFilesToStorage";
 import {
   ApolloError,
@@ -15,10 +16,11 @@ import { useRealtime } from "@upstash/realtime/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { Message, Role, User } from "@/app/generated/prisma";
 import type {
-  MessageType,
   FileType,
   MessageAttachment,
+  MessageType,
 } from "@/types/customer/customer.types";
 
 export type LocalMessageStatus = "sending" | "sent" | "failed";
@@ -32,6 +34,20 @@ export interface LocalMessage {
   timestamp: Date;
   status?: LocalMessageStatus;
   attachments?: MessageAttachment[];
+}
+
+interface ServerMessage extends Omit<Message, "senderId"> {
+  sender: Pick<
+    User,
+    "id" | "email" | "firstName" | "lastName" | "avatarImageUrl"
+  > & {
+    roles: Array<{ role: Role }>;
+  };
+  attachments?: Array<{
+    id?: string;
+    url: string;
+    type: string;
+  }>;
 }
 
 const FETCH_POLICY_NO_CACHE: FetchPolicy = "no-cache";
@@ -54,51 +70,52 @@ export const useSellerChat = (conversationId?: string | null) => {
     }
   }, [conversationId]);
 
-  interface ServerMessage {
-    id: string;
-    clientId?: string;
-    content?: string;
-    sender: {
-      role: string;
-    };
-    sentAt?: string;
-    createdAt?: string;
-    attachments?: Array<{
-      id?: string;
-      url: string;
-      type: string;
-    }>;
-    fileUrl?: string | null;
-    type?: string;
-  }
+  type MessageInput =
+    | ServerMessage
+    | (NewMessagePayload & { clientId?: string });
 
-  const normalizeServerMessage = useCallback((msg: ServerMessage): LocalMessage => {
-    const attachments = msg.attachments?.length
-      ? msg.attachments.map((a) => ({
-          id: a.id || crypto.randomUUID(),
-          url: a.url,
-          type: a.type as FileType,
-        }))
-      : msg.fileUrl
-      ? [
-          {
-            id: msg.id || crypto.randomUUID(),
-            url: msg.fileUrl,
-            type: (msg.type as FileType) || "IMAGE",
-          },
-        ]
-      : undefined;
+  const normalizeServerMessage = useCallback(
+    (msg: MessageInput): LocalMessage => {
+      const attachments = msg.attachments?.length
+        ? msg.attachments.map((a) => ({
+            id: a.id || crypto.randomUUID(),
+            url: a.url,
+            type: a.type as FileType,
+          }))
+        : msg.fileUrl
+        ? [
+            {
+              id: msg.id || crypto.randomUUID(),
+              url: msg.fileUrl,
+              type: (msg.type as FileType) || "IMAGE",
+            },
+          ]
+        : undefined;
 
-    return {
-      id: msg.id,
-      clientId: msg.clientId ?? undefined,
-      text: msg.content || "",
-      sender: msg.sender?.role === "SELLER" ? "seller" : "buyer",
-      timestamp: new Date(msg.sentAt || msg.createdAt || new Date()),
-      status: "sent" as const,
-      attachments,
-    };
-  }, []);
+      const isSeller = Array.isArray(msg.sender?.roles)
+        ? msg.sender.roles.some((r: any) => r.role === "SELLER")
+        : false;
+
+      // Use sentAt if createdAt/updatedAt do not exist
+      const timestamp = new Date(
+        (msg as ServerMessage).createdAt ||
+          (msg as any).updatedAt ||
+          msg.sentAt ||
+          new Date()
+      );
+
+      return {
+        id: msg.id,
+        clientId: msg.clientId ?? undefined,
+        text: msg.content || "",
+        sender: isSeller ? "seller" : "buyer",
+        timestamp,
+        status: "sent" as const,
+        attachments,
+      };
+    },
+    []
+  );
 
   const upsertServerMessage = useCallback((incoming: LocalMessage) => {
     setMessages((prev) => {
@@ -165,45 +182,51 @@ export const useSellerChat = (conversationId?: string | null) => {
     },
   });
 
-  const loadMessages = useCallback(async (silent: boolean = false) => {
-    if (!conversationId) {
-      setMessages([]);
-      return;
-    }
-
-    if (!silent) {
-      setIsLoading(true);
-    }
-    setError(null);
-
-    try {
-      const { data } = await fetchMessages({
-        variables: { conversationId, limit: 50, offset: 0 },
-      });
-
-      if (data?.messages) {
-        const serverMsgs: LocalMessage[] = data.messages
-          .map(normalizeServerMessage)
-          .sort((a: LocalMessage, b: LocalMessage) => a.timestamp.getTime() - b.timestamp.getTime());
-        setMessages(serverMsgs);
-        setHasShownError(false);
+  const loadMessages = useCallback(
+    async (silent: boolean = false) => {
+      if (!conversationId) {
+        setMessages([]);
+        return;
       }
-    } catch (e) {
-      const msg =
-        e instanceof ApolloError
-          ? e.message
-          : (e as Error)?.message || "Failed to load messages";
-      setError(msg);
-      if (!hasShownError && !silent) {
-        toast.error(msg);
-        setHasShownError(true);
-      }
-    } finally {
+
       if (!silent) {
-        setIsLoading(false);
+        setIsLoading(true);
       }
-    }
-  }, [conversationId, fetchMessages, normalizeServerMessage, hasShownError]);
+      setError(null);
+
+      try {
+        const { data } = await fetchMessages({
+          variables: { conversationId, limit: 50, offset: 0 },
+        });
+
+        if (data?.messages) {
+          const serverMsgs: LocalMessage[] = data.messages
+            .map(normalizeServerMessage)
+            .sort(
+              (a: LocalMessage, b: LocalMessage) =>
+                a.timestamp.getTime() - b.timestamp.getTime()
+            );
+          setMessages(serverMsgs);
+          setHasShownError(false);
+        }
+      } catch (e) {
+        const msg =
+          e instanceof ApolloError
+            ? e.message
+            : (e as Error)?.message || "Failed to load messages";
+        setError(msg);
+        if (!hasShownError && !silent) {
+          toast.error(msg);
+          setHasShownError(true);
+        }
+      } finally {
+        if (!silent) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [conversationId, fetchMessages, normalizeServerMessage, hasShownError]
+  );
 
   useEffect(() => {
     loadMessages(false); // Initial load - show loading
@@ -220,9 +243,12 @@ export const useSellerChat = (conversationId?: string | null) => {
     return () => clearInterval(interval);
   }, [conversationId, loadMessages]);
 
-  const refetchMessages = useCallback(async (silent: boolean = false) => {
-    await loadMessages(silent);
-  }, [loadMessages]);
+  const refetchMessages = useCallback(
+    async (silent: boolean = false) => {
+      await loadMessages(silent);
+    },
+    [loadMessages]
+  );
 
   const [sendMessageMutation] = useMutation(SEND_MESSAGE, {
     onError: (error) => {
@@ -277,7 +303,7 @@ export const useSellerChat = (conversationId?: string | null) => {
         if (uploadedAttachments?.length) {
           if (uploadedAttachments.some((a) => a.type === "VIDEO")) {
             msgType = "VIDEO";
-          }  else {
+          } else {
             msgType = "IMAGE";
           }
         }
@@ -308,10 +334,10 @@ export const useSellerChat = (conversationId?: string | null) => {
         upsertServerMessage(normalized);
 
         optimisticAttachments.forEach((a) => URL.revokeObjectURL(a.url));
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to send";
-      setError(msg);
-      toast.error(msg);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to send";
+        setError(msg);
+        toast.error(msg);
         setMessages((prev) =>
           prev.map((m) =>
             m.clientId === clientId ? { ...m, status: "failed" } : m
@@ -330,11 +356,8 @@ export const useSellerChat = (conversationId?: string | null) => {
   const handleRealtimeNewMessage = useCallback(
     (payload: NewMessagePayload) => {
       if (!payload) return;
-      // Convert null to undefined for content to match ServerMessage type
-      const normalized = normalizeServerMessage({
-        ...payload,
-        content: payload.content ?? undefined,
-      });
+
+      const normalized = normalizeServerMessage(payload); // TS is happy now
       upsertServerMessage(normalized);
     },
     [normalizeServerMessage, upsertServerMessage]

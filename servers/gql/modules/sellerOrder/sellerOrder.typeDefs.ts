@@ -55,7 +55,7 @@ export const sellerOrderTypeDefs = gql`
   }
 
   type Query {
-    getSellerOrders: getSellerOrdersResponse
+    getSellerOrders(limit:Int): getSellerOrdersResponse
     getActiveUsersForSeller: getActiveUsersForSellerResponse!
   }
 

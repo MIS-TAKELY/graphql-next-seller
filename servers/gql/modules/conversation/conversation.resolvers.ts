@@ -1,3 +1,4 @@
+import { requireBuyer } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
 export const conversationResolvers = {
@@ -40,7 +41,11 @@ export const conversationResolvers = {
                   id: true,
                   firstName: true,
                   lastName: true,
-                  role: true,
+                  roles: {
+                    select: {
+                      role: true,
+                    },
+                  },
                 },
               },
               // attachments: true,
@@ -125,7 +130,11 @@ export const conversationResolvers = {
                   id: true,
                   firstName: true,
                   lastName: true,
-                  role: true,
+                  roles: {
+                    select: {
+                      role: true,
+                    },
+                  },
                 },
               },
             },
@@ -179,13 +188,11 @@ export const conversationResolvers = {
     createConversation: async (
       _parent: any,
       { input }: { input: { productId: string } },
-      { prisma, user, publish }: GraphQLContext
+      context: GraphQLContext
     ): Promise<any> => {
-      if (!user || user.role !== "BUYER") {
-        throw new Error(
-          "Unauthorized: Only buyers can initiate conversations."
-        );
-      }
+      const user = requireBuyer(context);
+
+      const { prisma } = context;
 
       const { productId } = input;
       const senderId = user.id;
@@ -305,16 +312,18 @@ export const conversationResolvers = {
       // Optional: Publish to Upstash for real-time notification to seller
       if (result) {
         try {
-          await publish({
-            type: "CONVERSATION_CREATED",
-            payload: {
-              conversation: {
-                ...result,
-                createdAt: result.createdAt.toISOString(),
-              },
-            },
-            room: `conversation:${result.id}`,
-          });
+          // await publish({
+          //   type: "CONVERSATION_CREATED",
+          //   payload: {
+          //     conversation: {
+          //       ...result,
+          //       createdAt: result.createdAt.toISOString(),
+          //     },
+          //   },
+          //   room: `conversation:${result.id}`,
+          // });
+
+          
         } catch (error) {
           console.error("Failed to publish conversation creation:", error);
         }

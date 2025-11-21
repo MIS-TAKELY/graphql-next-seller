@@ -210,12 +210,7 @@ export const productResolvers = {
       context: GraphQLContext
     ) => {
       try {
-        const { user } = context;
-
-        // Validate user is a seller
-        if (!user || user.role !== "SELLER") {
-          throw new Error("Unauthorized: Only sellers can add products");
-        }
+        const user = requireSeller(context);
 
         // Validate required fields
         if (!input.name) {

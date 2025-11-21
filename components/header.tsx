@@ -36,10 +36,6 @@ export function Header() {
   const { user } = useUser();
   const router = useRouter();
 
-  if (!user) {
-    return <div>Invalid user</div>;
-  }
-
   const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
 
   const pushNotification = useCallback(
@@ -51,10 +47,9 @@ export function Header() {
     []
   );
 
-  console.log(`user:${user.id}`)
   // Upstash Realtime – This now works perfectly with your backend
   useRealtime({
-    channels: [`user:${user.id}`],
+    channels: user ? [`user:${user.id}`] : [],
     event: "notification.newNotification",
     onData: (payload: any) => {
       console.log("New realtime notification:", payload);
@@ -93,6 +88,14 @@ export function Header() {
     if (href) router.push(href);
   };
 
+  if (!user) {
+    return (
+      <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:h-[60px] lg:px-6">
+        <div>Loading...</div>
+      </header>
+    );
+  }
+  // console.log(`user:${user!.id}`);
   return (
     <header className="flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4 lg:h-[60px] lg:px-6">
       {/* Mobile menu */}

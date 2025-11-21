@@ -23,13 +23,15 @@ const schema = {
       clientId: z.string().optional(),
       fileUrl: z.string().nullable().optional(),
       isRead: z.boolean(),
-      sentAt: z.string(),
+      sentAt: z.date(),
       sender: z.object({
         id: z.string(),
         firstName: z.string().nullable().optional(),
         lastName: z.string().nullable().optional(),
         email: z.string(),
-        role: z.enum(["BUYER", "SELLER", "ADMIN"]),
+        roles: z.array(
+          z.object({ role: z.enum(["BUYER", "SELLER", "ADMIN"]) })
+        ),
       }),
       attachments: z
         .array(
@@ -88,6 +90,10 @@ export type RealtimeEvents = InferRealtimeEvents<typeof realtime>;
 
 // Export individual payload types for convenience
 export type NewMessagePayload = z.infer<typeof schema.message.newMessage>;
-export type NewNotificationPayload = z.infer<typeof schema.notification.newNotification>;
+export type NewNotificationPayload = z.infer<
+  typeof schema.notification.newNotification
+>;
 export type NewOrderPayload = z.infer<typeof schema.order.newOrder>;
-export type OrderStatusChangedPayload = z.infer<typeof schema.order.statusChanged>;
+export type OrderStatusChangedPayload = z.infer<
+  typeof schema.order.statusChanged
+>;

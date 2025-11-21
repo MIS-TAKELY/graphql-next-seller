@@ -1,8 +1,8 @@
-import { DashboardOverview } from "@/components/dashboard/dashboard-overview";
-import { QuickActions } from "@/components/dashboard/quick-actions";
-import { RecentOrders } from "@/components/dashboard/recent-orders";
-import { SalesChart } from "@/components/dashboard/sales-chart";
-import { TopProducts } from "@/components/dashboard/top-products";
+import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
+import { QuickActions } from "@/components/dashboard/QuickActions";
+import { RecentOrders } from "@/components/dashboard/RecentOrders";
+import { SalesChart } from "@/components/dashboard/SalesChart";
+import { TopProducts } from "@/components/dashboard/TopProducts";
 import {
   Card,
   CardContent,
@@ -49,9 +49,9 @@ export default async function DashboardPage() {
                 <CardTitle className="text-base sm:text-lg">
                   Recent Orders
                 </CardTitle>
-                <CardDescription className="text-sm">
+                {/* <CardDescription className="text-sm">
                   You have 265 orders this month.
-                </CardDescription>
+                </CardDescription> */}
               </CardHeader>
               <CardContent>
                 <RecentOrders />

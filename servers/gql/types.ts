@@ -1,7 +1,7 @@
 // servers/gql/types.ts
 // Shared types for GraphQL resolvers
 
-import type { PrismaClient, OrderStatus } from "@/app/generated/prisma";
+import type { OrderStatus, PrismaClient } from "@/app/generated/prisma";
 
 // GraphQL Context type
 export interface GraphQLContext {
@@ -9,7 +9,7 @@ export interface GraphQLContext {
   user?: {
     id: string;
     email: string;
-    role: "BUYER" | "SELLER" | "ADMIN";
+    roles: { role: "BUYER" | "SELLER" | "ADMIN" };
     clerkId: string;
   } | null;
 }
@@ -19,7 +19,11 @@ export type ResolverParent = unknown;
 export type ResolverArgs<T = Record<string, unknown>> = T;
 
 // Generic resolver function type
-export type ResolverFn<TParent = ResolverParent, TArgs = ResolverArgs, TResult = unknown> = (
+export type ResolverFn<
+  TParent = ResolverParent,
+  TArgs = ResolverArgs,
+  TResult = unknown
+> = (
   parent: TParent,
   args: TArgs,
   context: GraphQLContext

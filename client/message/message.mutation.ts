@@ -15,7 +15,9 @@ export const SEND_MESSAGE = gql`
         firstName
         lastName
         email
-        role
+        roles {
+            role
+          }
       }
     }
   }

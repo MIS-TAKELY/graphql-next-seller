@@ -2,6 +2,7 @@ import slugify from "slugify";
 import { requireAuth } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
+// Input types (unchanged)
 type SellerProfileAddressInput = {
   label?: string | null;
   line1: string;
@@ -29,6 +30,7 @@ type SellerProfileSetupInput = {
   address: SellerProfileAddressInput;
 };
 
+// Helper: Generate unique slug
 const generateUniqueSlug = async (
   prisma: GraphQLContext["prisma"],
   baseValue: string
@@ -37,15 +39,12 @@ const generateUniqueSlug = async (
   let slug = base || `shop-${Date.now()}`;
   let counter = 1;
 
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const existing = await prisma.sellerProfile.findUnique({
       where: { slug },
       select: { id: true },
     });
-    if (!existing) {
-      return slug;
-    }
+    if (!existing) return slug;
     slug = `${base}-${counter++}`;
   }
 };
@@ -64,6 +63,7 @@ export const sellerProfileResolvers = {
       });
     },
   },
+
   Mutation: {
     setupSellerProfile: async (
       _: unknown,
@@ -71,8 +71,10 @@ export const sellerProfileResolvers = {
       ctx: GraphQLContext
     ) => {
       const user = requireAuth(ctx);
+      console.log("user-->",user)
       const prisma = ctx.prisma;
 
+      // Prevent creating multiple profiles
       const existing = await prisma.sellerProfile.findUnique({
         where: { userId: user.id },
         select: { id: true },
@@ -89,12 +91,14 @@ export const sellerProfileResolvers = {
 
       const addressInput = input.address;
 
+      // Everything in a transaction
       const result = await prisma.$transaction(async (tx) => {
+        // 1. Create pickup/warehouse address
         const address = await tx.address.create({
           data: {
             userId: user.id,
             type: "WAREHOUSE",
-            label: addressInput.label,
+            label: addressInput.label ?? "Main Warehouse / Pickup Point",
             line1: addressInput.line1,
             line2: addressInput.line2,
             city: addressInput.city,
@@ -106,13 +110,22 @@ export const sellerProfileResolvers = {
           },
         });
 
-        if (user.role !== "SELLER") {
-          await tx.user.update({
-            where: { id: user.id },
-            data: { role: "SELLER" },
-          });
-        }
+        // 2. Grant SELLER role if not already granted
+        await tx.userRole.upsert({
+          where: {
+            userId_role: {
+              userId: user.id,
+              role: "SELLER",
+            },
+          },
+          update: {}, // Already has it → do nothing
+          create: {
+            userId: user.id,
+            role: "SELLER",
+          },
+        });
 
+        // 3. Create the seller profile
         const profile = await tx.sellerProfile.create({
           data: {
             userId: user.id,
@@ -130,8 +143,11 @@ export const sellerProfileResolvers = {
             email: input.supportEmail,
             pickupAddressId: address.id,
             isActive: true,
+            verificationStatus: "PENDING", // optional: start as pending review
           },
-          include: { pickupAddress: true },
+          include: {
+            pickupAddress: true,
+          },
         });
 
         return profile;
@@ -140,13 +156,14 @@ export const sellerProfileResolvers = {
       return result;
     },
   },
+
+  // Optional: Keep backward compatibility or simplify field access
   SellerProfile: {
     address: (
-      parent: { address?: unknown; pickupAddress?: unknown; pickupAddressId?: string },
+      parent: { pickupAddress?: any; pickupAddressId?: string },
       _: unknown,
       ctx: GraphQLContext
     ) => {
-      if (parent.address) return parent.address;
       if (parent.pickupAddress) return parent.pickupAddress;
       if (!parent.pickupAddressId) return null;
       return ctx.prisma.address.findUnique({
@@ -155,4 +172,3 @@ export const sellerProfileResolvers = {
     },
   },
 };
-

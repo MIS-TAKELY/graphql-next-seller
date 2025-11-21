@@ -9,7 +9,11 @@ export interface User {
   firstName: string;
   lastName: string;
   email: string;
-  role?: Role;
+  roles?: [
+    {
+      role: Role;
+    }
+  ];
 }
 
 // Message types

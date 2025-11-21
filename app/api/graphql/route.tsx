@@ -19,7 +19,7 @@ const yoga = createYoga<{
             "https://graphql-next-buyer-hmu9c58z1-mailitttome-4974s-projects.vercel.app", // frontend
             "https://graphql-next-buyer.vercel.app", // API itself (optional, in case of same-origin requests)
           ]
-        : ["http://localhost:3001"],
+        : ["http://localhost:3000"],
     credentials: true,
   },
 });

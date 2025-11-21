@@ -22,7 +22,9 @@ export const GET_CONVERSATIONS = gql`
         sentAt
         sender {
           id
-          role
+          roles {
+            role
+          }
         }
       }
       unreadCount

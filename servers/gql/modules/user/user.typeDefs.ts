@@ -1,3 +1,4 @@
+// servers/gql/schema/user.typeDefs.ts
 import { gql } from "graphql-tag";
 
 export const userTypeDefs = gql`
@@ -9,6 +10,15 @@ export const userTypeDefs = gql`
 
   scalar DateTime
 
+  type UserRole {
+    id: ID!
+    userId: ID!
+    role: Role!
+    user: User! # Resolve full user
+    createdAt: DateTime!
+    updatedAt: DateTime!
+  }
+
   type User {
     id: ID!
     clerkId: String!
@@ -16,18 +26,32 @@ export const userTypeDefs = gql`
     firstName: String
     lastName: String
     phone: String
-    role: Role!
+    avatarImageUrl: String
+    gender: String
+    dob: DateTime
+
+    "User can have multiple roles (e.g., both BUYER and SELLER)"
+    roles: [UserRole!]! # ← NEW: Array of roles (non-null)
     createdAt: DateTime!
     updatedAt: DateTime!
 
+    # Relations
     addresses: [Address!]
     paymentMethods: [PaymentMethod!]
     cartItems: [CartItem!]
     orders: [Order!]
     reviews: [Review!]
-    products: [Product!]
+    products: [Product!] # Products they sell
     payouts: [Payout!]
     sellerOrders: [SellerOrder!]
-    Wishlist: [Wishlist!]
+    wishlists: [Wishlist!]
+    sellerProfile: SellerProfile # One-to-one relation
+    notifications: [Notification!]
+  }
+
+  # Optional: Helpful query to get current user
+  extend type Query {
+    me: User
+    meSellerProfile: SellerProfile
   }
 `;

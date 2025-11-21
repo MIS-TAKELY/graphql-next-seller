@@ -1,5 +1,5 @@
+import { OrderStatusChangedPayload, realtime } from "@/lib/realtime";
 import { ApolloError } from "@apollo/client";
-import { realtime, OrderStatusChangedPayload } from "@/lib/realtime";
 import { requireSeller } from "../../auth/auth";
 import type { GraphQLContext as ResolverContext } from "../../context";
 import type {
@@ -27,7 +27,9 @@ const emitOrderStatusChanged = async (
   await Promise.all(
     recipients.map(async (clerkId) => {
       try {
-        await realtime.channel(`user:${clerkId}`).emit("order.statusChanged", payload);
+        await realtime
+          .channel(`user:${clerkId}`)
+          .emit("order.statusChanged", payload);
       } catch (error) {
         console.error("Failed to dispatch order status notification:", error);
       }
@@ -37,7 +39,11 @@ const emitOrderStatusChanged = async (
 
 export const sellerOrderResolver = {
   Query: {
-    getSellerOrders: async (_: unknown, __: unknown, ctx: ResolverContext) => {
+    getSellerOrders: async (
+      _: unknown,
+      { limit }: { limit?: number },
+      ctx: ResolverContext
+    ) => {
       try {
         const user = requireSeller(ctx);
         const sellerId = user.id;
@@ -55,21 +61,12 @@ export const sellerOrderResolver = {
           1
         );
         const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
-
-        // Fetch orders for seller
-
-        //   id
-        // status
-        // createdAt
-        // items {
-        //   totalPrice
-        //   unitPrice
-        //   variant {
-        //     price
-        //   }
-        // }
         const orders = await prisma.sellerOrder.findMany({
           where: { sellerId },
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: limit,
           include: {
             order: {
               include: {

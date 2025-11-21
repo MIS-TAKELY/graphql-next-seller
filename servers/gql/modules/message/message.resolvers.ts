@@ -1,11 +1,11 @@
 // servers/gql/messageResolvers.ts
-import { realtime } from "@/lib/realtime";
-import type { GraphQLContext, SendMessageInput } from "../../types";
 import type { FileType as PrismaFileType } from "@/app/generated/prisma";
+import { NewMessagePayload, realtime } from "@/lib/realtime";
 import type {
-  MessageType,
   FileType as CustomerFileType,
+  MessageType,
 } from "@/types/customer/customer.types";
+import type { GraphQLContext, SendMessageInput } from "../../types";
 
 const toPrismaFileType = (type: CustomerFileType): PrismaFileType => {
   const normalized = type.toUpperCase();
@@ -13,7 +13,9 @@ const toPrismaFileType = (type: CustomerFileType): PrismaFileType => {
     return normalized as PrismaFileType;
   }
 
-  throw new Error(`Unsupported attachment type: ${type}. Only IMAGE or VIDEO are allowed.`);
+  throw new Error(
+    `Unsupported attachment type: ${type}. Only IMAGE or VIDEO are allowed.`
+  );
 };
 
 export const messageResolvers = {
@@ -41,7 +43,8 @@ export const messageResolvers = {
       }
 
       const isParticipant =
-        conversation.senderId === user.id || conversation.recieverId === user.id;
+        conversation.senderId === user.id ||
+        conversation.recieverId === user.id;
 
       if (!isParticipant) {
         throw new Error("Unauthorized: You are not a participant.");
@@ -56,7 +59,11 @@ export const messageResolvers = {
               firstName: true,
               lastName: true,
               email: true,
-              role: true,
+              roles: {
+                select: {
+                  role: true,
+                },
+              },
             },
           },
           MessageAttachment: true,
@@ -111,7 +118,8 @@ export const messageResolvers = {
       }
 
       const isParticipant =
-        conversation.senderId === user.id || conversation.recieverId === user.id;
+        conversation.senderId === user.id ||
+        conversation.recieverId === user.id;
       if (!isParticipant) {
         throw new Error("Unauthorized: You are not a participant.");
       }
@@ -135,7 +143,11 @@ export const messageResolvers = {
                 firstName: true,
                 lastName: true,
                 email: true,
-                role: true,
+                roles: {
+                  select: {
+                    role: true,
+                  },
+                },
               },
             },
             MessageAttachment: true,
@@ -160,7 +172,11 @@ export const messageResolvers = {
                   firstName: true,
                   lastName: true,
                   email: true,
-                  role: true,
+                  roles: {
+                    select: {
+                      role: true,
+                    },
+                  },
                 },
               },
               MessageAttachment: true,
@@ -181,7 +197,7 @@ export const messageResolvers = {
         attachments: result.MessageAttachment || [],
       };
 
-      const realtimePayload = {
+      const realtimePayload: NewMessagePayload = {
         id: result.id,
         conversationId,
         content: result.content || "",
@@ -189,7 +205,7 @@ export const messageResolvers = {
         clientId,
         fileUrl: result.fileUrl || null,
         isRead: result.isRead,
-        sentAt: result.sentAt.toISOString(),
+        sentAt: result.sentAt, // <-- keep as Date
         sender: result.sender,
         attachments: (result.MessageAttachment || []).map((att) => ({
           id: att.id,
@@ -200,7 +216,9 @@ export const messageResolvers = {
 
       const channel = `conversation:${conversationId}`;
       try {
-        await realtime.channel(channel).emit("message.newMessage", realtimePayload);
+        await realtime
+          .channel(channel)
+          .emit("message.newMessage", realtimePayload);
       } catch (error) {
         console.error("Failed to publish to Upstash Realtime:", error);
       }
@@ -224,7 +242,10 @@ export const messageResolvers = {
             .channel(`user:${clerkId}`)
             .emit("message.newMessage", realtimePayload);
         } catch (error) {
-          console.error("Failed to publish user-level message notification:", error);
+          console.error(
+            "Failed to publish user-level message notification:",
+            error
+          );
         }
       }
 

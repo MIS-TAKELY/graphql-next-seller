@@ -15,7 +15,9 @@ export const GET_MESSAGES = gql`
         id
         firstName
         lastName
-        role
+        roles {
+            role
+          }
       }
       attachments {
         id
