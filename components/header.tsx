@@ -51,6 +51,7 @@ export function Header() {
     []
   );
 
+  console.log(`user:${user.id}`)
   // Upstash Realtime – This now works perfectly with your backend
   useRealtime({
     channels: [`user:${user.id}`],
