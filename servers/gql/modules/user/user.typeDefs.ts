@@ -19,6 +19,18 @@ export const userTypeDefs = gql`
     updatedAt: DateTime!
   }
 
+  type Notification {
+    id: ID!
+    userId: ID!
+    title: String!
+    body: String
+    type: String
+    data: Json
+    isRead: String
+    createdAt: DateTime
+    updatedAt: DateTime
+  }
+
   type User {
     id: ID!
     clerkId: String!
