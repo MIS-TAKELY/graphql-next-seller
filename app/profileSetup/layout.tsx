@@ -21,13 +21,16 @@ export default async function ProfileSetupLayout({
     redirect("/sign-in");
   }
 
+  console.log("userId-->",userId)
+  
   const dbUser = await prisma.user.findUnique({
     where: { clerkId: userId },
     select: {
       id: true,
     },
   });
-
+  
+  console.log("dbUser-->",dbUser)
   const sellerProfile = dbUser
     ? await prisma.sellerProfile.findUnique({
         where: { userId: dbUser.id },

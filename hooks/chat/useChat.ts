@@ -22,6 +22,7 @@ import type {
   MessageAttachment,
   MessageType,
 } from "@/types/customer/customer.types";
+import { MessageType as MessageTypeEnum } from "@/types/common/enums";
 
 export type LocalMessageStatus = "sending" | "sent" | "failed";
 export type LocalMessageSender = "seller" | "buyer";
@@ -79,15 +80,21 @@ export const useSellerChat = (conversationId?: string | null) => {
       const attachments = msg.attachments?.length
         ? msg.attachments.map((a) => ({
             id: a.id || crypto.randomUUID(),
+            messageId: msg.id || "",
             url: a.url,
             type: a.type as FileType,
+            createdAt: new Date(),
+            updatedAt: new Date(),
           }))
         : msg.fileUrl
         ? [
             {
               id: msg.id || crypto.randomUUID(),
+              messageId: msg.id || "",
               url: msg.fileUrl,
               type: (msg.type as FileType) || "IMAGE",
+              createdAt: new Date(),
+              updatedAt: new Date(),
             },
           ]
         : undefined;
@@ -264,17 +271,16 @@ export const useSellerChat = (conversationId?: string | null) => {
       const optimisticAttachments =
         (files?.map((file) => ({
           id: crypto.randomUUID(),
+          messageId: clientId,
           url: URL.createObjectURL(file),
-          type: file.type.startsWith("video/")
+          type: (file.type.startsWith("video/")
             ? "VIDEO"
             : file.type.startsWith("image/")
             ? "IMAGE"
-            : "DOCUMENT",
-        })) as {
-          id: string;
-          url: string;
-          type: "IMAGE" | "VIDEO";
-        }[]) ?? [];
+            : "DOCUMENT") as FileType,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        })) as MessageAttachment[]) ?? [];
 
       const optimistic: LocalMessage = {
         id: clientId,
@@ -298,13 +304,13 @@ export const useSellerChat = (conversationId?: string | null) => {
           ? await uploadFilesToStorage(files)
           : undefined;
 
-        let msgType: MessageType = "TEXT";
+        let msgType: MessageType = MessageTypeEnum.TEXT;
 
         if (uploadedAttachments?.length) {
           if (uploadedAttachments.some((a) => a.type === "VIDEO")) {
-            msgType = "VIDEO";
+            msgType = MessageTypeEnum.VIDEO;
           } else {
-            msgType = "IMAGE";
+            msgType = MessageTypeEnum.IMAGE;
           }
         }
 

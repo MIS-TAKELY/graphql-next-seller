@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { getStatusIcon } from '@/lib/orders/utils';
-import { OrderFilters, SellerOrder } from '@/types/pages/order.types';
+import { OrderFilters, SellerOrder, OrderStatus } from '@/types/pages/order.types';
 import { toast } from 'sonner';
 import { OrderTable } from './OrderTable';
 import { CreateShipmentDialog } from './CreateShipmentDialog';
@@ -104,7 +104,7 @@ export function OrderStatusTab({
             size="sm"
             onClick={async () => {
               try {
-                await updateOrderStatus(order.id, 'PROCESSING');
+                await updateOrderStatus(order.id, OrderStatus.PROCESSING);
                 // Call the callback after successful status update
                 if (onProcessingStarted) {
                   setTimeout(() => {
@@ -141,7 +141,7 @@ export function OrderStatusTab({
             size="sm"
             onClick={async () => {
               try {
-                await updateOrderStatus(order.id, 'DELIVERED');
+                await updateOrderStatus(order.id, OrderStatus.DELIVERED);
                 // Call the callback after successful status update
                 if (onOrderDelivered) {
                   setTimeout(() => {
@@ -176,7 +176,7 @@ export function OrderStatusTab({
             size="sm"
             onClick={async () => {
               try {
-                await updateOrderStatus(order.id, 'RETURNED');
+                await updateOrderStatus(order.id, OrderStatus.RETURNED);
               } catch (error) {
                 // Error handling is managed by the hook
                 console.error('Failed to process return:', error);

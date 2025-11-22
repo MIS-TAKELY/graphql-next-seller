@@ -69,8 +69,8 @@ export default function ProductsPage() {
       const matchesCategory =
         categoryFilter === "all" ||
         product.category?.name === categoryFilter ||
-        product.category?.children?.some(
-          (child) => child.name === categoryFilter
+        product.category?.children?.some((child: Category) =>
+          child.name === categoryFilter
         );
 
       return matchesSearch && matchesStatus && matchesCategory;

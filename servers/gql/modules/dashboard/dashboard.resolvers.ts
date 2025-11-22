@@ -17,6 +17,22 @@ interface MonthlySales {
   total: number;
 }
 
+interface GetTopProductsArgs {
+  limit?: number;
+  year?: number;
+  month?: number; // 1-12
+}
+
+interface TopProduct {
+  productId: string;
+  productName: string;
+  variantId: string | null;
+  sku: string | null;
+  image: string | null;
+  totalQuantity: number;
+  totalRevenue: number;
+}
+
 export const dashboardResolvers = {
   Query: {
     // Total Revenue (Current vs Previous Month)
@@ -124,6 +140,122 @@ export const dashboardResolvers = {
         ...m,
         total: Number(m.total.toFixed(2)),
       }));
+    },
+    getTopProducts: async (
+      _: unknown,
+      args: GetTopProductsArgs,
+      ctx: GraphQLContext
+    ): Promise<{ products: TopProduct[]; totalProducts: number }> => {
+      const user = await requireSeller(ctx);
+      const prisma = ctx.prisma;
+      const sellerId = user.id;
+
+      const { limit = 10, year, month } = args;
+
+      // Build date filter (UTC to avoid timezone bugs)
+      const dateWhere: { gte?: Date; lt?: Date } = {};
+
+      if (year) {
+        if (month) {
+          dateWhere.gte = new Date(Date.UTC(year, month - 1, 1)); // First day of month
+          dateWhere.lt = new Date(Date.UTC(year, month, 1)); // First day of next month
+        } else {
+          dateWhere.gte = new Date(Date.UTC(year, 0, 1));
+          dateWhere.lt = new Date(Date.UTC(year + 1, 0, 1));
+        }
+      }
+
+      // Step 1: Aggregate from SellerOrderItem → SellerOrder → ProductVariant → Product
+      const orderItems = await prisma.sellerOrderItem.findMany({
+        where: {
+          sellerOrder: {
+            sellerId,
+            status: "DELIVERED",
+            ...(Object.keys(dateWhere).length > 0 && {
+              createdAt: dateWhere,
+            }),
+          },
+        },
+        select: {
+          quantity: true,
+          totalPrice: true,
+          variant: {
+            select: {
+              id: true,
+              sku: true,
+              product: {
+                select: {
+                  id: true,
+                  name: true,
+                  images: {
+                    where: { mediaType: "PRIMARY", sortOrder: 0 },
+                    select: { url: true },
+                    take: 1,
+                  },
+                },
+              },
+            },
+          },
+        },
+        orderBy: [
+          // We’ll sort in memory after grouping (Prisma doesn’t support GROUP BY + ORDER BY in same query easily)
+          { totalPrice: "desc" },
+        ],
+      });
+
+      // Step 2: Group by product + variant in JS (fast enough for dashboard)
+      const grouped = new Map<
+        string,
+        {
+          productId: string;
+          productName: string;
+          variantId: string | null;
+          sku: string | null;
+          image: string | null;
+          totalQuantity: number;
+          totalRevenue: number;
+        }
+      >();
+
+      for (const item of orderItems) {
+        const variant = item.variant;
+        const product = variant.product;
+        const key = `${product.id}_${variant.id || "novariant"}`;
+
+        const existing = grouped.get(key);
+        const imageUrl = product.images[0]?.url ?? null;
+
+        if (existing) {
+          existing.totalQuantity += item.quantity;
+          existing.totalRevenue += Number(item.totalPrice);
+        } else {
+          grouped.set(key, {
+            productId: product.id,
+            productName: product.name,
+            variantId: variant.id,
+            sku: variant.sku,
+            image: imageUrl,
+            totalQuantity: item.quantity,
+            totalRevenue: Number(item.totalPrice),
+          });
+        }
+      }
+
+      // Step 3: Sort by revenue and apply limit
+      const sortedProducts = Array.from(grouped.values())
+        .sort((a, b) => b.totalRevenue - a.totalRevenue)
+        .slice(0, limit);
+
+      // Optional: Round to 2 decimals
+      const products = sortedProducts.map((p) => ({
+        ...p,
+        totalRevenue: Number(p.totalRevenue.toFixed(2)),
+      }));
+
+      return {
+        products,
+        totalProducts: products.length,
+      };
     },
   },
 };

@@ -51,11 +51,7 @@ const generateUniqueSlug = async (
 
 export const sellerProfileResolvers = {
   Query: {
-    meSellerProfile: async (
-      _: unknown,
-      __: unknown,
-      ctx: GraphQLContext
-    ) => {
+    meSellerProfile: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
       const user = requireAuth(ctx);
       return ctx.prisma.sellerProfile.findUnique({
         where: { userId: user.id },
@@ -71,7 +67,7 @@ export const sellerProfileResolvers = {
       ctx: GraphQLContext
     ) => {
       const user = requireAuth(ctx);
-      console.log("user-->",user)
+      console.log("user-->", user);
       const prisma = ctx.prisma;
 
       // Prevent creating multiple profiles
@@ -92,66 +88,69 @@ export const sellerProfileResolvers = {
       const addressInput = input.address;
 
       // Everything in a transaction
-      const result = await prisma.$transaction(async (tx) => {
-        // 1. Create pickup/warehouse address
-        const address = await tx.address.create({
-          data: {
-            userId: user.id,
-            type: "WAREHOUSE",
-            label: addressInput.label ?? "Main Warehouse / Pickup Point",
-            line1: addressInput.line1,
-            line2: addressInput.line2,
-            city: addressInput.city,
-            state: addressInput.state || addressInput.city,
-            country: addressInput.country || "NP",
-            postalCode: addressInput.postalCode,
-            phone: addressInput.phone || input.phone,
-            isDefault: true,
-          },
-        });
+      const result = await prisma.$transaction(
+        async (tx) => {
+          // 1. Create pickup/warehouse address
+          const address = await tx.address.create({
+            data: {
+              userId: user.id,
+              type: "WAREHOUSE",
+              label: addressInput.label ?? "Main Warehouse / Pickup Point",
+              line1: addressInput.line1,
+              line2: addressInput.line2,
+              city: addressInput.city,
+              state: addressInput.state || addressInput.city,
+              country: addressInput.country || "NP",
+              postalCode: addressInput.postalCode,
+              phone: addressInput.phone || input.phone,
+              isDefault: true,
+            },
+          });
 
-        // 2. Grant SELLER role if not already granted
-        await tx.userRole.upsert({
-          where: {
-            userId_role: {
+          // 2. Grant SELLER role if not already granted
+          await tx.userRole.upsert({
+            where: {
+              userId_role: {
+                userId: user.id,
+                role: "SELLER",
+              },
+            },
+            update: {}, // Already has it → do nothing
+            create: {
               userId: user.id,
               role: "SELLER",
             },
-          },
-          update: {}, // Already has it → do nothing
-          create: {
-            userId: user.id,
-            role: "SELLER",
-          },
-        });
+          });
 
-        // 3. Create the seller profile
-        const profile = await tx.sellerProfile.create({
-          data: {
-            userId: user.id,
-            shopName: input.shopName,
-            slug,
-            tagline: input.tagline,
-            description: input.description,
-            logo: input.logo,
-            banner: input.banner,
-            businessName: input.businessName,
-            businessRegNo: input.businessRegNo,
-            businessType: input.businessType,
-            phone: input.phone,
-            altPhone: input.altPhone,
-            email: input.supportEmail,
-            pickupAddressId: address.id,
-            isActive: true,
-            verificationStatus: "PENDING", // optional: start as pending review
-          },
-          include: {
-            pickupAddress: true,
-          },
-        });
+          // 3. Create the seller profile
+          const profile = await tx.sellerProfile.create({
+            data: {
+              userId: user.id,
+              shopName: input.shopName,
+              slug,
+              tagline: input.tagline,
+              description: input.description,
+              logo: input.logo,
+              banner: input.banner,
+              businessName: input.businessName,
+              businessRegNo: input.businessRegNo,
+              businessType: input.businessType,
+              phone: input.phone,
+              altPhone: input.altPhone,
+              email: input.supportEmail,
+              pickupAddressId: address.id,
+              isActive: true,
+              verificationStatus: "PENDING", // optional: start as pending review
+            },
+            include: {
+              pickupAddress: true,
+            },
+          });
 
-        return profile;
-      });
+          return profile;
+        },
+        { timeout: 300000 }
+      );
 
       return result;
     },

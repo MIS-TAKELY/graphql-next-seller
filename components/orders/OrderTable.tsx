@@ -68,7 +68,7 @@ export function OrderTable({
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     try {
-      if (newStatus === 'CONFIRMED') {
+      if (newStatus === OrderStatus.CONFIRMED) {
         await confirmSingleOrder(orderId);
         onConfirmationSuccess?.(orderId); // Trigger callback
       } else {
@@ -79,8 +79,9 @@ export function OrderTable({
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (dateString: string | Date) => {
+    const dateValue = typeof dateString === 'string' ? dateString : dateString.toISOString();
+    const date = new Date(dateValue);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -141,10 +142,10 @@ export function OrderTable({
               <TableCell>
                 <div className="min-w-0">
                   <div className="font-medium text-xs sm:text-sm truncate">
-                    {`${order.order.buyer.firstName} ${order.order.buyer.lastName}`}
+                    {order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Unknown Customer'}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
-                    {order.order.buyer.email}
+                    {order.order.buyer?.email ?? 'N/A'}
                   </div>
                 </div>
               </TableCell>
@@ -198,23 +199,23 @@ export function OrderTable({
                       <DropdownMenuContent>
                         <DropdownMenuLabel className="text-xs">Quick Actions</DropdownMenuLabel>
                         <DropdownMenuSeparator />
-                        {order.status === 'PENDING' && (
+                        {order.status === OrderStatus.PENDING && (
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order.id, 'CONFIRMED')}
+                            onClick={() => handleStatusUpdate(order.id, OrderStatus.CONFIRMED)}
                             className="text-xs"
                           >
                             Confirm Order
                           </DropdownMenuItem>
                         )}
-                        {order.status === 'CONFIRMED' && (
+                        {order.status === OrderStatus.CONFIRMED && (
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order.id, 'PROCESSING')}
+                            onClick={() => handleStatusUpdate(order.id, OrderStatus.PROCESSING)}
                             className="text-xs"
                           >
                             Start Processing
                           </DropdownMenuItem>
                         )}
-                        {order.status === 'PROCESSING' && (
+                        {order.status === OrderStatus.PROCESSING && (
                           <DropdownMenuItem asChild>
                             <CreateShipmentDialog
                               order={order}
@@ -224,18 +225,18 @@ export function OrderTable({
                             </CreateShipmentDialog>
                           </DropdownMenuItem>
                         )}
-                        {order.status === 'SHIPPED' && (
+                        {order.status === OrderStatus.SHIPPED && (
                           <DropdownMenuItem
-                            onClick={() => handleStatusUpdate(order.id, 'DELIVERED')}
+                            onClick={() => handleStatusUpdate(order.id, OrderStatus.DELIVERED)}
                             className="text-xs"
                           >
                             Mark as Delivered
                           </DropdownMenuItem>
                         )}
-                        {(order.status === 'SHIPPED' || order.status === 'DELIVERED') &&
+                        {(order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) &&
                           order.items[0]?.variant?.product?.returnPolicy?.type !== 'NO_RETURN' && (
                             <DropdownMenuItem
-                              onClick={() => handleStatusUpdate(order.id, 'RETURNED')}
+                              onClick={() => handleStatusUpdate(order.id, OrderStatus.RETURNED)}
                               className="text-xs"
                             >
                               Process Return

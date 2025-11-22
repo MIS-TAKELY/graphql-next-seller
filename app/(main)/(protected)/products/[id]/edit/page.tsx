@@ -8,6 +8,8 @@ export default async function EditProductPage({ params }: { params: { id: string
   const client = await getServerApolloClient(); // Switch to auth client
   const productId = params.id;
 
+  console.log("product id-->",productId)
+
   let productData;
   let categoryData;
 

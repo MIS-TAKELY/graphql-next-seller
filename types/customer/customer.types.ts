@@ -1,43 +1,42 @@
 // types/customer/customer.types.ts
+// Customer, message, and conversation types
 
-// User role types
-export type Role = "BUYER" | "SELLER" | "ADMIN";
+import type { Role, MessageType, FileType } from "../common/enums";
+import type { BaseEntity, Timestamps } from "../common/primitives";
+
+// Re-export enums for convenience
+export type { FileType, MessageType, Role };
+// RoleType is already exported from ../common/enums
 
 // User interface
-export interface User {
-  id: string;
+export interface User extends BaseEntity {
   firstName: string;
   lastName: string;
   email: string;
-  roles?: [
-    {
-      role: Role;
-    }
-  ];
+  roles?: Array<{
+    role: Role;
+  }>;
 }
 
-// Message types
-export type MessageType = "TEXT" | "IMAGE" | "VIDEO" | "SYSTEM";
-export type FileType = "IMAGE" | "VIDEO" | "DOCUMENT";
-
 // Message attachment interface
-export interface MessageAttachment {
-  id: string;
+export interface MessageAttachment extends BaseEntity {
+  messageId: string;
   url: string;
   type: FileType;
 }
 
 // Message interface
-export interface Message {
-  id: string;
+export interface Message extends BaseEntity {
+  conversationId: string;
+  senderId: string;
   content?: string;
   type: MessageType;
-  sentAt: string;
+  fileUrl?: string; // Legacy field, prefer attachments
   isRead: boolean;
+  sentAt: string | Date;
+  clientId?: string;
   sender: User;
   attachments?: MessageAttachment[];
-  fileUrl?: string; // Legacy field, prefer attachments
-  clientId?: string;
 }
 
 // Product interface (minimal for conversation context)
@@ -48,15 +47,18 @@ export interface Product {
 }
 
 // Conversation interface
-export interface Conversation {
-  id: string;
-  title: string;
-  unreadCount: number;
-  updatedAt: string;
+export interface Conversation extends BaseEntity {
+  productId: string;
+  senderId: string;
+  recieverId: string;
+  title?: string;
+  isActive: boolean;
   sender: User; // buyer who initiated
   reciever: User; // seller
   product: Product;
   lastMessage: Message;
+  unreadCount?: number;
+  updatedAt: string | Date;
 }
 
 // GraphQL response wrapper

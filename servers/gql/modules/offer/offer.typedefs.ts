@@ -37,9 +37,25 @@ export const offerTypeDefs = gql`
     offer: Offer!
     category: Category!
   }
-  input CreateProductOfferInput {
-    offer: CreateOfferInput!
+  #input CreateProductOfferInput {
+  #  offer: CreateOfferInput!
+  #}
+
+  input OfferInput {
+    title: String!
+    description: String
+    type: DiscountType!
+    value: Float!
+    startDate: String!
+    endDate: String!
+    isActive: Boolean
   }
+
+   input CreateProductOfferInput {
+    offer: OfferInput!
+  }
+
+
   input CreateOfferInput {
     title: String!
     description: String

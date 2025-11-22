@@ -30,7 +30,7 @@ export default function OrderStatusPage({ orders, status, tabValue }: OrderStatu
   };
 
   const filteredOrders = orders.filter((order) => {
-    const customerName = `${order.order.buyer.firstName} ${order.order.buyer.lastName}`;
+    const customerName = order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Unknown Customer';
     const matchesSearch =
       customerName.toLowerCase().includes(orderFilters.search.toLowerCase()) ||
       order.order.orderNumber.toLowerCase().includes(orderFilters.search.toLowerCase());

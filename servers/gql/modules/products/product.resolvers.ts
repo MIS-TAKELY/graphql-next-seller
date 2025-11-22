@@ -212,204 +212,311 @@ export const productResolvers = {
       try {
         const user = requireSeller(context);
 
-        // Validate required fields
-        if (!input.name) {
-          throw new Error("Product name is required");
+        // 1. Basic Validation
+        if (!input.name) throw new Error("Product name is required");
+        if (!input.variants || input.variants.length === 0) {
+          throw new Error("At least one product variant is required");
         }
-        if (!input.variants) {
-          throw new Error("Product variant information is required");
-        }
-        if (!input.images || !input.images.length) {
+        if (!input.images || input.images.length === 0) {
           throw new Error("At least one product image is required");
         }
 
-        // Validate variant data
-        const variant = input.variants;
-        if (!variant.sku) throw new Error("SKU is required");
-        if (variant.price == null || isNaN(Number(variant.price)))
-          throw new Error("Valid price is required");
-        if (variant.stock == null || isNaN(Number(variant.stock)))
-          throw new Error("Valid stock quantity is required");
+        // 2. Validate Variants Data
+        input.variants.forEach((v: any, index: number) => {
+          if (!v.sku) throw new Error(`SKU is required for variant #${index + 1}`);
+          if (v.price == null) throw new Error(`Price is required for variant #${index + 1}`);
+          if (v.stock == null) throw new Error(`Stock is required for variant #${index + 1}`);
+        });
 
         const sellerId = user.id;
         const slug = await generateUniqueSlug(input.name);
 
-        console.log("input-->", input);
+        // 3. Generate Embedding (Optional)
+        const textToEmbed = `${input.name} ${input.description || ""} ${input.brand || ""}`.trim();
+        let embedding: number[] | undefined;
+        try {
+          if (textToEmbed) embedding = await generateEmbedding(textToEmbed);
+        } catch (e) {
+          console.warn("Embedding generation failed", e);
+        }
 
-        // Use a transaction to ensure all related data is created together
-        const product = await prisma.$transaction(
-          async (tx) => {
-            const textToEmbed = `${input.name} ${input.description || ""} ${
-              input.brand || ""
-            }`.trim();
+        // 4. Transaction
+        const product = await prisma.$transaction(async (tx) => {
+          const newProduct = await tx.product.create({
+            data: {
+              name: input.name,
+              slug,
+              description: input.description || "",
+              status: input.status || "INACTIVE",
+              categoryId: input.categoryId || null,
+              brand: input.brand || "Generic",
+              sellerId,
 
-            let embedding;
-
-            if (textToEmbed) {
-              try {
-                embedding = await generateEmbedding(textToEmbed);
-              } catch (err) {
-                console.log(
-                  "Failed to generate embedding for product:",
-                  input.name
-                );
-                console.error(err);
-              }
-            }
-
-            // Create the product with variant and images
-            const newProduct = await tx.product.create({
-              data: {
-                name: input.name,
-                slug,
-                description: input.description || "",
-                status: "INACTIVE",
-                categoryId: input.categoryId || null,
-                brand: input.brand || "Generic",
-                sellerId,
-
-                // Create variant
-                variants: {
-                  create: {
-                    sku: variant.sku,
-                    price: variant.price,
-                    mrp: variant.mrp || variant.price,
-                    stock: variant.stock,
-                    attributes: variant.attributes || {},
-                    isDefault: variant.isDefault !== false,
-                    specifications:
-                      variant.specifications?.length > 0
-                        ? {
-                            create: variant.specifications.map((spec: any) => ({
-                              key: spec.key,
-                              value: spec.value,
-                            })),
-                          }
-                        : undefined,
-                  },
-                },
-
-                // Create images
-                images: {
-                  create: input.images.map((img: any, index: number) => ({
-                    url: img.url,
-                    altText: img.altText || null,
-                    sortOrder:
-                      img.sortOrder !== undefined ? img.sortOrder : index,
-                    mediaType: img.mediaType || "PRIMARY",
-                    fileType: img.fileType,
-                  })),
-                },
+              // A. Create Variants (One-to-Many)
+              variants: {
+                create: input.variants.map((variant: any, idx: number) => ({
+                  sku: variant.sku,
+                  price: variant.price,
+                  mrp: variant.mrp || variant.price,
+                  stock: variant.stock,
+                  attributes: variant.attributes || {}, // Store JSON attributes
+                  isDefault: variant.isDefault ?? (idx === 0), // Default to first if not set
+                  
+                  // Nested Specifications per Variant
+                  specifications: variant.specifications?.length > 0
+                    ? {
+                        create: variant.specifications.map((spec: any) => ({
+                          key: spec.key,
+                          value: spec.value,
+                        })),
+                      }
+                    : undefined,
+                })),
               },
-            });
-            if (embedding) {
-              await tx.$executeRaw`
-    UPDATE "products"
-    SET embedding = ${embedding}::vector
-    WHERE id = ${newProduct.id}
-  `;
-            }
-            // Create offers if provided
-            if (input.productOffers?.length > 0) {
-              for (const offerInput of input.productOffers) {
-                const offer = await tx.offer.create({
-                  data: {
-                    title: offerInput.offer.title,
-                    description: offerInput.offer.description || null,
-                    type: offerInput.offer.type,
-                    value: offerInput.offer.value,
-                    startDate: new Date(offerInput.offer.startDate),
-                    endDate: new Date(offerInput.offer.endDate),
-                    bannerImage: offerInput.offer.bannerImage || null,
-                    isActive: true,
-                  },
-                });
 
-                await tx.productOffer.create({
-                  data: {
-                    productId: newProduct.id,
-                    offerId: offer.id,
-                  },
-                });
-              }
-            }
-
-            // Create delivery options if provided
-            if (input.deliveryOptions?.length > 0) {
-              await tx.deliveryOption.createMany({
-                data: input.deliveryOptions.map((option: any) => ({
-                  productId: newProduct.id,
-                  title: option.title,
-                  description: option.description || null,
-                  isDefault: option.isDefault || false,
+              // B. Create Images
+              images: {
+                create: input.images.map((img: any, index: number) => ({
+                  url: img.url,
+                  altText: img.altText || "",
+                  sortOrder: img.sortOrder ?? index,
+                  mediaType: img.mediaType || "PRIMARY",
+                  fileType: img.fileType,
                 })),
-              });
-            }
+              },
 
-            // Create warranty if provided
-            if (input.warranty?.length > 0) {
-              await tx.warranty.createMany({
-                data: input.warranty.map((warranty: any) => ({
-                  productId: newProduct.id,
-                  type: warranty.type,
-                  duration: warranty.duration || null,
-                  unit: warranty.unit || null,
-                  description: warranty.description || null,
-                })),
-              });
-            }
+              // C. Delivery Options
+              deliveryOptions: input.deliveryOptions?.length > 0 ? {
+                create: input.deliveryOptions.map((opt: any) => ({
+                  title: opt.title,
+                  description: opt.description,
+                  isDefault: opt.isDefault || false
+                }))
+              } : undefined,
 
-            // Create return policy if provided
-            if (input.returnPolicy?.length > 0) {
-              await tx.returnPolicy.createMany({
-                data: input.returnPolicy.map((policy: any) => ({
-                  productId: newProduct.id,
-                  type: policy.type,
-                  duration: policy.duration || null,
-                  unit: policy.unit || null,
-                  conditions: policy.conditions || null,
-                })),
-              });
-            }
+              // D. Warranty
+              warranty: input.warranty?.length > 0 ? {
+                create: input.warranty.map((w: any) => ({
+                  type: w.type,
+                  duration: w.duration,
+                  unit: w.unit,
+                  description: w.description
+                }))
+              } : undefined,
 
-            // Fetch the complete product with all relations
-            return await tx.product.findUnique({
-              where: { id: newProduct.id },
-              // include: {
-              //   variants: {
-              //     include: {
-              //       specifications: true,
-              //     },
-              //   },
-              //   images: true,
-              //   seller: true,
-              //   category: true,
-              //   productOffers: {
-              //     include: {
-              //       offer: true,
-              //     },
-              //   },
-              //   deliveryOptions: true,
-              //   warranty: true,
-              //   returnPolicy: true,
-              // },
-            });
-          },
-          { timeout: 30000 } // Moved timeout here for the entire transaction
-        );
+              // E. Return Policy
+              returnPolicy: input.returnPolicy?.length > 0 ? {
+                create: input.returnPolicy.map((p: any) => ({
+                  type: p.type,
+                  duration: p.duration,
+                  unit: p.unit,
+                  conditions: p.conditions
+                }))
+              } : undefined,
+            },
+          });
 
-        if (!product) throw new Error("Unable to create product");
-        console.log("Product created successfully:", product);
+          // console.log("new products-->",newProduct)
 
-        console.log("deleting cache");
+          // Save Embedding via raw SQL (Prisma doesn't fully type pgvector yet)
+          if (embedding) {
+            await tx.$executeRaw`UPDATE "products" SET embedding = ${embedding}::vector WHERE id = ${newProduct.id}`;
+          }
+
+          return newProduct;
+        }, { timeout: 30000 });
+
+        if(product)console.log("product created")
+
+        // 5. Cleanup Cache
         await Promise.all([
           delCache("product:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
+
         return true;
       } catch (error: any) {
-        console.error("Error while creating product:", error);
-        throw new Error(`Failed to create product: ${error.message}`);
+        console.error("Error creating product:", error);
+        throw new Error(error.message || "Failed to create product");
+      }
+    },
+
+    updateProduct: async (
+      _: any,
+      { input }: { input: any },
+      ctx: GraphQLContext
+    ) => {
+      try {
+        const user = requireSeller(ctx);
+        const sellerId = user.id;
+
+        if (!input.id) throw new Error("Product ID is required");
+
+        // 1. Authorization Check
+        const existingProduct = await prisma.product.findFirst({
+          where: { id: input.id, sellerId },
+          include: { variants: true }
+        });
+
+        if (!existingProduct) {
+          throw new Error("Product not found or unauthorized");
+        }
+
+        // 2. Prepare Basic Updates
+        const productData: any = {};
+        if (input.name) {
+          productData.name = input.name;
+          if (input.name !== existingProduct.name) {
+            productData.slug = await generateUniqueSlug(input.name);
+          }
+        }
+        if (input.description !== undefined) productData.description = input.description;
+        if (input.status !== undefined) productData.status = input.status;
+        if (input.categoryId !== undefined) productData.categoryId = input.categoryId;
+        if (input.brand !== undefined) productData.brand = input.brand;
+
+        await prisma.$transaction(async (tx) => {
+          // A. Update Product Root
+          if (Object.keys(productData).length > 0) {
+            await tx.product.update({
+              where: { id: input.id },
+              data: productData,
+            });
+          }
+
+          // B. SYNC VARIANTS (Critical for Orders)
+          // We cannot just delete all variants because OrderItems link to Variant IDs.
+          if (input.variants) {
+            const incomingIds = input.variants
+              .filter((v: any) => v.id)
+              .map((v: any) => v.id);
+
+            // 1. Delete variants not in the input (unless they have orders - optional check)
+            // Note: Prisma will fail if foreign key constraint exists (Order) and on delete cascade is not set. 
+            // Ideally, you soft delete or check orders. For now, assuming standard delete.
+            await tx.productVariant.deleteMany({
+              where: {
+                productId: input.id,
+                id: { notIn: incomingIds }
+              }
+            });
+
+            // 2. Upsert (Update or Create)
+            for (const v of input.variants) {
+              const variantData = {
+                sku: v.sku,
+                price: v.price,
+                mrp: v.mrp || v.price,
+                stock: v.stock,
+                attributes: v.attributes || {},
+                isDefault: v.isDefault || false
+              };
+
+              if (v.id) {
+                // Update Existing
+                await tx.productVariant.update({
+                  where: { id: v.id },
+                  data: {
+                    ...variantData,
+                    // Re-create specifications for this variant
+                    specifications: {
+                      deleteMany: {},
+                      create: v.specifications?.map((s: any) => ({
+                        key: s.key,
+                        value: s.value
+                      }))
+                    }
+                  }
+                });
+              } else {
+                // Create New
+                await tx.productVariant.create({
+                  data: {
+                    productId: input.id,
+                    ...variantData,
+                    specifications: {
+                      create: v.specifications?.map((s: any) => ({
+                        key: s.key,
+                        value: s.value
+                      }))
+                    }
+                  }
+                });
+              }
+            }
+          }
+
+          // C. Re-create Dependent Lists (Images, Warranty, etc.)
+          // These are usually safe to delete and recreate as they aren't linked to Orders directly in your schema
+          
+          // Images
+          if (input.images) {
+            await tx.productImage.deleteMany({ where: { productId: input.id } });
+            await tx.productImage.createMany({
+              data: input.images.map((img: any, i: number) => ({
+                productId: input.id,
+                url: img.url,
+                altText: img.altText,
+                sortOrder: img.sortOrder ?? i,
+                mediaType: img.mediaType || "PRIMARY",
+                fileType: img.fileType
+              }))
+            });
+          }
+
+          // Delivery Options
+          if (input.deliveryOptions) {
+            await tx.deliveryOption.deleteMany({ where: { productId: input.id } });
+            await tx.deliveryOption.createMany({
+              data: input.deliveryOptions.map((opt: any) => ({
+                productId: input.id,
+                title: opt.title,
+                description: opt.description,
+                isDefault: opt.isDefault
+              }))
+            });
+          }
+
+          // Warranty
+          if (input.warranty) {
+            await tx.warranty.deleteMany({ where: { productId: input.id } });
+            await tx.warranty.createMany({
+              data: input.warranty.map((w: any) => ({
+                productId: input.id,
+                type: w.type,
+                duration: w.duration,
+                unit: w.unit,
+                description: w.description
+              }))
+            });
+          }
+
+          // Return Policy
+          if (input.returnPolicy) {
+            await tx.returnPolicy.deleteMany({ where: { productId: input.id } });
+            await tx.returnPolicy.createMany({
+              data: input.returnPolicy.map((p: any) => ({
+                productId: input.id,
+                type: p.type,
+                duration: p.duration,
+                unit: p.unit,
+                conditions: p.conditions
+              }))
+            });
+          }
+        }, { timeout: 30000 });
+
+        // Cache Invalidation
+        await Promise.all([
+          delCache(`product:${input.id}`),
+          delCache("product:all"),
+          delCache(`products:seller:${sellerId}`),
+        ]);
+
+        return true;
+      } catch (error: any) {
+        console.error("Error updating product:", error);
+        throw new Error(error.message || "Failed to update product");
       }
     },
 
@@ -458,310 +565,6 @@ export const productResolvers = {
       } catch (error: any) {
         console.error("Error deleting product:", error);
         throw new Error(`Failed to delete product: ${error.message}`);
-      }
-    },
-
-    updateProduct: async (
-      _: any,
-      { input }: { input: any },
-      ctx: GraphQLContext
-    ) => {
-      try {
-        // Validate user is a seller
-        const user = requireSeller(ctx);
-        const sellerId = user.id;
-
-        // Validate input
-        if (!input.id) {
-          throw new Error("Product ID is required");
-        }
-
-        // Verify product exists and belongs to the seller
-        const existingProduct = await prisma.product.findFirst({
-          where: {
-            id: input.id,
-            sellerId,
-          },
-          include: {
-            variants: true,
-          },
-        });
-
-        if (!existingProduct) {
-          throw new Error(
-            "Product not found or you are not authorized to update it"
-          );
-        }
-
-        // Prepare product update data (only include provided fields)
-        const productData: any = {};
-        if (input.name !== undefined) {
-          productData.name = input.name;
-          if (input.name !== existingProduct.name) {
-            productData.slug = await generateUniqueSlug(input.name);
-          }
-        }
-        if (input.description !== undefined) {
-          productData.description = input.description;
-        }
-        if (input.status !== undefined) {
-          productData.status = input.status;
-        }
-        if (input.categoryId !== undefined) {
-          productData.categoryId = input.categoryId;
-        }
-        if (input.brand !== undefined) {
-          productData.brand = input.brand;
-        }
-
-        // Use a transaction for atomic updates
-        await prisma.$transaction(
-          async (tx) => {
-            // Update product table if there are fields to update
-            if (Object.keys(productData).length > 0) {
-              await tx.product.update({
-                where: { id: input.id },
-                data: productData,
-              });
-            }
-
-            // Update variants if provided
-            if (input.variants !== undefined) {
-              let defaultVariant = await tx.productVariant.findFirst({
-                where: {
-                  productId: input.id,
-                  isDefault: true,
-                },
-              });
-
-              if (defaultVariant) {
-                // Prepare variant update data (only include provided fields)
-                const variantData: any = {};
-                if (input.variants.sku !== undefined) {
-                  variantData.sku = input.variants.sku;
-                }
-                if (input.variants.price !== undefined) {
-                  if (
-                    input.variants.price == null ||
-                    isNaN(Number(input.variants.price))
-                  ) {
-                    throw new Error("Valid price is required for variant");
-                  }
-                  variantData.price = input.variants.price;
-                  // Only update mrp if explicitly provided, otherwise keep price
-                  variantData.mrp =
-                    input.variants.mrp !== undefined
-                      ? input.variants.mrp
-                      : input.variants.price;
-                }
-                if (input.variants.stock !== undefined) {
-                  if (
-                    input.variants.stock == null ||
-                    isNaN(Number(input.variants.stock))
-                  ) {
-                    throw new Error(
-                      "Valid stock quantity is required for variant"
-                    );
-                  }
-                  variantData.stock = input.variants.stock;
-                }
-                if (input.variants.attributes !== undefined) {
-                  variantData.attributes = input.variants.attributes;
-                }
-                if (input.variants.isDefault !== undefined) {
-                  variantData.isDefault = input.variants.isDefault;
-                }
-
-                // Update existing default variant if there are changes
-                if (Object.keys(variantData).length > 0) {
-                  await tx.productVariant.update({
-                    where: { id: defaultVariant.id },
-                    data: variantData,
-                  });
-                }
-
-                // Update specifications if provided
-                if (input.variants.specifications !== undefined) {
-                  await tx.productSpecification.deleteMany({
-                    where: { variantId: defaultVariant.id },
-                  });
-                  if (input.variants.specifications?.length > 0) {
-                    await tx.productSpecification.createMany({
-                      data: input.variants.specifications.map((spec: any) => ({
-                        variantId: defaultVariant.id,
-                        key: spec.key,
-                        value: spec.value,
-                      })),
-                    });
-                  }
-                }
-              } else if (input.variants !== undefined) {
-                // Validate required fields for new variant
-                if (!input.variants.sku) {
-                  throw new Error("SKU is required for variant");
-                }
-                if (
-                  input.variants.price == null ||
-                  isNaN(Number(input.variants.price))
-                ) {
-                  throw new Error("Valid price is required for variant");
-                }
-                if (
-                  input.variants.stock == null ||
-                  isNaN(Number(input.variants.stock))
-                ) {
-                  throw new Error(
-                    "Valid stock quantity is required for variant"
-                  );
-                }
-
-                // Create a new default variant
-                await tx.productVariant.create({
-                  data: {
-                    productId: input.id,
-                    sku: input.variants.sku,
-                    price: input.variants.price,
-                    mrp:
-                      input.variants.mrp !== undefined
-                        ? input.variants.mrp
-                        : input.variants.price,
-                    stock: input.variants.stock,
-                    attributes: input.variants.attributes || {},
-                    isDefault: input.variants.isDefault !== false,
-                    specifications:
-                      input.variants.specifications?.length > 0
-                        ? {
-                            create: input.variants.specifications.map(
-                              (spec: any) => ({
-                                key: spec.key,
-                                value: spec.value,
-                              })
-                            ),
-                          }
-                        : undefined,
-                  },
-                });
-              }
-            }
-
-            // Update images if provided
-            if (input.images !== undefined) {
-              await tx.productImage.deleteMany({
-                where: { productId: input.id },
-              });
-              if (input.images?.length > 0) {
-                await tx.productImage.createMany({
-                  data: input.images.map((img: any, index: number) => ({
-                    productId: input.id,
-                    url: img.url,
-                    altText: img.altText || null,
-                    sortOrder:
-                      img.sortOrder !== undefined ? img.sortOrder : index,
-                    mediaType: img.mediaType || "PRIMARY",
-                    fileType: img.fileType,
-                  })),
-                });
-              }
-            }
-
-            // Update product offers if provided
-            if (input.productOffers !== undefined) {
-              await tx.productOffer.deleteMany({
-                where: { productId: input.id },
-              });
-              if (input.productOffers?.length > 0) {
-                for (const offerInput of input.productOffers) {
-                  const offer = await tx.offer.create({
-                    data: {
-                      title: offerInput.offer.title,
-                      description: offerInput.offer.description || null,
-                      type: offerInput.offer.type,
-                      value: offerInput.offer.value,
-                      startDate: new Date(offerInput.offer.startDate),
-                      endDate: new Date(offerInput.offer.endDate),
-                      bannerImage: offerInput.offer.bannerImage || null,
-                      isActive: true,
-                    },
-                  });
-
-                  await tx.productOffer.create({
-                    data: {
-                      productId: input.id,
-                      offerId: offer.id,
-                    },
-                  });
-                }
-              }
-            }
-
-            // Update delivery options if provided
-            if (input.deliveryOptions !== undefined) {
-              await tx.deliveryOption.deleteMany({
-                where: { productId: input.id },
-              });
-              if (input.deliveryOptions?.length > 0) {
-                await tx.deliveryOption.createMany({
-                  data: input.deliveryOptions.map((option: any) => ({
-                    productId: input.id,
-                    title: option.title,
-                    description: option.description || null,
-                    isDefault: option.isDefault || false,
-                  })),
-                });
-              }
-            }
-
-            // Update warranty if provided
-            if (input.warranty !== undefined) {
-              await tx.warranty.deleteMany({
-                where: { productId: input.id },
-              });
-              if (input.warranty?.length > 0) {
-                await tx.warranty.createMany({
-                  data: input.warranty.map((warranty: any) => ({
-                    productId: input.id,
-                    type: warranty.type,
-                    duration: warranty.duration || null,
-                    unit: warranty.unit || null,
-                    description: warranty.description || null,
-                  })),
-                });
-              }
-            }
-
-            // Update return policy if provided
-            if (input.returnPolicy !== undefined) {
-              await tx.returnPolicy.deleteMany({
-                where: { productId: input.id },
-              });
-              if (input.returnPolicy?.length > 0) {
-                await tx.returnPolicy.createMany({
-                  data: input.returnPolicy.map((policy: any) => ({
-                    productId: input.id,
-                    type: policy.type,
-                    duration: policy.duration || null,
-                    unit: policy.unit || null,
-                    conditions: policy.conditions || null,
-                  })),
-                });
-              }
-            }
-          },
-          { timeout: 30000 }
-        );
-
-        // Clear Redis caches
-        await Promise.all([
-          delCache(`product:${input.id}`),
-          delCache("product:all"),
-          delCache(`products:seller:${sellerId}`),
-        ]);
-
-        console.log("Product updated successfully:", input.id);
-        return true;
-      } catch (error: any) {
-        console.error("Error while updating product:", error);
-        throw new Error(`Failed to update product: ${error.message}`);
       }
     },
   },

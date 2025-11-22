@@ -13,7 +13,7 @@ const ConversationList: React.FC<ConversationListProps> = ({
   conversation,
   onSelect,
 }) => {
-  const unreadBadge = conversation.unreadCount > 0 && (
+  const unreadBadge = (conversation.unreadCount ?? 0) > 0 && (
     <Badge variant="destructive" className="ml-2">
       {conversation.unreadCount}
     </Badge>

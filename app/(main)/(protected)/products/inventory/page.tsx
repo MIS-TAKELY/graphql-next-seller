@@ -17,19 +17,33 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
-import { GetInventoryResponse, InventoryProduct } from "@/types/pages/product";
+import { GetMyProductsResponse, InventoryProduct } from "@/types/pages/product";
+import type { ProductVariant } from "@/types/product/product.types";
 import { AlertTriangle, Package, TrendingDown } from "lucide-react";
 
 // export const dynamic = "force-dynamic";
 
 export default async function InventoryPage() {
   const client = await getServerApolloClient();
-  const { data } = await client.query<GetInventoryResponse>({
+  const { data } = await client.query<GetMyProductsResponse>({
     query: GET_INVENTORY,
     fetchPolicy: "no-cache",
   });
 
-  const inventoryItems: InventoryProduct[] = data?.getMyProducts?.products ?? [];
+  // Map Product[] to InventoryProduct[] format
+  const inventoryItems: InventoryProduct[] = (data?.getMyProducts?.products ?? []).map((product) => ({
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    variants: product.variants.map((v: ProductVariant) => ({
+      id: v.id,
+      sku: v.sku,
+      stock: v.stock,
+      soldCount: v.soldCount ?? 0,
+      price: typeof v.price === "string" ? parseFloat(v.price) : v.price,
+      mrp: v.mrp ? (typeof v.mrp === "string" ? parseFloat(v.mrp) : v.mrp) : undefined,
+    })),
+  }));
 
   const totalSoldCount = inventoryItems.reduce((total, item) => {
     return total + (item.variants[0]?.soldCount ?? 0);

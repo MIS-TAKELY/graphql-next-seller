@@ -30,7 +30,7 @@ export function OrderDetailsDialog({
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     try {
-      if (newStatus === 'CONFIRMED') {
+      if (newStatus === OrderStatus.CONFIRMED) {
         await confirmSingleOrder(order.id);
         onConfirmationSuccess?.(order.id); // Trigger callback
       } else {
@@ -61,47 +61,47 @@ export function OrderDetailsDialog({
           {/* ... (customer info, order items, etc., remain unchanged) */}
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2">
-            {order.status === 'PENDING' && (
+            {order.status === OrderStatus.PENDING && (
               <Button
                 size="sm"
-                onClick={() => handleStatusUpdate('CONFIRMED')}
+                onClick={() => handleStatusUpdate(OrderStatus.CONFIRMED)}
                 className="text-xs"
               >
                 <Package className="mr-1 h-3 w-3" />
                 Confirm Order
               </Button>
             )}
-            {order.status === 'CONFIRMED' && (
+            {order.status === OrderStatus.CONFIRMED && (
               <Button
                 size="sm"
-                onClick={() => handleStatusUpdate('PROCESSING')}
+                onClick={() => handleStatusUpdate(OrderStatus.PROCESSING)}
                 className="text-xs"
               >
                 Start Processing
               </Button>
             )}
-            {order.status === 'PROCESSING' && (
+            {order.status === OrderStatus.PROCESSING && (
               <CreateShipmentDialog
                 order={order}
                 onSuccess={() => onShipmentSuccess?.(order.id)}
               />
             )}
-            {order.status === 'SHIPPED' && (
+            {order.status === OrderStatus.SHIPPED && (
               <Button
                 size="sm"
-                onClick={() => handleStatusUpdate('DELIVERED')}
+                onClick={() => handleStatusUpdate(OrderStatus.DELIVERED)}
                 className="text-xs"
               >
                 Mark as Delivered
               </Button>
             )}
-            {(order.status === 'DELIVERED' || order.status === 'SHIPPED') &&
+            {(order.status === OrderStatus.DELIVERED || order.status === OrderStatus.SHIPPED) &&
               order.items[0]?.variant?.product?.returnPolicy?.type !== 'NO_RETURN' && (
-              // TODO: Add 'returnPolicy' to the 'Product' type in types/pages/order.types.ts
+                // TODO: Add 'returnPolicy' to the 'Product' type in types/pages/order.types.ts
                 <Button
                   size="sm"
                   variant="destructive"
-                  onClick={() => handleStatusUpdate('RETURNED')}
+                  onClick={() => handleStatusUpdate(OrderStatus.RETURNED)}
                   className="text-xs"
                 >
                   Process Return

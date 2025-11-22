@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Truck } from 'lucide-react';
-import { SellerOrder } from '@/types/pages/order.types';
+import { SellerOrder, OrderStatus, ShipmentStatus } from '@/types/pages/order.types';
 
 interface CreateShipmentDialogProps {
   order: SellerOrder;
@@ -86,9 +86,9 @@ export function CreateShipmentDialog({
         orderId: order.buyerOrderId,
         trackingNumber: formData.trackingNumber,
         carrier: formData.carrier,
-        status: 'SHIPPED',
+        status: ShipmentStatus.SHIPPED,
       });
-      await updateOrderStatus(order.id, 'SHIPPED');
+      await updateOrderStatus(order.id, OrderStatus.SHIPPED);
       toast.success(`Shipment created for order #${order.order.orderNumber}`);
       setIsOpen(false);
       setFormData({ trackingNumber: '', carrier: '' });

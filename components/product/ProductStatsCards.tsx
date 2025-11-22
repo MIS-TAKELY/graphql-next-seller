@@ -1,6 +1,7 @@
 "use client";
 
 import { Product } from "@/types/pages/product";
+import type { ProductVariant } from "@/types/product/product.types";
 import { StatCard } from "./StatCard";
 
 interface ProductStatsCardsProps {
@@ -19,11 +20,11 @@ export function ProductStatsCards({
   ).length;
 
   const outOfStockProducts = products.filter((product) =>
-    product.variants?.some((variant) => variant.stock === 0)
+    product.variants?.some((variant: ProductVariant) => variant.stock === 0)
   ).length;
 
   const lowStockProducts = products.filter((product) =>
-    product.variants?.some((variant) => variant.stock <= 10)
+    product.variants?.some((variant: ProductVariant) => variant.stock <= 10)
   ).length;
 
   return (

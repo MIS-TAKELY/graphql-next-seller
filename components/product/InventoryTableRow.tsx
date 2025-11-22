@@ -58,13 +58,14 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
       const productInput: ICreateProductInput & { id: string } = {
         id: item.id,
         name: item.name,
-        variants: {
+        images: [], // Images are not updated in inventory management
+        variants: [{
           sku: variant.sku,
           stock: finalStock,
-          price: variant.price ?? 0,
-          mrp: variant.mrp ?? 0,
+          price: typeof variant.price === 'string' ? parseFloat(variant.price) : (variant.price ?? 0),
+          mrp: variant.mrp ? (typeof variant.mrp === 'string' ? parseFloat(variant.mrp) : variant.mrp) : undefined,
           isDefault: true,
-        },
+        }],
       };
       await handleUpdateHandler(productInput);
       toast.success("Stock updated successfully!");
@@ -95,7 +96,11 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
               : "destructive"
           }
         >
-          {item.status.replace("_", " ")}
+          {variant.stock > 10
+            ? "In Stock"
+            : variant.stock > 0
+            ? "Low Stock"
+            : "Out of Stock"}
         </Badge>
       </TableCell>
       <TableCell>

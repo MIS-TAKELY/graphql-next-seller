@@ -13,6 +13,7 @@ import {
   ShipmentStatus,
   Shipment,
 } from "@/types/pages/order.types";
+import { OrderStatus as OrderStatusEnum, ShipmentStatus as ShipmentStatusEnum } from "@/types/common/enums";
 import { useMutation } from "@apollo/client";
 import { toast } from "sonner";
 
@@ -90,7 +91,7 @@ export const useOrder = () => {
                     sellerOrders: existing.getSellerOrders.sellerOrders.map(
                       (order) =>
                         order.id === sellerOrderId
-                          ? { ...order, status: "CONFIRMED" as const, updatedAt: new Date().toISOString() }
+                          ? { ...order, status: OrderStatusEnum.CONFIRMED, updatedAt: new Date().toISOString() }
                           : order
                     ),
                   },
@@ -290,7 +291,7 @@ export const useOrder = () => {
                 orderId: order.buyerOrderId,
                 trackingNumber,
                 carrier,
-                status: "SHIPPED" as const, // createShipment expects ShipmentStatus
+                status: ShipmentStatusEnum.SHIPPED, // createShipment expects ShipmentStatus
               },
               update: (cache, { data }) => {
                 const newShipment = data?.createShipment;

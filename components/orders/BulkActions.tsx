@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Printer } from 'lucide-react';
 import { toast } from 'sonner';
-import { SellerOrder } from '@/types/pages/order.types';
+import { SellerOrder, OrderStatus } from '@/types/pages/order.types';
 import { useOrder } from '@/hooks/order/useOrder';
 
 interface BulkActionsProps {
@@ -21,7 +21,7 @@ export function BulkActions({ orders, selectedOrders, setSelectedOrders }: BulkA
     try {
       switch (action) {
         case 'mark_processing':
-          await bulkUpdateOrders(selectedOrders, 'PROCESSING');
+          await bulkUpdateOrders(selectedOrders, OrderStatus.PROCESSING);
           break;
 
         case 'mark_shipped':
@@ -31,7 +31,7 @@ export function BulkActions({ orders, selectedOrders, setSelectedOrders }: BulkA
             toast.error('Tracking number and carrier are required');
             return;
           }
-          await bulkCreateShipments(orders, selectedOrders, trackingNumber, carrier, 'SHIPPED');
+          await bulkCreateShipments(orders, selectedOrders, trackingNumber, carrier, OrderStatus.SHIPPED);
           break;
 
         case 'print_labels':

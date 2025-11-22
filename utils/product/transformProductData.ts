@@ -1,5 +1,8 @@
 // utils/product/transformProductData.ts
 import { FormData, Product } from "@/types/pages/product";
+import { DiscountType, ReturnType, ProductStatus, WarrantyType } from "@/types/common/enums";
+import type { ProductAttribute } from "@/types/product/product.types";
+import type { ProductVariantData, DeliveryOptionData } from "@/types/product/product-form.types";
 
 export const transformProductToFormData = (product: Product): FormData => {
   if (!product) return {} as FormData;
@@ -51,12 +54,64 @@ export const transformProductToFormData = (product: Product): FormData => {
   const warranty = product.warranty?.[0];
   const returnPolicy = product.returnPolicy?.[0];
 
+  // Determine if product has variants
+  const hasVariants = (product.variants?.length || 0) > 1;
+
+  // Extract attributes from variants
+  const attributes: ProductAttribute[] = [];
+  if (product.variants && product.variants.length > 0) {
+    const attributeMap = new Map<string, Set<string>>();
+    product.variants.forEach((variant) => {
+      if (variant.attributes) {
+        Object.entries(variant.attributes).forEach(([key, value]) => {
+          if (!attributeMap.has(key)) {
+            attributeMap.set(key, new Set());
+          }
+          if (value !== null && value !== undefined) {
+            attributeMap.get(key)!.add(String(value));
+          }
+        });
+      }
+    });
+    attributes.push(...Array.from(attributeMap.entries()).map(([name, values]) => ({
+      name,
+      values: Array.from(values),
+    })));
+  }
+
+  // Transform variants to ProductVariantData
+  const variants: ProductVariantData[] = product.variants?.map((variant) => ({
+    id: variant.id,
+    sku: variant.sku,
+    price: typeof variant.price === 'string' ? variant.price : variant.price?.toString() || "",
+    mrp: typeof variant.mrp === 'string' ? variant.mrp : variant.mrp?.toString() || "",
+    stock: variant.stock?.toString() || "",
+    attributes: (variant.attributes as Record<string, string>) || {},
+    isDefault: variant.isDefault,
+    specifications: variant.specifications?.map((spec) => ({
+      key: spec.key,
+      value: spec.value,
+    })),
+  })) || [];
+
+  // Transform delivery options
+  const deliveryOptions: DeliveryOptionData[] = product.deliveryOptions?.map((opt) => ({
+    title: opt.title,
+    description: opt.description,
+    isDefault: opt.isDefault,
+  })) || [];
+
   return {
     // Basic Details
     name: product.name || "",
     description: product.description || "",
     brand: product.brand || "",
     ...categoryHierarchy,
+    status: product.status || ProductStatus.ACTIVE,
+    hasVariants,
+    attributes,
+    variants,
+    deliveryOptions,
 
     // Specifications
     features: product.features || [],
@@ -74,11 +129,11 @@ export const transformProductToFormData = (product: Product): FormData => {
 
     // Offers
     hasOffer: !!offer,
-    offerType: offer?.type || "PERCENTAGE",
+    offerType: offer?.type || DiscountType.PERCENTAGE,
     offerTitle: offer?.title || "",
     offerValue: offer?.value?.toString() || "",
-    offerStart: offer?.startDate ? formatDate(offer.startDate) : "",
-    offerEnd: offer?.endDate ? formatDate(offer.endDate) : "",
+    offerStart: offer?.startDate ? formatDate(typeof offer.startDate === 'string' ? offer.startDate : offer.startDate.toISOString()) : "",
+    offerEnd: offer?.endDate ? formatDate(typeof offer.endDate === 'string' ? offer.endDate : offer.endDate.toISOString()) : "",
 
     buyX: product.productOffers?.[0]?.offer?.buyX?.toString?.() || "",
     getY: product.productOffers?.[0]?.offer?.getY?.toString?.() || "",
@@ -102,19 +157,19 @@ export const transformProductToFormData = (product: Product): FormData => {
     restrictedStates: product.restrictedStates || [],
 
     // Return Policy
-    returnType: returnPolicy?.type || "NO_RETURN",
+    returnType: returnPolicy?.type || ReturnType.NO_RETURN,
     returnDuration: returnPolicy?.duration?.toString() || "",
     returnUnit: returnPolicy?.unit || "days",
     returnConditions: returnPolicy?.conditions || "",
-    returnPolicy: returnPolicy?.description || "",
-    returnPeriod: returnPolicy?.period || "",
+    returnPolicy: returnPolicy?.conditions || "",
+    returnPeriod: "",
 
     // Warranty
-    warrantyType: warranty?.type || "NO_WARRANTY",
+    warrantyType: warranty?.type || WarrantyType.NO_WARRANTY,
     warrantyDuration: warranty?.duration?.toString() || "",
     warrantyUnit: warranty?.unit || "months",
     warrantyDescription: warranty?.description || "",
-    warrantyConditions: warranty?.conditions || "",
+    warrantyConditions: "",
     warranty: warranty?.description || "",
   };
 };

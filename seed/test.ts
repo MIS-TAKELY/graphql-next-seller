@@ -1,50 +1,241 @@
-// import redisConfig from "@/config/redis";
-// import { prisma } from "@/lib/db/prisma";
-// import { getAuth } from "@clerk/nextjs/server";
-// import { NextRequest } from "next/server";
+import { gql } from "graphql-tag";
 
-// export interface GraphQLContext {
-//   prisma: typeof prisma;
-//   user?: { id: string; clerkId: string; email: string; role: string } | null;
-//   publish: (evt: {
-//     type: string;
-//     payload: unknown;
-//     room?: string;
-//   }) => Promise<void>;
-// }
+export const productTypeDefs = gql`
+  scalar JSON
+  scalar DateTime
 
-// // ... (your existing imports)
+  # --- ENUMS ---
+  enum ProductStatus {
+    DRAFT
+    ACTIVE
+    INACTIVE
+    DISCONTINUED
+  }
 
-// export async function createContext(
-//   request: NextRequest
-// ): Promise<GraphQLContext> {
-//   try {
-//     const { userId } = await getAuth(request);
-//     let user = null;
-//     if (userId) {
-//       user = await prisma.user.findUnique({
-//         where: { clerkId: userId },
-//         select: { id: true, clerkId: true, email: true, role: true },
-//       });
-//     }
+  enum DiscountType {
+    PERCENTAGE
+    FIXED_AMOUNT
+    BUY_X_GET_Y
+    FREE_SHIPPING
+  }
 
-//     return {
-//       prisma,
-//       user,
-//       publish: async (evt) => {
-//         if (!redisConfig.publisher) {
-//           console.warn("Publisher not available; event not sent:", evt);
-//           return;
-//         }
-//         await redisConfig.publisher.publish("events", JSON.stringify(evt));
-//       },
-//     };
-//   } catch (error) {
-//     console.error("Error creating GraphQL context:", error);
-//     return {
-//       prisma,
-//       user: null,
-//       publish: async () => {},
-//     };
-//   }
-// }
+  enum WarrantyType {
+    MANUFACTURER
+    SELLER
+    NO_WARRANTY
+  }
+
+  enum ReturnType {
+    NO_RETURN
+    REPLACEMENT
+    REFUND
+    REPLACEMENT_OR_REFUND
+  }
+
+  enum FileType {
+    IMAGE
+    VIDEO
+  }
+
+  enum MediaType {
+    PRIMARY
+    PROMOTIONAL
+  }
+
+  # --- TYPES ---
+
+  type ProductSpecification {
+    id: ID!
+    key: String!
+    value: String!
+  }
+
+  type ProductVariant {
+    id: ID!
+    sku: String!
+    price: Float!
+    mrp: Float!
+    stock: Int!
+    attributes: JSON
+    isDefault: Boolean
+    specifications: [ProductSpecification!]
+  }
+
+  type ProductImage {
+    id: ID!
+    url: String!
+    altText: String
+    mediaType: MediaType
+    fileType: FileType
+    sortOrder: Int
+  }
+
+  type DeliveryOption {
+    id: ID!
+    title: String!
+    description: String
+    isDefault: Boolean
+  }
+
+  type Warranty {
+    type: WarrantyType!
+    duration: Int
+    unit: String
+    description: String
+  }
+
+  type ReturnPolicy {
+    type: ReturnType!
+    duration: Int
+    unit: String
+    conditions: String
+  }
+
+  type Product {
+    id: ID!
+    sellerId: String!
+    name: String!
+    slug: String!
+    categoryId: String
+    description: String
+    status: ProductStatus!
+    brand: String
+    
+    variants: [ProductVariant!]!
+    images: [ProductImage!]
+    category: Category
+    deliveryOptions: [DeliveryOption!]
+    warranty: [Warranty!]
+    returnPolicy: [ReturnPolicy!]
+    
+    createdAt: String!
+    updatedAt: String!
+  }
+
+  # --- INPUTS ---
+
+  input SpecificationInput {
+    key: String!
+    value: String!
+  }
+
+  input CreateProductVariantInput {
+    id: ID # Optional
+    sku: String!
+    price: Float!
+    mrp: Float
+    stock: Int!
+    attributes: JSON
+    isDefault: Boolean
+    specifications: [SpecificationInput!]
+  }
+
+  input UpdateProductVariantInput {
+    id: ID
+    sku: String
+    price: Float
+    mrp: Float
+    stock: Int
+    attributes: JSON
+    isDefault: Boolean
+    specifications: [SpecificationInput!]
+  }
+
+  input CreateProductImageInput {
+    url: String!
+    altText: String
+    sortOrder: Int
+    mediaType: MediaType
+    fileType: FileType!
+  }
+
+  input CreateDeliveryOptionInput {
+    title: String!
+    description: String
+    isDefault: Boolean
+  }
+
+  input CreateWarrantyInput {
+    type: WarrantyType!
+    duration: Int
+    unit: String
+    description: String
+  }
+
+  input CreateReturnPolicyInput {
+    type: ReturnType!
+    duration: Int
+    unit: String
+    conditions: String
+  }
+
+  input CreateProductOfferInput {
+    offer: OfferInput!
+  }
+
+  input OfferInput {
+    title: String!
+    description: String
+    type: DiscountType!
+    value: Float!
+    startDate: String!
+    endDate: String!
+    isActive: Boolean
+  }
+
+  # --- MAIN INPUTS ---
+
+  input CreateProductInput {
+    name: String!
+    description: String
+    categoryId: String
+    brand: String
+    status: ProductStatus
+    
+    # 👇 FIXED HERE: Added [] brackets to indicate an Array
+    variants: [CreateProductVariantInput!]! 
+    
+    images: [CreateProductImageInput!]!
+    deliveryOptions: [CreateDeliveryOptionInput!]
+    warranty: [CreateWarrantyInput!]
+    returnPolicy: [CreateReturnPolicyInput!]
+    productOffers: [CreateProductOfferInput!] 
+  }
+
+  input UpdateProductInput {
+    id: ID!
+    name: String
+    description: String
+    categoryId: String
+    brand: String
+    status: ProductStatus
+    
+    # 👇 FIXED HERE: Added [] brackets to indicate an Array
+    variants: [UpdateProductVariantInput!]
+    
+    images: [CreateProductImageInput!]
+    deliveryOptions: [CreateDeliveryOptionInput!]
+    warranty: [CreateWarrantyInput!]
+    returnPolicy: [CreateReturnPolicyInput!]
+    productOffers: [CreateProductOfferInput!]
+  }
+
+  type getMyProductsResponse {
+    products: [Product]
+    currentMonthCount: Float
+    previousMonthCount: Float
+    percentChange: Float
+  }
+
+  type Query {
+    getProducts: [Product!]!
+    getProduct(productId: ID!): Product!
+    getMyProducts: getMyProductsResponse
+  }
+
+  type Mutation {
+    addProduct(input: CreateProductInput!): Product
+    updateProduct(input: UpdateProductInput!): Product
+    deleteProduct(productId: ID!): Boolean
+  }
+`;

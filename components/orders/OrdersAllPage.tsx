@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { OrderFilters, SellerOrder } from "@/types/pages/order.types";
+import { OrderFilters, SellerOrder, OrderStatus } from "@/types/pages/order.types";
 import { Download, Filter } from "lucide-react";
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -60,7 +60,7 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "CONFIRMED" as const } : order
+          order.id === orderId ? { ...order, status: OrderStatus.CONFIRMED } : order
         )
       );
 
@@ -81,7 +81,7 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "PROCESSING" as const } : order
+          order.id === orderId ? { ...order, status: OrderStatus.PROCESSING } : order
         )
       );
 
@@ -102,7 +102,7 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "SHIPPED" as const } : order
+          order.id === orderId ? { ...order, status: OrderStatus.SHIPPED } : order
         )
       );
 
@@ -123,7 +123,7 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
       // Update the order status in local state immediately
       setCurrentOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: "DELIVERED" as const } : order
+          order.id === orderId ? { ...order, status: OrderStatus.DELIVERED } : order
         )
       );
 
@@ -163,19 +163,19 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
     { status: OrderFilters["status"]; tabValue: string }
   > = {
     all: { status: "all", tabValue: "all" },
-    new: { status: "PENDING", tabValue: "new" },
-    confirmed: { status: "CONFIRMED", tabValue: "confirmed" },
-    processing: { status: "PROCESSING", tabValue: "processing" },
-    shipped: { status: "SHIPPED", tabValue: "shipped" },
-    delivered: { status: "DELIVERED", tabValue: "delivered" },
-    returns: { status: "RETURNED", tabValue: "returns" },
+    new: { status: OrderStatus.PENDING, tabValue: "new" },
+    confirmed: { status: OrderStatus.CONFIRMED, tabValue: "confirmed" },
+    processing: { status: OrderStatus.PROCESSING, tabValue: "processing" },
+    shipped: { status: OrderStatus.SHIPPED, tabValue: "shipped" },
+    delivered: { status: OrderStatus.DELIVERED, tabValue: "delivered" },
+    returns: { status: OrderStatus.RETURNED, tabValue: "returns" },
   };
 
   const currentConfig = statusMap[activeTab] || statusMap.all;
 
   // Filter orders based on current tab and search
   const filteredOrders = currentOrders.filter((order) => {
-    const customerName = `${order.order.buyer.firstName} ${order.order.buyer.lastName}`;
+    const customerName = order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Unknown Customer';
     const matchesSearch =
       customerName.toLowerCase().includes(orderFilters.search.toLowerCase()) ||
       order.order.orderNumber

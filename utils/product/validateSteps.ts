@@ -1,4 +1,7 @@
+// utils/product/validateSteps.ts
+
 import { FormData, ICreateProductInput } from "@/types/pages/product";
+import { MediaType, FileType } from "@/types/common/enums";
 
 export const validateStep = (
   step: number,
@@ -8,135 +11,193 @@ export const validateStep = (
   const newErrors: Record<string, string> = {};
 
   switch (step) {
-    case 1:
+    case 1: // Basic Details
       if (!formData.name.trim()) newErrors.name = "Product title is required";
       if (!formData.categoryId) newErrors.categoryId = "Category is required";
       if (!formData.subcategory)
         newErrors.subcategory = "Subcategory is required";
       if (!formData.description.trim())
-        newErrors.description = "Product description is required";
+        newErrors.description = "Description is required";
       break;
 
-    case 3:
-      if (!formData.price || parseFloat(formData.price) <= 0) {
-        newErrors.salePrice = "Valid selling price is required";
-      }
-      if (!formData.sku?.trim()) newErrors.sku = "SKU is required";
-      if (!formData.stock || parseInt(formData.stock) < 0) {
-        newErrors.stock = "Valid stock quantity is required";
-      }
+    case 2: // Specifications
+      // Optional: Add check if specs are required
       break;
-
-    case 4:
-      if (step === 4) {
-        // Media step
-        if (formData.productMedia.length === 0) {
-          newErrors.productMedia = "At least one product image is required.";
+    case 3: // Variants & Pricing
+      if (formData.hasVariants) {
+        if (formData.variants.length === 0) {
+          newErrors.variants =
+            "Please define attributes and generate variants.";
+        } else {
+          formData.variants.forEach((variant, index) => {
+            if (!variant.sku?.trim()) {
+              newErrors[`variant_sku_${index}`] = `Variant ${
+                index + 1
+              }: SKU is required`;
+            }
+            if (!variant.price || parseFloat(variant.price) <= 0) {
+              newErrors[`variant_price_${index}`] = `Variant ${
+                index + 1
+              }: Valid price is required`;
+            }
+            if (variant.stock === "" || parseInt(String(variant.stock), 10) < 0) {
+              newErrors[`variant_stock_${index}`] = `Variant ${
+                index + 1
+              }: Valid stock is required`;
+            }
+          });
         }
-        break;
+      } else {
+        // Simple product
+        if (!formData.price || parseFloat(formData.price) <= 0) {
+          newErrors.price = "Valid selling price is required";
+        }
+        if (!formData.sku?.trim()) {
+          newErrors.sku = "SKU is required";
+        }
+        if (formData.stock === "" || parseInt(String(formData.stock), 10) < 0) {
+          newErrors.stock = "Valid stock quantity is required";
+        }
       }
+      break;
+
+    case 4: // Media
+      if (formData.productMedia.length === 0) {
+        newErrors.productMedia = "At least one product image is required.";
+      }
+      break;
+
+    case 5: // Shipping
+      // FIXED: Allow 0 weight if necessary, but strictly check for empty string
+      // if (formData.weight === "" || parseFloat(String(formData.weight)) < 0) {
+      //   newErrors.weight = "Valid weight is required";
+      // }
+      break;
   }
 
   setErrors(newErrors);
   return Object.keys(newErrors).length === 0;
 };
 
-// transform FormData -> ICreateProductInput
-// transform FormData -> ICreateProductInput
-export const buildProductInput = (formData: FormData,id:string): ICreateProductInput => ({
-  id,
-  name: formData.name,
-  description: formData.description,
-  categoryId: formData.subSubcategory || formData.subcategory,
-  brand: formData.brand || "Generic",
-  variants: {
-    sku: formData.sku,
-    price: parseFloat(formData.price) || 0,
-    mrp: parseFloat(formData.mrp) || 0,
-    stock: parseInt(formData.stock, 10) || 0,
-    isDefault: true,
-    attributes: {
-      weight: formData.weight ? parseFloat(formData.weight) : undefined,
-      length: formData.length ? parseFloat(formData.weight) : undefined,
-      width: formData.width ? parseFloat(formData.weight) : undefined,
-      height: formData.height ? parseFloat(formData.weight) : undefined,
-      shippingClass: formData.shippingMethod || undefined,
-    },
-    specifications: formData.specifications
-      .filter((spec) => spec.key && spec.value)
-      .map((spec) => ({ key: spec.key, value: spec.value })),
-  },
-  productOffers: formData.hasOffer
-    ? [
-        {
-          offer: {
-            title: formData.offerTitle,
-            type: formData.offerType,
-            value: parseFloat(formData.offerValue) || 0,
-            startDate: formData.offerStart,
-            endDate: formData.offerEnd,
-          },
-        },
-      ]
-    : undefined,
-  deliveryOptions:
-    formData.freeDeliveryOption !== "none"
+// --- BUILDER FUNCTION ---
+
+export const buildProductInput = (
+  formData: FormData,
+  productId?: string
+): ICreateProductInput => {
+  // 1. Construct Variants Array
+  let apiVariants = [];
+
+  if (formData.hasVariants) {
+    // Map generated variants from UI
+    apiVariants = formData.variants.map((v) => ({
+      id: v.id,
+      sku: v.sku,
+      price: parseFloat(v.price) || 0,
+      mrp: parseFloat(v.mrp) || parseFloat(v.price) || 0,
+      stock: parseInt(String(v.stock), 10) || 0,
+      attributes: v.attributes,
+      isDefault: v.isDefault,
+      // Pass global specs to variants
+      specifications: formData.specifications
+        .filter((s) => s.key && s.value)
+        .map((s) => ({ key: s.key, value: s.value })),
+    }));
+  } else {
+    // Create single variant for simple product
+    apiVariants = [
+      {
+        id: undefined, // Add logic here if editing a simple product to find its variant ID
+        sku: formData.sku,
+        price: parseFloat(formData.price) || 0,
+        mrp: parseFloat(formData.mrp) || parseFloat(formData.price) || 0,
+        stock: parseInt(String(formData.stock), 10) || 0,
+        attributes: {}, // Empty for simple
+        isDefault: true,
+        specifications: formData.specifications
+          .filter((s) => s.key && s.value)
+          .map((s) => ({ key: s.key, value: s.value })),
+      },
+    ];
+  }
+
+  // 2. Construct Final Payload
+  return {
+    id: productId,
+    name: formData.name,
+    description: formData.description,
+    // Logic to pick the most specific category ID
+    categoryId:
+      formData.subSubcategory || formData.subcategory || formData.categoryId,
+    brand: formData.brand || "Generic",
+    status: formData.status,
+
+    variants: apiVariants,
+
+    images: [
+      ...formData.productMedia.map((media, index) => ({
+        url: media.url,
+        altText: media.altText || "",
+        mediaType: media.mediaType,
+        fileType: media.fileType ?? FileType.IMAGE,
+        sortOrder: index,
+      })),
+      ...formData.promotionalMedia.map((media, index) => ({
+        url: media.url,
+        altText: media.altText || "",
+        mediaType: media.mediaType,
+        fileType: media.fileType ?? FileType.IMAGE,
+        sortOrder: formData.productMedia.length + index,
+      })),
+    ],
+
+    productOffers: formData.hasOffer
       ? [
           {
-            title:
-              formData.freeDeliveryOption === "all_nepal"
-                ? "Free Delivery Across Nepal"
-                : "Free Delivery in Selected Provinces",
-            description:
-              formData.freeDeliveryOption === "selected_provinces"
-                ? formData.freeDeliveryProvinces?.join(", ") || ""
-                : "Available across all provinces",
-            isDefault: true,
+            offer: {
+              title: formData.offerTitle,
+              description: "", // Added to satisfy type
+              type: formData.offerType,
+              value: parseFloat(formData.offerValue) || 0,
+              startDate: formData.offerStart,
+              endDate: formData.offerEnd,
+              isActive: true,
+            },
           },
         ]
       : undefined,
-  warranty:
-    formData.warrantyType !== "NO_WARRANTY" && formData.warrantyDuration
-      ? [
-          {
-            type: formData.warrantyType as "SELLER" | "MANUFACTURER",
-            duration: parseInt(formData.warrantyDuration, 10) || 0,
-            unit: formData.warrantyUnit,
-            description: formData.warrantyDescription,
-          },
-        ]
-      : undefined,
-  returnPolicy:
-    formData.returnType !== "NO_RETURN" && formData.returnDuration
-      ? [
-          {
-            type: formData.returnType as
-              | "NO_RETURN"
-              | "REPLACEMENT"
-              | "REFUND"
-              | "REPLACEMENT_OR_REFUND",
-            duration: parseInt(formData.returnDuration, 10) || 0,
-            unit: formData.returnUnit,
-            conditions: formData.returnConditions,
-          },
-        ]
-      : undefined,
-  images: [
-    // Product media: PRIMARY
-    ...formData.productMedia.map((media, index) => ({
-      url: media.url,
-      altText: media.altText || "",
-      mediaType: "PRIMARY" as const, // Fixed: Use literal, not media.mediaType (which is role)
-      fileType: media.fileType ?? "IMAGE", // Already "IMAGE" | "VIDEO"
-      sortOrder: index,
-    })),
-    // Promotional media: PROMOTIONAL
-    ...formData.promotionalMedia.map((media, index) => ({
-      url: media.url,
-      altText: media.altText || "",
-      mediaType: "PROMOTIONAL" as const, // Fixed: Use mediaType, not type
-      fileType: media.fileType ?? "IMAGE", // Add: Was missing
-      sortOrder: formData.productMedia.length + index,
-    })),
-  ],
-});
+
+    deliveryOptions:
+      formData.deliveryOptions.length > 0
+        ? formData.deliveryOptions.map((opt) => ({
+            title: opt.title,
+            description: opt.description,
+            isDefault: opt.isDefault,
+          }))
+        : undefined,
+
+    warranty:
+      formData.warrantyType !== "NO_WARRANTY"
+        ? [
+            {
+              type: formData.warrantyType,
+              duration: parseInt(formData.warrantyDuration, 10) || 0,
+              unit: formData.warrantyUnit,
+              description: formData.warrantyDescription,
+            },
+          ]
+        : undefined,
+
+    returnPolicy:
+      formData.returnType !== "NO_RETURN"
+        ? [
+            {
+              type: formData.returnType,
+              duration: parseInt(formData.returnDuration, 10) || 0,
+              unit: formData.returnUnit,
+              conditions: formData.returnConditions,
+            },
+          ]
+        : undefined,
+  };
+};

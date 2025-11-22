@@ -16,7 +16,7 @@ import { customerTypeDefs } from "./modules/customer/customer.typeDefs";
 import { analyticsResolvers } from "./modules/analytics/analytics.resolvers";
 import { analyticsTypeDefs } from "./modules/analytics/analytics.typeDefs";
 import { dashboardResolvers } from "./modules/dashboard/dashboard.resolvers";
-import { dashboardTyprDefs } from "./modules/dashboard/dashboard.typeDefs";
+import { dashboardTypeDefs } from "./modules/dashboard/dashboard.typeDefs";
 import { deliveryTypedefs } from "./modules/delivery/delivery.typeDefs";
 import { messageResolvers } from "./modules/message/message.resolvers";
 import { messageTypedefs } from "./modules/message/message.typeDefs";
@@ -83,7 +83,7 @@ const typeDefs = mergeTypeDefs([
   warrentyTypeDefs,
   messageTypedefs,
   conversationTypedefs,
-  dashboardTyprDefs,
+  dashboardTypeDefs,
   analyticsTypeDefs,
   customerTypeDefs,
   sellerProfileTypeDefs,

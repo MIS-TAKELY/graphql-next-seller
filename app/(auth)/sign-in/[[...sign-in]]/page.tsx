@@ -6,8 +6,8 @@ export default function Page() {
       routing="path"
       path="/sign-in"
       signUpUrl="/sign-up"
-      fallbackRedirectUrl="/profile_setup"
-      forceRedirectUrl="/profile_setup"
+      fallbackRedirectUrl="/profileSetup"
+      forceRedirectUrl="/profileSetup"
     />
   );
 }

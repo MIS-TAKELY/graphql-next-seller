@@ -13,7 +13,7 @@ interface OrderTabsProps {
 
 export function OrderTabs({ activeTab, orders, filters, onTabChange }: OrderTabsProps) {
   const filteredOrders = orders.filter((order) => {
-    const customerName = `${order.order.buyer.firstName} ${order.order.buyer.lastName}`;
+    const customerName = order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Unknown Customer';
     const matchesSearch =
       customerName.toLowerCase().includes(filters.search.toLowerCase()) ||
       order.order.orderNumber.toLowerCase().includes(filters.search.toLowerCase());

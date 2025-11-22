@@ -23,6 +23,7 @@ export function ProductActionsMenu({
   onDelete,
   onView,
 }: ProductActionsMenuProps) {
+  console.log("product id-->", productId);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
