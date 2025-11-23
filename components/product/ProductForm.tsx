@@ -53,6 +53,7 @@ const steps = [
 ];
 
 export function ProductForm({
+  mode,
   categoriesData,
   initialValues,
   onSubmit,
@@ -199,6 +200,42 @@ export function ProductForm({
   return (
     <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
       {/* ... Header and ProgressStepper code remains same ... */}
+
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+          <p className="text-muted-foreground">{subtitle}</p>
+        </div>
+        {mode === "edit" && onDelete && (
+          <button
+            className="px-3 py-2 bg-red-600 text-white rounded"
+            onClick={() => {
+              onDelete(productId);
+            }}
+            disabled={isDeleting || isSubmitting}
+          >
+            {isDeleting ? "Deleting..." : "Delete"}
+          </button>
+        )}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Progress</CardTitle>
+              <CardDescription>
+                Step {currentStep} of {steps.length}
+              </CardDescription>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {Math.round((currentStep / steps.length) * 100)}% Complete
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
+
+      <ProgressStepper steps={steps} currentStep={currentStep} />
 
       <Card>
         <CardHeader>
