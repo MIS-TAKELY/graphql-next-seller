@@ -16,7 +16,7 @@ interface SpecificationsStepProps {
   formData: FormData;
   errors: Errors;
   updateFormData: (field: keyof FormData, value: any) => void;
-  categoriesData: Category[];
+  // categoriesData: Category[];
 }
 
 export const SpecificationsStep = React.memo(

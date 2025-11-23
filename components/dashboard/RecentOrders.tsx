@@ -59,7 +59,7 @@ export function RecentOrders() {
 
   return (
     <div className="space-y-8">
-      {recentData.map((order: any) => (
+      {recentData?.map((order: any) => (
         <div key={order.id} className="flex items-center">
           <Avatar className="h-9 w-9">
             <AvatarImage

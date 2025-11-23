@@ -1,29 +1,25 @@
-// app/products/add/page.tsx
+// components/pages/AddProductClient.tsx
 "use client";
 
 import { Category } from "@/types/category.type";
 import { ProductForm } from "../product/ProductForm";
 import { useProduct } from "@/hooks/product/useProduct";
 
-export default function AddProductPage({
+export default function AddProductClient({
   categoriesData,
 }: {
   categoriesData: Category[];
 }) {
-
-  const{handleSubmitHandler}=useProduct()
-
-  console.log("category",categoriesData)
-
+  const { handleSubmitHandler, isAdding } = useProduct();
 
   return (
     <ProductForm
       mode="add"
       categoriesData={categoriesData || []}
       onSubmit={handleSubmitHandler}
-      // isSubmitting={creating}
+      isSubmitting={isAdding}
       title="Add New Product"
-      subtitle="Create a new product listing."
+      subtitle="Create a new product listing with all the details"
     />
   );
 }

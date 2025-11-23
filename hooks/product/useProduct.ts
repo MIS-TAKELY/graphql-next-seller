@@ -5,13 +5,13 @@ import {
   UPDATE_PRODUCT,
 } from "@/client/product/product.mutations";
 import { GET_MY_PRODUCTS } from "@/client/product/product.queries";
+import { ProductStatus } from "@/types/common/enums";
 import {
   GetMyProductsResponse,
   ICreateProductInput,
   Product,
 } from "@/types/pages/product";
 import type { ProductVariant } from "@/types/product/product.types";
-import { ProductStatus } from "@/types/common/enums";
 import { useMutation, useQuery } from "@apollo/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -183,55 +183,23 @@ export const useProduct = () => {
   });
 
   // --- ADD MUTATION ---
-  const [addProduct] = useMutation<
+  const [addProductMutation, { loading: isAdding }] = useMutation<
     { addProduct: Product },
     { input: ICreateProductInput }
   >(ADD_PRODUCT, {
-    update: (cache, { data }, { variables }) => {
-      try {
-        const actualInput = variables?.input;
-        if (!actualInput) return;
-        const existing = cache.readQuery<GetMyProductsResponse>({
-          query: GET_MY_PRODUCTS,
-        });
-        if (!existing?.getMyProducts) return;
-
-        const tempId = "temp-" + Date.now();
-        // Try to find category object from existing cache to prevent UI flicker
-        const existingCategory = existing.getMyProducts.products.find(
-          (p: Product) => p.category?.id === actualInput.categoryId
-        )?.category;
-
-        const optimisticProduct = buildOptimisticProduct(actualInput, {
-          id: tempId,
-          category: existingCategory ?? undefined, // Fixed type mismatch (null vs undefined)
-          sellerId:
-            existing.getMyProducts.products[0]?.sellerId ??
-            productsData?.getMyProducts.products[0]?.sellerId ??
-            "temp-seller",
-          status: ProductStatus.INACTIVE, // Default status
-        });
-
-        cache.writeQuery({
-          query: GET_MY_PRODUCTS,
-          data: {
-            getMyProducts: {
-              __typename: "getMyProductsResponse",
-              products: [...existing.getMyProducts.products, optimisticProduct],
-              percentChange: existing.getMyProducts.percentChange ?? 0,
-            },
-          },
-        });
-      } catch (error) {
-        console.error("Error updating cache for add:", error);
-      }
-    },
-    optimisticResponse: (vars: { input: ICreateProductInput }) => ({
-      addProduct: buildOptimisticProduct(vars.input),
-    }),
-    onError: () => {
-      toast.error("Failed to create product. Please try again.");
+    refetchQueries: [{ query: GET_MY_PRODUCTS }],
+    awaitRefetchQueries: true,
+    onCompleted: (data) => {
+      const statusText =
+        data.addProduct.status === ProductStatus.DRAFT
+          ? "saved as draft"
+          : "published";
+      toast.success(`Product ${statusText} successfully!`);
       router.push("/products");
+    },
+    onError: (error) => {
+      console.error("Add error:", error);
+      toast.error(error.message || "Failed to create product");
     },
   });
 
@@ -253,59 +221,61 @@ export const useProduct = () => {
           (p: Product) => p.category?.id === actualInput.categoryId
         )?.category;
 
-        const updatedProducts = existing.getMyProducts.products.map((p: Product) => {
-          if (p.id !== actualInput.id) return p;
+        const updatedProducts = existing.getMyProducts.products.map(
+          (p: Product) => {
+            if (p.id !== actualInput.id) return p;
 
-          // Construct updated variants safely
-          const updatedVariants: ProductVariant[] = actualInput.variants
-            ? actualInput.variants.map((v, idx) => ({
-                id: v.id || `${p.id}-variant-new-${idx}`,
-                productId: p.id,
-                sku: v.sku,
-                price: v.price,
-                mrp: v.mrp,
-                stock: v.stock,
-                soldCount: 0, // Maintain existing sold count if possible, or 0
-                attributes: v.attributes,
-                isDefault: v.isDefault ?? false,
-                specifications: v.specifications?.map((s, si) => ({
-                  id: `temp-spec-${si}`,
-                  variantId: v.id || `${p.id}-variant-new-${idx}`,
-                  key: s.key,
-                  value: s.value,
+            // Construct updated variants safely
+            const updatedVariants: ProductVariant[] = actualInput.variants
+              ? actualInput.variants.map((v, idx) => ({
+                  id: v.id || `${p.id}-variant-new-${idx}`,
+                  productId: p.id,
+                  sku: v.sku,
+                  price: v.price,
+                  mrp: v.mrp,
+                  stock: v.stock,
+                  soldCount: 0, // Maintain existing sold count if possible, or 0
+                  attributes: v.attributes,
+                  isDefault: v.isDefault ?? false,
+                  specifications: v.specifications?.map((s, si) => ({
+                    id: `temp-spec-${si}`,
+                    variantId: v.id || `${p.id}-variant-new-${idx}`,
+                    key: s.key,
+                    value: s.value,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                  })),
                   createdAt: new Date(),
                   updatedAt: new Date(),
-                })),
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              }))
-            : p.variants;
+                }))
+              : p.variants;
 
-          return {
-            ...p,
-            name: actualInput.name ?? p.name,
-            description: actualInput.description ?? p.description,
-            brand: actualInput.brand ?? p.brand,
-            category: actualInput.categoryId
-              ? existingCategory || p.category
-              : p.category,
-            images:
-              actualInput.images?.map((img, index) => ({
-                id: `temp-img-${index}`,
-                productId: p.id,
-                url: img.url,
-                altText: img.altText,
-                sortOrder: img.sortOrder ?? index,
-                mediaType: img.mediaType || "PRIMARY",
-                fileType: img.fileType,
-              })) || p.images,
-            variants: updatedVariants,
-            // Simple status check: if all variants have 0 stock
-            status: updatedVariants.every((v) => v.stock === 0)
-              ? ProductStatus.INACTIVE
-              : actualInput.status || p.status,
-          };
-        });
+            return {
+              ...p,
+              name: actualInput.name ?? p.name,
+              description: actualInput.description ?? p.description,
+              brand: actualInput.brand ?? p.brand,
+              category: actualInput.categoryId
+                ? existingCategory || p.category
+                : p.category,
+              images:
+                actualInput.images?.map((img, index) => ({
+                  id: `temp-img-${index}`,
+                  productId: p.id,
+                  url: img.url,
+                  altText: img.altText,
+                  sortOrder: img.sortOrder ?? index,
+                  mediaType: img.mediaType || "PRIMARY",
+                  fileType: img.fileType,
+                })) || p.images,
+              variants: updatedVariants,
+              // Simple status check: if all variants have 0 stock
+              status: updatedVariants.every((v) => v.stock === 0)
+                ? ProductStatus.INACTIVE
+                : actualInput.status || p.status,
+            };
+          }
+        );
 
         cache.writeQuery({
           query: GET_MY_PRODUCTS,
@@ -321,7 +291,9 @@ export const useProduct = () => {
         console.error("Error updating cache for update:", error);
       }
     },
-    optimisticResponse: (vars: { input: ICreateProductInput & { id: string } }) => ({
+    optimisticResponse: (vars: {
+      input: ICreateProductInput & { id: string };
+    }) => ({
       updateProduct: buildOptimisticProduct(vars.input, {
         id: vars.input.id,
         status: vars.input.status,
@@ -337,26 +309,20 @@ export const useProduct = () => {
 
   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
     try {
-      if (!productInput.name) throw new Error("Product name is required");
-
-      if (!productInput.images || productInput.images.length === 0)
+      // Final validation
+      if (!productInput.name?.trim())
+        throw new Error("Product name is required");
+      if (!productInput.images?.length)
         throw new Error("At least one image is required");
+      if (!productInput.variants?.length)
+        throw new Error("At least one variant is required");
 
-      // UPDATED: Validation for Array of Variants
-      if (!productInput.variants || productInput.variants.length === 0) {
-        throw new Error("At least one product variant is required");
-      }
-
-      toast.success("Creating product...");
-      router.push("/products");
-      await addProduct({ variables: { input: productInput } });
-    } catch (error) {
-      console.error("Error creating product:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to create product. Please try again."
-      );
+      await addProductMutation({
+        variables: { input: productInput },
+      });
+    } catch (error: any) {
+      console.error("Submit error:", error);
+      throw error; // Let ProductForm catch and show toast
     }
   };
 
@@ -406,5 +372,7 @@ export const useProduct = () => {
     productsDataLoading,
     productsDataError,
     handleUpdateHandler,
+
+    isAdding
   };
 };
