@@ -1,3 +1,4 @@
+import { ProductStatus } from "@/app/generated/prisma";
 import { prisma } from "@/lib/db/prisma";
 import { generateEmbedding } from "@/lib/embemdind";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
@@ -221,18 +222,27 @@ export const productResolvers = {
           throw new Error("At least one product image is required");
         }
 
+        input.status === ProductStatus.INACTIVE
+          ? (input.status = ProductStatus.INACTIVE)
+          : (input.status = ProductStatus.DRAFT);
+
         // 2. Validate Variants Data
         input.variants.forEach((v: any, index: number) => {
-          if (!v.sku) throw new Error(`SKU is required for variant #${index + 1}`);
-          if (v.price == null) throw new Error(`Price is required for variant #${index + 1}`);
-          if (v.stock == null) throw new Error(`Stock is required for variant #${index + 1}`);
+          if (!v.sku)
+            throw new Error(`SKU is required for variant #${index + 1}`);
+          if (v.price == null)
+            throw new Error(`Price is required for variant #${index + 1}`);
+          if (v.stock == null)
+            throw new Error(`Stock is required for variant #${index + 1}`);
         });
 
         const sellerId = user.id;
         const slug = await generateUniqueSlug(input.name);
 
         // 3. Generate Embedding (Optional)
-        const textToEmbed = `${input.name} ${input.description || ""} ${input.brand || ""}`.trim();
+        const textToEmbed = `${input.name} ${input.description || ""} ${
+          input.brand || ""
+        }`.trim();
         let embedding: number[] | undefined;
         try {
           if (textToEmbed) embedding = await generateEmbedding(textToEmbed);
@@ -241,92 +251,105 @@ export const productResolvers = {
         }
 
         // 4. Transaction
-        const product = await prisma.$transaction(async (tx) => {
-          const newProduct = await tx.product.create({
-            data: {
-              name: input.name,
-              slug,
-              description: input.description || "",
-              status: input.status || "INACTIVE",
-              categoryId: input.categoryId || null,
-              brand: input.brand || "Generic",
-              sellerId,
+        const product = await prisma.$transaction(
+          async (tx) => {
+            const newProduct = await tx.product.create({
+              data: {
+                name: input.name,
+                slug,
+                description: input.description || "",
+                status: input.status || "INACTIVE",
+                categoryId: input.categoryId || null,
+                brand: input.brand || "Generic",
+                sellerId,
 
-              // A. Create Variants (One-to-Many)
-              variants: {
-                create: input.variants.map((variant: any, idx: number) => ({
-                  sku: variant.sku,
-                  price: variant.price,
-                  mrp: variant.mrp || variant.price,
-                  stock: variant.stock,
-                  attributes: variant.attributes || {}, // Store JSON attributes
-                  isDefault: variant.isDefault ?? (idx === 0), // Default to first if not set
-                  
-                  // Nested Specifications per Variant
-                  specifications: variant.specifications?.length > 0
+                // A. Create Variants (One-to-Many)
+                variants: {
+                  create: input.variants.map((variant: any, idx: number) => ({
+                    sku: variant.sku,
+                    price: variant.price,
+                    mrp: variant.mrp || variant.price,
+                    stock: variant.stock,
+                    attributes: variant.attributes || {}, // Store JSON attributes
+                    isDefault: variant.isDefault ?? idx === 0, // Default to first if not set
+
+                    // Nested Specifications per Variant
+                    specifications:
+                      variant.specifications?.length > 0
+                        ? {
+                            create: variant.specifications.map((spec: any) => ({
+                              key: spec.key,
+                              value: spec.value,
+                            })),
+                          }
+                        : undefined,
+                  })),
+                },
+
+                // B. Create Images
+                images: {
+                  create: input.images.map((img: any, index: number) => ({
+                    url: img.url,
+                    altText: img.altText || "",
+                    sortOrder: img.sortOrder ?? index,
+                    mediaType: img.mediaType || "PRIMARY",
+                    fileType: img.fileType,
+                  })),
+                },
+
+                // C. Delivery Options
+                deliveryOptions:
+                  input.deliveryOptions?.length > 0
                     ? {
-                        create: variant.specifications.map((spec: any) => ({
-                          key: spec.key,
-                          value: spec.value,
+                        create: input.deliveryOptions.map((opt: any) => ({
+                          title: opt.title,
+                          description: opt.description,
+                          isDefault: opt.isDefault || false,
                         })),
                       }
                     : undefined,
-                })),
+
+                // D. Warranty
+                warranty:
+                  input.warranty?.length > 0
+                    ? {
+                        create: input.warranty.map((w: any) => ({
+                          type: w.type,
+                          duration: w.duration,
+                          unit: w.unit,
+                          description: w.description,
+                        })),
+                      }
+                    : undefined,
+
+                // E. Return Policy
+                returnPolicy:
+                  input.returnPolicy?.length > 0
+                    ? {
+                        create: input.returnPolicy.map((p: any) => ({
+                          type: p.type,
+                          duration: p.duration,
+                          unit: p.unit,
+                          conditions: p.conditions,
+                        })),
+                      }
+                    : undefined,
               },
+            });
 
-              // B. Create Images
-              images: {
-                create: input.images.map((img: any, index: number) => ({
-                  url: img.url,
-                  altText: img.altText || "",
-                  sortOrder: img.sortOrder ?? index,
-                  mediaType: img.mediaType || "PRIMARY",
-                  fileType: img.fileType,
-                })),
-              },
+            // console.log("new products-->",newProduct)
 
-              // C. Delivery Options
-              deliveryOptions: input.deliveryOptions?.length > 0 ? {
-                create: input.deliveryOptions.map((opt: any) => ({
-                  title: opt.title,
-                  description: opt.description,
-                  isDefault: opt.isDefault || false
-                }))
-              } : undefined,
+            // Save Embedding via raw SQL (Prisma doesn't fully type pgvector yet)
+            if (embedding) {
+              await tx.$executeRaw`UPDATE "products" SET embedding = ${embedding}::vector WHERE id = ${newProduct.id}`;
+            }
 
-              // D. Warranty
-              warranty: input.warranty?.length > 0 ? {
-                create: input.warranty.map((w: any) => ({
-                  type: w.type,
-                  duration: w.duration,
-                  unit: w.unit,
-                  description: w.description
-                }))
-              } : undefined,
+            return newProduct;
+          },
+          { timeout: 30000 }
+        );
 
-              // E. Return Policy
-              returnPolicy: input.returnPolicy?.length > 0 ? {
-                create: input.returnPolicy.map((p: any) => ({
-                  type: p.type,
-                  duration: p.duration,
-                  unit: p.unit,
-                  conditions: p.conditions
-                }))
-              } : undefined,
-            },
-          });
-
-          // console.log("new products-->",newProduct)
-
-          // Save Embedding via raw SQL (Prisma doesn't fully type pgvector yet)
-          if (embedding) {
-            await tx.$executeRaw`UPDATE "products" SET embedding = ${embedding}::vector WHERE id = ${newProduct.id}`;
-          }
-
-          return newProduct;
-        }, { timeout: 30000 });
-
-        if(product)console.log("product created")
+        if (product) console.log("product created");
 
         // 5. Cleanup Cache
         await Promise.all([
@@ -355,7 +378,7 @@ export const productResolvers = {
         // 1. Authorization Check
         const existingProduct = await prisma.product.findFirst({
           where: { id: input.id, sellerId },
-          include: { variants: true }
+          include: { variants: true },
         });
 
         if (!existingProduct) {
@@ -370,141 +393,152 @@ export const productResolvers = {
             productData.slug = await generateUniqueSlug(input.name);
           }
         }
-        if (input.description !== undefined) productData.description = input.description;
+        if (input.description !== undefined)
+          productData.description = input.description;
         if (input.status !== undefined) productData.status = input.status;
-        if (input.categoryId !== undefined) productData.categoryId = input.categoryId;
+        if (input.categoryId !== undefined)
+          productData.categoryId = input.categoryId;
         if (input.brand !== undefined) productData.brand = input.brand;
 
-        await prisma.$transaction(async (tx) => {
-          // A. Update Product Root
-          if (Object.keys(productData).length > 0) {
-            await tx.product.update({
-              where: { id: input.id },
-              data: productData,
-            });
-          }
+        await prisma.$transaction(
+          async (tx) => {
+            // A. Update Product Root
+            if (Object.keys(productData).length > 0) {
+              await tx.product.update({
+                where: { id: input.id },
+                data: productData,
+              });
+            }
 
-          // B. SYNC VARIANTS (Critical for Orders)
-          // We cannot just delete all variants because OrderItems link to Variant IDs.
-          if (input.variants) {
-            const incomingIds = input.variants
-              .filter((v: any) => v.id)
-              .map((v: any) => v.id);
+            // B. SYNC VARIANTS (Critical for Orders)
+            // We cannot just delete all variants because OrderItems link to Variant IDs.
+            if (input.variants) {
+              const incomingIds = input.variants
+                .filter((v: any) => v.id)
+                .map((v: any) => v.id);
 
-            // 1. Delete variants not in the input (unless they have orders - optional check)
-            // Note: Prisma will fail if foreign key constraint exists (Order) and on delete cascade is not set. 
-            // Ideally, you soft delete or check orders. For now, assuming standard delete.
-            await tx.productVariant.deleteMany({
-              where: {
-                productId: input.id,
-                id: { notIn: incomingIds }
-              }
-            });
+              // 1. Delete variants not in the input (unless they have orders - optional check)
+              // Note: Prisma will fail if foreign key constraint exists (Order) and on delete cascade is not set.
+              // Ideally, you soft delete or check orders. For now, assuming standard delete.
+              await tx.productVariant.deleteMany({
+                where: {
+                  productId: input.id,
+                  id: { notIn: incomingIds },
+                },
+              });
 
-            // 2. Upsert (Update or Create)
-            for (const v of input.variants) {
-              const variantData = {
-                sku: v.sku,
-                price: v.price,
-                mrp: v.mrp || v.price,
-                stock: v.stock,
-                attributes: v.attributes || {},
-                isDefault: v.isDefault || false
-              };
+              // 2. Upsert (Update or Create)
+              for (const v of input.variants) {
+                const variantData = {
+                  sku: v.sku,
+                  price: v.price,
+                  mrp: v.mrp || v.price,
+                  stock: v.stock,
+                  attributes: v.attributes || {},
+                  isDefault: v.isDefault || false,
+                };
 
-              if (v.id) {
-                // Update Existing
-                await tx.productVariant.update({
-                  where: { id: v.id },
-                  data: {
-                    ...variantData,
-                    // Re-create specifications for this variant
-                    specifications: {
-                      deleteMany: {},
-                      create: v.specifications?.map((s: any) => ({
-                        key: s.key,
-                        value: s.value
-                      }))
-                    }
-                  }
-                });
-              } else {
-                // Create New
-                await tx.productVariant.create({
-                  data: {
-                    productId: input.id,
-                    ...variantData,
-                    specifications: {
-                      create: v.specifications?.map((s: any) => ({
-                        key: s.key,
-                        value: s.value
-                      }))
-                    }
-                  }
-                });
+                if (v.id) {
+                  // Update Existing
+                  await tx.productVariant.update({
+                    where: { id: v.id },
+                    data: {
+                      ...variantData,
+                      // Re-create specifications for this variant
+                      specifications: {
+                        deleteMany: {},
+                        create: v.specifications?.map((s: any) => ({
+                          key: s.key,
+                          value: s.value,
+                        })),
+                      },
+                    },
+                  });
+                } else {
+                  // Create New
+                  await tx.productVariant.create({
+                    data: {
+                      productId: input.id,
+                      ...variantData,
+                      specifications: {
+                        create: v.specifications?.map((s: any) => ({
+                          key: s.key,
+                          value: s.value,
+                        })),
+                      },
+                    },
+                  });
+                }
               }
             }
-          }
 
-          // C. Re-create Dependent Lists (Images, Warranty, etc.)
-          // These are usually safe to delete and recreate as they aren't linked to Orders directly in your schema
-          
-          // Images
-          if (input.images) {
-            await tx.productImage.deleteMany({ where: { productId: input.id } });
-            await tx.productImage.createMany({
-              data: input.images.map((img: any, i: number) => ({
-                productId: input.id,
-                url: img.url,
-                altText: img.altText,
-                sortOrder: img.sortOrder ?? i,
-                mediaType: img.mediaType || "PRIMARY",
-                fileType: img.fileType
-              }))
-            });
-          }
+            // C. Re-create Dependent Lists (Images, Warranty, etc.)
+            // These are usually safe to delete and recreate as they aren't linked to Orders directly in your schema
 
-          // Delivery Options
-          if (input.deliveryOptions) {
-            await tx.deliveryOption.deleteMany({ where: { productId: input.id } });
-            await tx.deliveryOption.createMany({
-              data: input.deliveryOptions.map((opt: any) => ({
-                productId: input.id,
-                title: opt.title,
-                description: opt.description,
-                isDefault: opt.isDefault
-              }))
-            });
-          }
+            // Images
+            if (input.images) {
+              await tx.productImage.deleteMany({
+                where: { productId: input.id },
+              });
+              await tx.productImage.createMany({
+                data: input.images.map((img: any, i: number) => ({
+                  productId: input.id,
+                  url: img.url,
+                  altText: img.altText,
+                  sortOrder: img.sortOrder ?? i,
+                  mediaType: img.mediaType || "PRIMARY",
+                  fileType: img.fileType,
+                })),
+              });
+            }
 
-          // Warranty
-          if (input.warranty) {
-            await tx.warranty.deleteMany({ where: { productId: input.id } });
-            await tx.warranty.createMany({
-              data: input.warranty.map((w: any) => ({
-                productId: input.id,
-                type: w.type,
-                duration: w.duration,
-                unit: w.unit,
-                description: w.description
-              }))
-            });
-          }
+            // Delivery Options
+            if (input.deliveryOptions) {
+              await tx.deliveryOption.deleteMany({
+                where: { productId: input.id },
+              });
+              await tx.deliveryOption.createMany({
+                data: input.deliveryOptions.map((opt: any) => ({
+                  productId: input.id,
+                  title: opt.title,
+                  description: opt.description,
+                  isDefault: opt.isDefault,
+                })),
+              });
+            }
 
-          // Return Policy
-          if (input.returnPolicy) {
-            await tx.returnPolicy.deleteMany({ where: { productId: input.id } });
-            await tx.returnPolicy.createMany({
-              data: input.returnPolicy.map((p: any) => ({
-                productId: input.id,
-                type: p.type,
-                duration: p.duration,
-                unit: p.unit,
-                conditions: p.conditions
-              }))
-            });
-          }
-        }, { timeout: 30000 });
+            // Warranty
+            if (input.warranty) {
+              await tx.warranty.deleteMany({ where: { productId: input.id } });
+              await tx.warranty.createMany({
+                data: input.warranty.map((w: any) => ({
+                  productId: input.id,
+                  type: w.type,
+                  duration: w.duration,
+                  unit: w.unit,
+                  description: w.description,
+                })),
+              });
+            }
+
+            // Return Policy
+            if (input.returnPolicy) {
+              await tx.returnPolicy.deleteMany({
+                where: { productId: input.id },
+              });
+              await tx.returnPolicy.createMany({
+                data: input.returnPolicy.map((p: any) => ({
+                  productId: input.id,
+                  type: p.type,
+                  duration: p.duration,
+                  unit: p.unit,
+                  conditions: p.conditions,
+                })),
+              });
+            }
+          },
+          { timeout: 30000 }
+        );
 
         // Cache Invalidation
         await Promise.all([

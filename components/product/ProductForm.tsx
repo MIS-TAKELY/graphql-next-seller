@@ -29,8 +29,8 @@ import {
 } from "@/types/common/enums";
 import { FormData } from "@/types/pages/product";
 import { buildProductInput, validateStep } from "@/utils/product/validateSteps";
-import { ProgressStepper } from "./ProgressStepper";
 import { FullScreenLoader } from "./FullScreenLoader";
+import { ProgressStepper } from "./ProgressStepper";
 
 const steps = [
   { id: 1, title: "Basic Details", description: "Product information" },
@@ -187,7 +187,11 @@ export function ProductForm({
       setErrors(allErrors);
       if (firstInvalidStep) {
         setCurrentStep(firstInvalidStep);
-        toast.error(`Please fix errors in step ${firstInvalidStep}: ${steps[firstInvalidStep - 1].title}`);
+        toast.error(
+          `Please fix errors in step ${firstInvalidStep}: ${
+            steps[firstInvalidStep - 1].title
+          }`
+        );
       }
       return false;
     }
@@ -206,8 +210,17 @@ export function ProductForm({
 
     try {
       const input = buildProductInput(formData, productId);
+
+      console.log("input before change-->", input.status);
+      // input.status=ProductStatus.INACTIVE
+
+      status === ProductStatus.INACTIVE
+        ? (input.status = ProductStatus.INACTIVE)
+        : (input.status = ProductStatus.DRAFT);
+
+        console.log("input after change-->",input)
       await onSubmit(input, status);
-      
+
       const actionText = mode === "edit" ? "updated" : "created";
       const statusText = status === ProductStatus.DRAFT ? "draft" : "published";
       toast.success(`Product ${actionText} and ${statusText} successfully!`);
@@ -327,4 +340,4 @@ export function ProductForm({
       </div>
     </>
   );
-} 
+}
