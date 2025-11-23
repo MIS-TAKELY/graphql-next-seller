@@ -1,7 +1,7 @@
 // utils/product/validateSteps.ts
 
+import { FileType } from "@/types/common/enums";
 import { FormData, ICreateProductInput } from "@/types/pages/product";
-import { MediaType, FileType } from "@/types/common/enums";
 
 export const validateStep = (
   step: number,
@@ -40,7 +40,10 @@ export const validateStep = (
                 index + 1
               }: Valid price is required`;
             }
-            if (variant.stock === "" || parseInt(String(variant.stock), 10) < 0) {
+            if (
+              variant.stock === "" ||
+              parseInt(String(variant.stock), 10) < 0
+            ) {
               newErrors[`variant_stock_${index}`] = `Variant ${
                 index + 1
               }: Valid stock is required`;

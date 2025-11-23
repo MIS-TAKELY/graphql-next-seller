@@ -21,8 +21,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import {
+  DiscountType,
+  ProductStatus,
+  ReturnType,
+  WarrantyType,
+} from "@/types/common/enums";
 import { FormData } from "@/types/pages/product";
-import { ReturnType, WarrantyType, DiscountType, ProductStatus } from "@/types/common/enums";
 import { buildProductInput, validateStep } from "@/utils/product/validateSteps";
 
 // Enums are imported from types
@@ -48,14 +53,9 @@ const steps = [
 ];
 
 export function ProductForm({
-  mode,
   categoriesData,
   initialValues,
   onSubmit,
-  onDelete,
-  isDeleting,
-  title,
-  subtitle,
 }: Props) {
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -93,7 +93,11 @@ export function ProductForm({
       height: "",
       isFragile: false,
       deliveryOptions: [
-        { title: "Standard Delivery", description: "3-5 Business Days", isDefault: true },
+        {
+          title: "Standard Delivery",
+          description: "3-5 Business Days",
+          isDefault: true,
+        },
       ],
 
       // Policies
@@ -127,16 +131,6 @@ export function ProductForm({
       setErrors((prev: any) => ({ ...prev, [field]: undefined }));
     }
   };
-
-  const nextStep = () => {
-    if (validateStep(currentStep, formData, setErrors)) {
-      setCurrentStep((s) => Math.min(s + 1, steps.length));
-    } else {
-      toast.error("Please fix the errors before proceeding");
-    }
-  };
-
-  const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 1));
 
   const handleSubmit = async () => {
     const allErrors: Record<number, any> = {};
