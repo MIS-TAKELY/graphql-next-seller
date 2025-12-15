@@ -1,5 +1,6 @@
 // servers/gql/messageResolvers.ts
 import type { FileType as PrismaFileType } from "@/app/generated/prisma";
+import { createAndPushNotification } from "@/lib/notification";
 import { NewMessagePayload, realtime } from "@/lib/realtime";
 import type {
   FileType as CustomerFileType,
@@ -246,6 +247,35 @@ export const messageResolvers = {
             "Failed to publish user-level message notification:",
             error
           );
+        }
+      }
+
+      // Send push notification to receiver
+      const receiverId =
+        conversation.senderId === user.id
+          ? conversation.recieverId
+          : conversation.senderId;
+
+      const receiverClerkId =
+        conversation.senderId === user.id
+          ? conversation.reciever?.clerkId
+          : conversation.sender?.clerkId;
+
+      if (receiverId && receiverClerkId) {
+        const senderName =
+          `${result.sender?.firstName || ""} ${result.sender?.lastName || ""
+            }`.trim() || "A seller";
+
+        try {
+          await createAndPushNotification({
+            userId: receiverId,
+            recieverClerkId: receiverClerkId,
+            title: "New Message",
+            body: `${senderName} sent you a message`,
+            type: "NEW_MESSAGE",
+          });
+        } catch (error) {
+          console.error("Failed to send push notification:", error);
         }
       }
 
