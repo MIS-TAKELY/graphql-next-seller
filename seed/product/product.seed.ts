@@ -5,21 +5,56 @@
 //   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
 // }
 
-// async function createOrGetSeller(email:string, firstName:string, lastName:string) {
-//   let seller = await prisma.user.findUnique({ where: { email } });
+// async function createOrGetSeller(
+//   email: string,
+//   firstName: string = "Seller",
+//   lastName: string = "Account"
+// ) {
+//   let seller = await prisma.user.findUnique({
+//     where: { email },
+//     include: { roles: true }, // Important: fetch current roles
+//   });
+
 //   if (!seller) {
 //     seller = await prisma.user.create({
 //       data: {
-//         clerkId: `clerk_${email.split("@")[0]}`,
+//         clerkId: `clerk_${email.split("@")[0]}_${Date.now()}`,
 //         email,
 //         firstName,
 //         lastName,
-//         role: "SELLER",
+//         roles: {
+//           create: [
+//             {
+//               role: "SELLER", // This creates a UserRole entry
+//             },
+//           ],
+//         },
 //       },
+//       include: { roles: true },
 //     });
+//     console.log(`Created seller: ${email} with SELLER role`);
+//   } else {
+//     // Check if user already has SELLER role
+//     const hasSellerRole = seller.roles.some((r) => r.role === "SELLER");
+
+//     if (!hasSellerRole && seller) {
+//       await prisma.userRole.create({
+//         data: {
+//           userId: seller.id,
+//           role: "SELLER",
+//         },
+//       });
+//       console.log(`Added SELLER role to existing user: ${email}`);
+//     }
 //   }
-//   return seller;
+
+//   // Return fresh user with roles
+//   return await prisma.user.findUnique({
+//     where: { email },
+//     include: { roles: true },
+//   });
 // }
+
 
 // async function createProduct(input:string, sellerId:string, categoryId:string) {
 //   const slug = slugify(input.name);

@@ -1,7 +1,6 @@
 // hooks/chat/useSellerChat.ts
 "use client";
 
-// import { Message, User, Role } from "@prisma/client";
 import { SEND_MESSAGE } from "@/client/message/message.mutation";
 import { GET_MESSAGES } from "@/client/message/message.query";
 import { NewMessagePayload } from "@/lib/realtime";
@@ -16,13 +15,16 @@ import { useRealtime } from "@upstash/realtime/client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
+// Generated types
 import { Message, Role, User } from "@/app/generated/prisma";
+// Enum for mutation inputs
+import { MessageType as MessageTypeEnum } from "@/types/common/enums";
+// Frontend specific types
 import type {
   FileType,
   MessageAttachment,
   MessageType,
 } from "@/types/customer/customer.types";
-import { MessageType as MessageTypeEnum } from "@/types/common/enums";
 
 export type LocalMessageStatus = "sending" | "sent" | "failed";
 export type LocalMessageSender = "seller" | "buyer";
@@ -37,6 +39,10 @@ export interface LocalMessage {
   attachments?: MessageAttachment[];
 }
 
+/**
+ * Represents the structure coming from the GraphQL Query (GET_MESSAGES).
+ * Based on your logic, it includes a sender with roles and an attachments array.
+ */
 interface ServerMessage extends Omit<Message, "senderId"> {
   sender: Pick<
     User,
@@ -49,7 +55,39 @@ interface ServerMessage extends Omit<Message, "senderId"> {
     url: string;
     type: string;
   }>;
+  // GraphQL often returns Date strings, Prisma types return Date objects.
+  // We allow both here to be safe before normalization.
+  createdAt: Date | string; 
+  updatedAt: Date | string;
 }
+
+/**
+ * Represents the shape of the payload expected from Realtime/Socket events.
+ * Since NewMessagePayload is external, we intersect it with the fields
+ * your logic actually accesses (sender, attachments, dates).
+ */
+type RealtimeMessageInput = NewMessagePayload & {
+  clientId?: string;
+  id?: string;
+  content?: string | null;
+  fileUrl?: string | null;
+  type?: string | MessageType;
+  attachments?: Array<{
+    id?: string;
+    url: string;
+    type: string;
+  }>;
+  sender?: {
+    roles?: Array<{ role: Role | string }>;
+  };
+  // Realtime payloads might have different date keys or string formats
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  sentAt?: string | Date;
+};
+
+// Union type for the normalizer function
+type MessageInput = ServerMessage | RealtimeMessageInput;
 
 const FETCH_POLICY_NO_CACHE: FetchPolicy = "no-cache";
 
@@ -71,13 +109,9 @@ export const useSellerChat = (conversationId?: string | null) => {
     }
   }, [conversationId]);
 
-  type MessageInput =
-    | ServerMessage
-    | (NewMessagePayload & { clientId?: string });
-
   const normalizeServerMessage = useCallback(
     (msg: MessageInput): LocalMessage => {
-      const attachments = msg.attachments?.length
+      const attachments: MessageAttachment[] | undefined = msg.attachments?.length
         ? msg.attachments.map((a) => ({
             id: a.id || crypto.randomUUID(),
             messageId: msg.id || "",
@@ -100,19 +134,20 @@ export const useSellerChat = (conversationId?: string | null) => {
         : undefined;
 
       const isSeller = Array.isArray(msg.sender?.roles)
-        ? msg.sender.roles.some((r: any) => r.role === "SELLER")
+        ? msg.sender!.roles!.some((r: any) => r.role === "SELLER")
         : false;
 
-      // Use sentAt if createdAt/updatedAt do not exist
-      const timestamp = new Date(
+      // Logic to resolve timestamp from various possible keys
+      const rawDate =
         (msg as ServerMessage).createdAt ||
-          (msg as any).updatedAt ||
-          msg.sentAt ||
-          new Date()
-      );
+        (msg as RealtimeMessageInput).updatedAt ||
+        (msg as RealtimeMessageInput).sentAt ||
+        new Date();
+
+      const timestamp = new Date(rawDate);
 
       return {
-        id: msg.id,
+        id: msg.id || crypto.randomUUID(),
         clientId: msg.clientId ?? undefined,
         text: msg.content || "",
         sender: isSeller ? "seller" : "buyer",
@@ -136,6 +171,7 @@ export const useSellerChat = (conversationId?: string | null) => {
 
       const updated = [...prev];
       const byServerId = updated.findIndex((m) => m.id === incoming.id);
+      
       if (byServerId >= 0) {
         cleanBlobs(updated[byServerId]);
         updated[byServerId] = {
@@ -208,7 +244,7 @@ export const useSellerChat = (conversationId?: string | null) => {
 
         if (data?.messages) {
           const serverMsgs: LocalMessage[] = data.messages
-            .map(normalizeServerMessage)
+            .map((m: any) => normalizeServerMessage(m)) // Explicit any cast for raw GQL response if types don't align perfectly
             .sort(
               (a: LocalMessage, b: LocalMessage) =>
                 a.timestamp.getTime() - b.timestamp.getTime()
@@ -236,16 +272,15 @@ export const useSellerChat = (conversationId?: string | null) => {
   );
 
   useEffect(() => {
-    loadMessages(false); // Initial load - show loading
+    loadMessages(false);
   }, [loadMessages]);
 
-  // Poll for new messages every 10 seconds when conversation is open (silent updates)
   useEffect(() => {
     if (!conversationId) return;
 
     const interval = setInterval(() => {
-      loadMessages(true); // Silent polling - don't show loading
-    }, 10000); // Poll every 10 seconds (realtime should handle most updates)
+      loadMessages(true);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [conversationId, loadMessages]);
@@ -329,14 +364,22 @@ export const useSellerChat = (conversationId?: string | null) => {
         const serverMsg = data?.sendMessage;
         if (!serverMsg) throw new Error("No server response");
 
+        // Mutating the response object to include attachments if backend didn't return them immediately
+        // Note: It's cleaner to clone, but keeping logic as requested
+        const msgToNormalize = { ...serverMsg };
+        
         if (
           uploadedAttachments &&
-          (!serverMsg.attachments || !serverMsg.attachments.length)
+          (!msgToNormalize.attachments || !msgToNormalize.attachments.length)
         ) {
-          serverMsg.attachments = uploadedAttachments;
+          msgToNormalize.attachments = uploadedAttachments;
         }
 
-        const normalized = normalizeServerMessage({ ...serverMsg, clientId });
+        const normalized = normalizeServerMessage({
+          ...msgToNormalize,
+          clientId,
+        } as ServerMessage); // Casting here as we know the structure matches ServerMessage
+        
         upsertServerMessage(normalized);
 
         optimisticAttachments.forEach((a) => URL.revokeObjectURL(a.url));
@@ -363,7 +406,9 @@ export const useSellerChat = (conversationId?: string | null) => {
     (payload: NewMessagePayload) => {
       if (!payload) return;
 
-      const normalized = normalizeServerMessage(payload); // TS is happy now
+      // Force cast payload to RealtimeMessageInput to satisfy the generic MessageInput union
+      // This is safe assuming your realtime payload contains the necessary fields used in normalizeServerMessage
+      const normalized = normalizeServerMessage(payload as unknown as RealtimeMessageInput);
       upsertServerMessage(normalized);
     },
     [normalizeServerMessage, upsertServerMessage]
@@ -378,7 +423,7 @@ export const useSellerChat = (conversationId?: string | null) => {
     [handleRealtimeNewMessage]
   );
 
-  // useRealtime types don't match the actual runtime API
+  // useRealtime types don't match the actual runtime API perfectly in some versions
   (useRealtime as any)({
     channel: conversationId ? `conversation:${conversationId}` : undefined,
     events,

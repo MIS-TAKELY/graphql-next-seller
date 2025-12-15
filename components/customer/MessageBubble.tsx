@@ -1,53 +1,63 @@
-// components/customers/MessageBubble.tsx
+// import { LocalMessage } from "@/hooks/chat/useSellerChat"; // Ensure this matches your hook filename
 import { LocalMessage } from "@/hooks/chat/useChat";
 import { cn } from "@/lib/utils";
-import { FileText } from "lucide-react";
+import { format } from "date-fns";
+import { CheckCheck, FileIcon, FileText } from "lucide-react";
 
 interface MessageBubbleProps {
   message: LocalMessage;
+  isOwn: boolean;
 }
 
-export default function MessageBubble({ message }: MessageBubbleProps) {
-  const isSeller = message.sender === "seller";
+export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
+  // Fix 1: Use 'timestamp' instead of 'createdAt'
+  const time = message.timestamp
+    ? format(new Date(message.timestamp), "HH:mm")
+    : "";
+
+  const attachments = message.attachments || [];
 
   return (
-    <div className={cn("flex", isSeller ? "justify-end" : "justify-start")}>
+    <div className={cn("flex w-full", isOwn ? "justify-end" : "justify-start")}>
       <div
         className={cn(
-          "max-w-[70%] rounded-lg px-3 py-2",
-          isSeller ? "bg-primary text-primary-foreground" : "bg-muted"
+          "relative max-w-[80%] sm:max-w-[70%] px-4 py-2 rounded-2xl text-sm shadow-sm",
+          isOwn
+            ? "bg-primary text-primary-foreground rounded-tr-sm"
+            : "bg-card border rounded-tl-sm"
         )}
       >
-        {message.text && (
-          <p className="text-sm whitespace-pre-wrap break-words">{message.text}</p>
-        )}
-
-        {message.attachments && message.attachments.length > 0 && (
-          <div className="mt-2 space-y-2">
-            {message.attachments.map((attachment) => (
-              <div key={attachment.id}>
-                {attachment.type === "IMAGE" ? (
+        {/* Fix 2: Map through 'attachments' array instead of using single 'fileUrl' */}
+        {attachments.length > 0 && (
+          <div className="flex flex-col gap-2 mb-2">
+            {attachments.map((attachment, index) => (
+              <div key={attachment.id || index}>
+                {attachment.type === "IMAGE" ||
+                (attachment.type === "VIDEO" && !attachment.url.endsWith(".pdf")) || // Fallback check
+                attachment.url.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
                   <img
                     src={attachment.url}
-                    alt="Attachment"
-                    className="rounded-md max-w-full h-auto"
-                    loading="lazy"
-                  />
-                ) : attachment.type === "VIDEO" ? (
-                  <video
-                    src={attachment.url}
-                    controls
-                    className="rounded-md max-w-full h-auto"
+                    alt="attachment"
+                    className="rounded-lg max-h-60 w-full object-cover border bg-black/5"
                   />
                 ) : (
                   <a
                     href={attachment.url}
                     target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-blue-500 hover:underline"
+                    rel="noreferrer"
+                    className={cn(
+                      "flex items-center gap-2 p-3 rounded-lg transition-colors overflow-hidden",
+                      isOwn
+                        ? "bg-primary-foreground/10 hover:bg-primary-foreground/20"
+                        : "bg-muted hover:bg-muted/80"
+                    )}
                   >
-                    <FileText className="w-5 h-5" />
-                    {attachment.url.split("/").pop() || "Document"}
+                    <div className="shrink-0 bg-background/20 p-1 rounded">
+                       <FileText className="h-5 w-5" />
+                    </div>
+                    <span className="underline truncate text-xs sm:text-sm">
+                      {attachment.url.split("/").pop() || "Download File"}
+                    </span>
                   </a>
                 )}
               </div>
@@ -55,21 +65,32 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
           </div>
         )}
 
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-xs opacity-70">
-            {new Date(message.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
-          {message.status === "sending" && (
-            <span className="text-xs opacity-70">Sending...</span>
+        {/* Text */}
+        {message.text && (
+          <p className="whitespace-pre-wrap leading-relaxed break-words">
+            {message.text}
+          </p>
+        )}
+
+        {/* Meta (Time & Status) */}
+        <div
+          className={cn(
+            "flex items-center justify-end gap-1 mt-1 select-none opacity-80",
+            isOwn ? "text-primary-foreground" : "text-muted-foreground"
           )}
-          {message.status === "failed" && (
-            <span className="text-xs text-destructive">Failed</span>
+        >
+          <span className="text-[10px]">{time}</span>
+          {isOwn && (
+            // Status logic: sending -> clock?, sent -> check, read -> check-check
+            <CheckCheck
+              className={cn(
+                "w-3 h-3",
+                message.status === "sending" ? "opacity-50" : "opacity-100"
+              )}
+            />
           )}
         </div>
       </div>
     </div>
   );
-};
+}
