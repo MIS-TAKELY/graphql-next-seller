@@ -12,6 +12,7 @@ import {
   useMutation,
 } from "@apollo/client";
 import { useRealtime } from "@upstash/realtime/client";
+import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -92,6 +93,7 @@ type MessageInput = ServerMessage | RealtimeMessageInput;
 const FETCH_POLICY_NO_CACHE: FetchPolicy = "no-cache";
 
 export const useSellerChat = (conversationId?: string | null) => {
+  const { userId: clerkId } = useAuth();
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -423,9 +425,16 @@ export const useSellerChat = (conversationId?: string | null) => {
     [handleRealtimeNewMessage]
   );
 
+  // Subscribe to conversation-level channel
   // useRealtime types don't match the actual runtime API perfectly in some versions
   (useRealtime as any)({
     channel: conversationId ? `conversation:${conversationId}` : undefined,
+    events,
+  });
+
+  // Subscribe to user-level channel for seller to receive messages even when not in a specific conversation
+  (useRealtime as any)({
+    channel: clerkId ? `user:${clerkId}` : undefined,
     events,
   });
 
