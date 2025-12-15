@@ -4,11 +4,11 @@ import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function EditProductPage({ params }: { params: { id: string } }) {
+export default async function EditProductPage({ params }: { params: Promise<{ id: string }> }) {
   const client = await getServerApolloClient(); // Switch to auth client
-  const productId = params.id;
+  const { id: productId } = await params;
 
-  console.log("product id-->",productId)
+  console.log("product id-->", productId)
 
   let productData;
   let categoryData;
@@ -18,7 +18,7 @@ export default async function EditProductPage({ params }: { params: { id: string
       client.query({
         query: GET_PRODUCT,
         variables: { productId },
-        fetchPolicy:"no-cache"
+        fetchPolicy: "no-cache"
       }),
       client.query({
         query: GET_PRODUCT_CATEGORIES,
@@ -27,7 +27,7 @@ export default async function EditProductPage({ params }: { params: { id: string
 
     productData = productQuery.data;
     categoryData = categoryQuery.data;
-  } catch (error:any) {
+  } catch (error: any) {
     // Handle GraphQL errors (e.g., auth failure)
     console.error("Failed to fetch product data:", error);
     if (error.message.includes("Authentication required")) {

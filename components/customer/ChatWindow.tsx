@@ -8,6 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LocalMessage } from "@/hooks/chat/useChat";
@@ -94,7 +95,6 @@ export default function ChatWindow({
 
   const partnerName =
     conversation?.reciever?.firstName ||
-    conversation?.reciever?.username ||
     "User";
   const productName = conversation?.product?.name;
 
@@ -113,7 +113,7 @@ export default function ChatWindow({
           </Button>
 
           <Avatar className="h-9 w-9 border">
-            <AvatarImage src={conversation?.reciever?.avatar} />
+            <AvatarImage src={(conversation?.reciever as any)?.avatar || (conversation?.reciever as any)?.avatarImageUrl} />
             <AvatarFallback className="text-xs bg-primary/10 text-primary">
               {partnerName.substring(0, 2).toUpperCase()}
             </AvatarFallback>
@@ -166,7 +166,7 @@ export default function ChatWindow({
               messages.map((msg, i) => {
                 // Check if previous message was from same sender to group visually
                 const isSequence =
-                  i > 0 && messages[i - 1].senderId === msg.senderId;
+                  i > 0 && messages[i - 1].sender === msg.sender;
                 return (
                   <div
                     key={msg.clientId || msg.id}
@@ -174,7 +174,7 @@ export default function ChatWindow({
                   >
                     <MessageBubble
                       message={msg}
-                      isOwn={msg.senderId === currentUserId}
+                      isOwn={msg.sender === "seller"}
                     />
                   </div>
                 );

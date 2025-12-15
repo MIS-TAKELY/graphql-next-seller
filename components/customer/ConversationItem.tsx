@@ -23,12 +23,12 @@ export default function ConversationItem({
       ? conversation.reciever
       : conversation.sender;
 
-  const name = otherUser?.firstName || otherUser?.username || "Unknown User";
-  const lastMessage = conversation.messages?.[0]; // Assuming backend returns sorted
+  const name = otherUser?.firstName || "Unknown User";
+  const lastMessage = conversation.lastMessage; // Adjusted to match type definition
   const lastMessageText =
-    lastMessage?.text ||
+    lastMessage?.content ||
     (lastMessage?.fileUrl ? "Sent an attachment" : "No messages yet");
-  const timeAgo = lastMessage?.createdAt
+  const timeAgo = lastMessage?.createdAt // Message (from types) extends BaseEntity which has createdAt
     ? formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: false })
     : "";
 
@@ -44,7 +44,7 @@ export default function ConversationItem({
     >
       <div className="relative shrink-0">
         <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
-          <AvatarImage src={otherUser?.avatar} />
+          <AvatarImage src={(otherUser as any)?.avatar || (otherUser as any)?.avatarImageUrl} />
           <AvatarFallback
             className={cn(
               isActive ? "bg-primary text-primary-foreground" : "bg-muted"

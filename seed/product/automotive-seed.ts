@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/db/prisma";
 
 
-function slugify(name:string) {
+function slugify(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
 }
 
-async function createOrGetSeller(email:string, firstName:string, lastName:string) {
+async function createOrGetSeller(email: string, firstName: string, lastName: string) {
   let seller = await prisma.user.findUnique({ where: { email } });
   if (!seller) {
     seller = await prisma.user.create({
@@ -14,14 +14,18 @@ async function createOrGetSeller(email:string, firstName:string, lastName:string
         email,
         firstName,
         lastName,
-        role: "SELLER",
+        roles: {
+          create: {
+            role: "SELLER",
+          },
+        },
       },
     });
   }
   return seller;
 }
 
-async function createProduct(input:string, sellerId:string, categoryId:string) {
+async function createProduct(input: any, sellerId: string, categoryId: string) {
   const slug = slugify(input.name);
   let uniqueSlug = slug;
   let counter = 1;
@@ -52,16 +56,16 @@ async function createProduct(input:string, sellerId:string, categoryId:string) {
               specifications:
                 input.variants.specifications?.length > 0
                   ? {
-                      create: input.variants.specifications.map((spec) => ({
-                        key: spec.key,
-                        value: spec.value,
-                      })),
-                    }
+                    create: input.variants.specifications.map((spec: any) => ({
+                      key: spec.key,
+                      value: spec.value,
+                    })),
+                  }
                   : undefined,
             },
           },
           images: {
-            create: input.images.map((img, index) => ({
+            create: input.images.map((img: any, index: number) => ({
               url: img.url,
               altText: img.altText || null,
               sortOrder: img.sortOrder !== undefined ? img.sortOrder : index,
@@ -74,7 +78,7 @@ async function createProduct(input:string, sellerId:string, categoryId:string) {
 
       if (input.deliveryOptions?.length > 0) {
         await tx.deliveryOption.createMany({
-          data: input.deliveryOptions.map((option) => ({
+          data: input.deliveryOptions.map((option: any) => ({
             productId: newProduct.id,
             title: option.title,
             description: option.description || null,
@@ -85,7 +89,7 @@ async function createProduct(input:string, sellerId:string, categoryId:string) {
 
       if (input.warranty?.length > 0) {
         await tx.warranty.createMany({
-          data: input.warranty.map((warranty) => ({
+          data: input.warranty.map((warranty: any) => ({
             productId: newProduct.id,
             type: warranty.type,
             duration: warranty.duration || null,
@@ -97,7 +101,7 @@ async function createProduct(input:string, sellerId:string, categoryId:string) {
 
       if (input.returnPolicy?.length > 0) {
         await tx.returnPolicy.createMany({
-          data: input.returnPolicy.map((policy) => ({
+          data: input.returnPolicy.map((policy: any) => ({
             productId: newProduct.id,
             type: policy.type,
             duration: policy.duration || null,
@@ -120,8 +124,8 @@ async function main() {
     await createOrGetSeller("seller3@test.com", "Mike", "Johnson"),
   ];
 
-  const productsData = [
-  
+  const productsData: any[] = [
+
   ];
 
   let createdCount = 0;
@@ -142,7 +146,7 @@ async function main() {
       const product = await createProduct(productData, seller.id, category.id);
       console.log(`✅ Created product: ${product.name}`);
       createdCount++;
-    } catch (error) {
+    } catch (error: any) {
       console.error(`❌ Error creating "${productData.name}":`, error.message);
     }
   }
@@ -151,7 +155,7 @@ async function main() {
 }
 
 main()
-  .catch((e) => {
+  .catch((e: any) => {
     console.error("Error during seeding:", e);
     process.exit(1);
   })

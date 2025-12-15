@@ -43,7 +43,7 @@ export interface LocalMessage {
  * Represents the structure coming from the GraphQL Query (GET_MESSAGES).
  * Based on your logic, it includes a sender with roles and an attachments array.
  */
-interface ServerMessage extends Omit<Message, "senderId"> {
+interface ServerMessage extends Omit<Message, "senderId" | "createdAt" | "updatedAt"> {
   sender: Pick<
     User,
     "id" | "email" | "firstName" | "lastName" | "avatarImageUrl"
@@ -57,7 +57,7 @@ interface ServerMessage extends Omit<Message, "senderId"> {
   }>;
   // GraphQL often returns Date strings, Prisma types return Date objects.
   // We allow both here to be safe before normalization.
-  createdAt: Date | string; 
+  createdAt: Date | string;
   updatedAt: Date | string;
 }
 
@@ -113,15 +113,15 @@ export const useSellerChat = (conversationId?: string | null) => {
     (msg: MessageInput): LocalMessage => {
       const attachments: MessageAttachment[] | undefined = msg.attachments?.length
         ? msg.attachments.map((a) => ({
-            id: a.id || crypto.randomUUID(),
-            messageId: msg.id || "",
-            url: a.url,
-            type: a.type as FileType,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          }))
+          id: a.id || crypto.randomUUID(),
+          messageId: msg.id || "",
+          url: a.url,
+          type: a.type as FileType,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }))
         : msg.fileUrl
-        ? [
+          ? [
             {
               id: msg.id || crypto.randomUUID(),
               messageId: msg.id || "",
@@ -131,7 +131,7 @@ export const useSellerChat = (conversationId?: string | null) => {
               updatedAt: new Date(),
             },
           ]
-        : undefined;
+          : undefined;
 
       const isSeller = Array.isArray(msg.sender?.roles)
         ? msg.sender!.roles!.some((r: any) => r.role === "SELLER")
@@ -171,7 +171,7 @@ export const useSellerChat = (conversationId?: string | null) => {
 
       const updated = [...prev];
       const byServerId = updated.findIndex((m) => m.id === incoming.id);
-      
+
       if (byServerId >= 0) {
         cleanBlobs(updated[byServerId]);
         updated[byServerId] = {
@@ -201,7 +201,7 @@ export const useSellerChat = (conversationId?: string | null) => {
             m.status === "sending" &&
             m.sender === incoming.sender &&
             Math.abs(m.timestamp.getTime() - incoming.timestamp.getTime()) <
-              5000
+            5000
         )?.i;
 
       if (candidateIndex !== undefined) {
@@ -311,8 +311,8 @@ export const useSellerChat = (conversationId?: string | null) => {
           type: (file.type.startsWith("video/")
             ? "VIDEO"
             : file.type.startsWith("image/")
-            ? "IMAGE"
-            : "DOCUMENT") as FileType,
+              ? "IMAGE"
+              : "DOCUMENT") as FileType,
           createdAt: new Date(),
           updatedAt: new Date(),
         })) as MessageAttachment[]) ?? [];
@@ -367,7 +367,7 @@ export const useSellerChat = (conversationId?: string | null) => {
         // Mutating the response object to include attachments if backend didn't return them immediately
         // Note: It's cleaner to clone, but keeping logic as requested
         const msgToNormalize = { ...serverMsg };
-        
+
         if (
           uploadedAttachments &&
           (!msgToNormalize.attachments || !msgToNormalize.attachments.length)
@@ -379,7 +379,7 @@ export const useSellerChat = (conversationId?: string | null) => {
           ...msgToNormalize,
           clientId,
         } as ServerMessage); // Casting here as we know the structure matches ServerMessage
-        
+
         upsertServerMessage(normalized);
 
         optimisticAttachments.forEach((a) => URL.revokeObjectURL(a.url));

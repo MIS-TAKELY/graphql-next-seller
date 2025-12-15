@@ -176,6 +176,7 @@ export default function ChatModal({
                   <MessageBubble
                     key={message.clientId ?? message.id}
                     message={message}
+                    isOwn={message.sender === "seller"}
                   />
                 ))
               )}
