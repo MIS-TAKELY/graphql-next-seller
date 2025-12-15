@@ -139,6 +139,14 @@ export const useSellerChat = (conversationId?: string | null) => {
         ? msg.sender!.roles!.some((r: any) => r.role === "SELLER")
         : false;
 
+      // Debug logging
+      console.log("Message sender detection:", {
+        messageId: msg.id,
+        roles: msg.sender?.roles,
+        isSeller,
+        determinedSender: isSeller ? "seller" : "buyer"
+      });
+
       // Logic to resolve timestamp from various possible keys
       const rawDate =
         (msg as ServerMessage).createdAt ||
