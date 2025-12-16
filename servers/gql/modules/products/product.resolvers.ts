@@ -121,6 +121,75 @@ export const productResolvers = {
       return product;
     },
 
+    getProductBySlug: async (
+      _: any,
+      { slug }: { slug: string },
+      ctx: GraphQLContext
+    ) => {
+      requireAuth(ctx);
+
+      if (!slug) throw new Error("Product slug is required");
+
+      try {
+        const cacheKey = `product:details:${slug}`;
+
+        // Try cache first
+        const cached = await getCache(cacheKey);
+        if (cached) {
+          console.log("⚡ returning product from cache (by slug)");
+          return cached;
+        }
+
+        console.log("💾 fetching product by slug from database");
+        const product = await prisma.product.findUnique({
+          where: { slug },
+          include: {
+            seller: true,
+            variants: {
+              include: {
+                specifications: true,
+              },
+            },
+            images: true,
+            reviews: {
+              include: {
+                user: true,
+              },
+            },
+            category: {
+              include: {
+                children: true,
+                parent: {
+                  include: {
+                    parent: true,
+                  },
+                },
+              },
+            },
+            wishlistItems: true,
+            productOffers: {
+              include: {
+                offer: true,
+              },
+            },
+            deliveryOptions: true,
+            warranty: true,
+            returnPolicy: true,
+          },
+        });
+
+        // Only cache if product is found
+        if (product) {
+          await setCache(cacheKey, product, 3600); // Cache for 1 hour
+        }
+
+        return product; // Returns null if not found
+      } catch (error: any) {
+        console.error("Error fetching product by slug:", error);
+        throw new Error(`Failed to fetch product: ${error.message}`);
+      }
+    },
+
     getMyProducts: async (_: any, __: any, ctx: GraphQLContext) => {
       try {
         const user = requireSeller(ctx);
@@ -240,9 +309,8 @@ export const productResolvers = {
         const slug = await generateUniqueSlug(input.name);
 
         // 3. Generate Embedding (Optional)
-        const textToEmbed = `${input.name} ${input.description || ""} ${
-          input.brand || ""
-        }`.trim();
+        const textToEmbed = `${input.name} ${input.description || ""} ${input.brand || ""
+          }`.trim();
         let embedding: number[] | undefined;
         try {
           if (textToEmbed) embedding = await generateEmbedding(textToEmbed);
@@ -277,11 +345,11 @@ export const productResolvers = {
                     specifications:
                       variant.specifications?.length > 0
                         ? {
-                            create: variant.specifications.map((spec: any) => ({
-                              key: spec.key,
-                              value: spec.value,
-                            })),
-                          }
+                          create: variant.specifications.map((spec: any) => ({
+                            key: spec.key,
+                            value: spec.value,
+                          })),
+                        }
                         : undefined,
                   })),
                 },
@@ -301,38 +369,38 @@ export const productResolvers = {
                 deliveryOptions:
                   input.deliveryOptions?.length > 0
                     ? {
-                        create: input.deliveryOptions.map((opt: any) => ({
-                          title: opt.title,
-                          description: opt.description,
-                          isDefault: opt.isDefault || false,
-                        })),
-                      }
+                      create: input.deliveryOptions.map((opt: any) => ({
+                        title: opt.title,
+                        description: opt.description,
+                        isDefault: opt.isDefault || false,
+                      })),
+                    }
                     : undefined,
 
                 // D. Warranty
                 warranty:
                   input.warranty?.length > 0
                     ? {
-                        create: input.warranty.map((w: any) => ({
-                          type: w.type,
-                          duration: w.duration,
-                          unit: w.unit,
-                          description: w.description,
-                        })),
-                      }
+                      create: input.warranty.map((w: any) => ({
+                        type: w.type,
+                        duration: w.duration,
+                        unit: w.unit,
+                        description: w.description,
+                      })),
+                    }
                     : undefined,
 
                 // E. Return Policy
                 returnPolicy:
                   input.returnPolicy?.length > 0
                     ? {
-                        create: input.returnPolicy.map((p: any) => ({
-                          type: p.type,
-                          duration: p.duration,
-                          unit: p.unit,
-                          conditions: p.conditions,
-                        })),
-                      }
+                      create: input.returnPolicy.map((p: any) => ({
+                        type: p.type,
+                        duration: p.duration,
+                        unit: p.unit,
+                        conditions: p.conditions,
+                      })),
+                    }
                     : undefined,
               },
             });
@@ -353,7 +421,8 @@ export const productResolvers = {
 
         // 5. Cleanup Cache
         await Promise.all([
-          delCache("product:all"),
+          delCache(`product:details:${slug}`), // Invalidate detail cache for buyer
+          delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
 
@@ -542,8 +611,9 @@ export const productResolvers = {
 
         // Cache Invalidation
         await Promise.all([
-          delCache(`product:${input.id}`),
-          delCache("product:all"),
+          delCache(`product:${input.id}`), // Used by list query individual cache
+          delCache(`product:details:${existingProduct.slug}`), // New details cache
+          delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
 
@@ -592,7 +662,8 @@ export const productResolvers = {
 
         await Promise.all([
           delCache(`product:${productId}`),
-          delCache("product:all"),
+          delCache(`product:details:${product.slug}`),
+          delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
         return true;

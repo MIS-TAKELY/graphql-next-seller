@@ -36,7 +36,7 @@ export function SSRApolloProvider({
     const httpLink = createHttpLink({
       uri:
         `${process.env.NEXT_PUBLIC_APP_URL}/api/graphql` ||
-        "http://localhost:3000/api/graphql",
+        "/api/graphql",
     });
 
     const client = new ApolloClient({
@@ -48,7 +48,7 @@ export function SSRApolloProvider({
     // console.log("inner cllient-->",client)
 
     // Hydrate cache with initial data
-    
+
 
     return client;
   }, [

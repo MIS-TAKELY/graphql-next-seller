@@ -55,7 +55,7 @@ export function RecentOrders() {
   if (loading) return <div>loading</div>;
   if (error) console.log("error", error);
 
-  const recentData = data.getSellerOrders?.sellerOrders;
+  const recentData = data?.getSellerOrders?.sellerOrders;
 
   return (
     <div className="space-y-8">

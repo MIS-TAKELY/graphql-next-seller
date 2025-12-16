@@ -78,6 +78,28 @@ const schema = {
       updatedAt: z.string(),
     }),
   },
+
+  faq: {
+    newQuestion: z.object({
+      id: z.string(),
+      productId: z.string(),
+      content: z.string(),
+      createdAt: z.string().or(z.date()),
+      user: z.object({
+        firstName: z.string().nullable().optional(),
+        lastName: z.string().nullable().optional(),
+      }),
+    }),
+    newAnswer: z.object({
+      id: z.string(),
+      questionId: z.string(),
+      content: z.string(),
+      createdAt: z.string().or(z.date()),
+      seller: z.object({
+        shopName: z.string(),
+      }),
+    }),
+  },
 };
 
 export const realtime = new Realtime({
@@ -97,3 +119,6 @@ export type NewOrderPayload = z.infer<typeof schema.order.newOrder>;
 export type OrderStatusChangedPayload = z.infer<
   typeof schema.order.statusChanged
 >;
+
+export type NewQuestionPayload = z.infer<typeof schema.faq.newQuestion>;
+export type NewAnswerPayload = z.infer<typeof schema.faq.newAnswer>;

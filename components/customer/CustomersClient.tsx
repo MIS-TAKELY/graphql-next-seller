@@ -7,7 +7,7 @@ import ClientCustomersPage from "./ClientCustomersPage";
 export default function CustomersClient() {
   const { data, loading, error, refetch } = useQuery(GET_CUSTOMERS, {
     fetchPolicy: "cache-and-network",
-    pollInterval: 60000, // Poll every 60 seconds for new customers
+    // pollInterval: 60000, // Poll every 60 seconds for new customers
   });
 
   if (loading && !data) {

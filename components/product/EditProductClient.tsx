@@ -8,6 +8,7 @@ import { transformProductToFormData } from "@/utils/product/transformProductData
 import { useMutation } from "@apollo/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import SellerFAQ from "./SellerFAQ";
 
 export default function EditProductClient({ product, categories }: any) {
   const router = useRouter();
@@ -32,15 +33,25 @@ export default function EditProductClient({ product, categories }: any) {
   };
 
   return (
-    <ProductForm
-      mode="edit"
-      categoriesData={categories}
-      initialValues={initialValues}
-      onSubmit={handleUpdateHandler}
-      onDelete={handleDelete}
-      isDeleting={deleting}
-      title="Edit Product"
-      subtitle="Update product information and settings."
-    />
+    <div className="space-y-10 pb-10">
+      <ProductForm
+        mode="edit"
+        categoriesData={categories}
+        initialValues={initialValues}
+        onSubmit={handleUpdateHandler}
+        onDelete={handleDelete}
+        isDeleting={deleting}
+        title="Edit Product"
+        subtitle="Update product information and settings."
+      />
+
+      <div className="border-t pt-10">
+        <div className="max-w-4xl">
+          <h2 className="text-xl font-bold mb-4">Customer Questions</h2>
+          <p className="text-muted-foreground mb-6">Answer questions from customers about this product.</p>
+          <SellerFAQ productId={product.id} />
+        </div>
+      </div>
+    </div>
   );
 }

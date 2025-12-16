@@ -95,8 +95,8 @@ export const conversationResolvers = {
       { prisma, user }: GraphQLContext
     ) => {
       console.log("senderid---->", recieverId, user?.clerkId);
-      if (!user || user.clerkId !== recieverId) {
-        throw new Error("Unauthorized: Seller ID mismatch");
+      if (!user) {
+        throw new Error("Unauthorized: User not authenticated");
       }
 
       const conversations = await prisma.conversation.findMany({
@@ -323,7 +323,7 @@ export const conversationResolvers = {
           //   room: `conversation:${result.id}`,
           // });
 
-          
+
         } catch (error) {
           console.error("Failed to publish conversation creation:", error);
         }
