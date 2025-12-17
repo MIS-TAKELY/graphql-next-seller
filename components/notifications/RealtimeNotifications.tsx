@@ -84,8 +84,8 @@ export const RealtimeNotifications = () => {
         return;
       }
 
-      const conversationId = payload.data?.conversationId as string | undefined;
-      const sellerOrderId = payload.data?.sellerOrderId as string | undefined;
+      const conversationId = (payload as any).data?.conversationId as string | undefined;
+      const sellerOrderId = (payload as any).data?.sellerOrderId as string | undefined;
 
       let action:
         | {

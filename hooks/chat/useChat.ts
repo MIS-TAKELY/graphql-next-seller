@@ -437,5 +437,6 @@ export const useSellerChat = (conversationId?: string | null) => {
     handleSend,
     isLoading,
     error,
+    refetchMessages: loadMessages,
   };
 };
