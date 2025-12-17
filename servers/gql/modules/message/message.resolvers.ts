@@ -192,6 +192,8 @@ export const messageResolvers = {
 
       if (!result) throw new Error("Unable to save message in database");
 
+      console.log(`[SELLER-BACKEND] ✅ Message persisted to database with ID: ${result.id}`);
+
       // Map for GraphQL response
       const graphqlResult = {
         ...result,
@@ -217,7 +219,7 @@ export const messageResolvers = {
 
       const channel = `conversation:${conversationId}`;
 
-      console.log("chennals-->",channel)
+      console.log("chennals-->", channel)
 
       realtime
         .channel(channel)
@@ -264,9 +266,8 @@ export const messageResolvers = {
 
       if (receiverId && receiverClerkId) {
         const senderName =
-          `${result.sender?.firstName || ""} ${
-            result.sender?.lastName || ""
-          }`.trim() || "A seller";
+          `${result.sender?.firstName || ""} ${result.sender?.lastName || ""
+            }`.trim() || "A seller";
 
         createAndPushNotification({
           userId: receiverId,
