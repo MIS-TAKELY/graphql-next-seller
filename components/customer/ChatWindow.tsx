@@ -93,9 +93,12 @@ export default function ChatWindow({
     setSelectedFiles([]);
   };
 
-  const partnerName =
-    conversation?.reciever?.firstName ||
-    "User";
+  const partner =
+    conversation?.sender?.id === currentUserId
+      ? conversation?.reciever
+      : conversation?.sender;
+
+  const partnerName = partner?.firstName || "User";
   const productName = conversation?.product?.name;
 
   return (
@@ -113,7 +116,7 @@ export default function ChatWindow({
           </Button>
 
           <Avatar className="h-9 w-9 border">
-            <AvatarImage src={(conversation?.reciever as any)?.avatar || (conversation?.reciever as any)?.avatarImageUrl} />
+            <AvatarImage src={(partner as any)?.avatar || (partner as any)?.avatarImageUrl} />
             <AvatarFallback className="text-xs bg-primary/10 text-primary">
               {partnerName.substring(0, 2).toUpperCase()}
             </AvatarFallback>

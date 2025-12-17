@@ -51,7 +51,6 @@ const schema = {
       title: z.string(),
       body: z.string(),
       type: z.string(),
-      data: z.record(z.string(), z.any()).nullable(),
       createdAt: z.string(),
       isRead: z.boolean(),
     }),

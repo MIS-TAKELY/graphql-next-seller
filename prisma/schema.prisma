@@ -1,880 +1,817 @@
 generator client {
-    provider      = "prisma-client-js"
-    output        = "../app/generated/prisma"
-    binaryTargets = ["native", "windows", "rhel-openssl-3.0.x"]
+  provider      = "prisma-client-js"
+  output        = "../app/generated/prisma"
+  binaryTargets = ["native", "windows", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
-}
-
-// ENUMS 
-enum Role {
-    BUYER
-    SELLER
-    ADMIN
-}
-
-enum AddressType {
-    SHIPPING
-    BILLING
-    BUSINESS
-    WAREHOUSE
-}
-
-enum MessageType {
-    TEXT
-    IMAGE
-    VIDEO
-    SYSTEM // e.g., "Order shipped" notifications
-}
-
-enum OrderStatus {
-    PENDING
-    CONFIRMED
-    PROCESSING
-    SHIPPED
-    DELIVERED
-    CANCELLED
-    RETURNED
-}
-
-enum PaymentMethodType {
-    CREDIT_CARD
-    DEBIT_CARD
-    UPI
-    NET_BANKING
-    WALLET
-    CASH_ON_DELIVERY
-}
-
-enum PaymentStatus {
-    PENDING
-    COMPLETED
-    FAILED
-    REFUNDED
-}
-
-enum ProductStatus {
-    DRAFT
-    ACTIVE
-    INACTIVE
-    DISCONTINUED
-}
-
-enum ShipmentStatus {
-    PENDING
-    PROCESSING
-    SHIPPED
-    IN_TRANSIT
-    OUT_FOR_DELIVERY
-    DELIVERED
-    RETURNED
-    LOST
-}
-
-enum ShippingMethod {
-    STANDARD
-    EXPRESS
-    OVERNIGHT
-    SAME_DAY
-}
-
-enum MediaType {
-    PRIMARY
-    PROMOTIONAL
-}
-
-enum DiscountType {
-    PERCENTAGE
-    FIXED_AMOUNT
-    BUY_X_GET_Y
-    FREE_SHIPPING
-}
-
-enum DiscountScope {
-    PRODUCT
-    CATEGORY
-    CART
-    SHIPPING
-    USER_SPECIFIC
-}
-
-enum CouponStatus {
-    ACTIVE
-    INACTIVE
-    EXPIRED
-    USED_UP
-}
-
-enum Gender {
-    MALE
-    FEMALE
-    OTHERS
-    NOT_TO_SAY
-}
-
-enum ReviewStatus {
-    PENDING
-    APPROVED
-    REJECTED
-}
-
-enum FileType {
-    IMAGE
-    VIDEO
-}
-
-enum WarrantyType {
-    MANUFACTURER
-    SELLER
-    NO_WARRANTY
-}
-
-enum ReturnType {
-    NO_RETURN
-    REPLACEMENT
-    REFUND
-    REPLACEMENT_OR_REFUND
-}
-
-enum VerificationStatus {
-    PENDING
-    UNDER_REVIEW
-    APPROVED
-    REJECTED
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-    id             String    @id @default(cuid())
-    clerkId        String    @unique
-    email          String    @unique @db.VarChar(255)
-    firstName      String?
-    lastName       String?
-    avatarImageUrl String?
-    phone          String?   @db.VarChar(20)
-    gender         Gender?
-    dob            DateTime?
-    createdAt      DateTime  @default(now())
-    updatedAt      DateTime  @updatedAt
+  id                      String                    @id @default(cuid())
+  clerkId                 String                    @unique
+  email                   String                    @unique @db.VarChar(255)
+  firstName               String?
+  lastName                String?
+  avatarImageUrl          String?
+  phone                   String?                   @db.VarChar(20)
+  gender                  Gender?
+  dob                     DateTime?
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  addresses               Address[]                 @relation("UserAddresses")
+  cartItems               CartItem[]                @relation("UserCartItems")
+  ConversationParticipant ConversationParticipant[]
+  sellerConversations     Conversation[]            @relation("SellerConversations")
+  buyerConversations      Conversation[]            @relation("BuyerConversations")
+  sentMessages            Message[]                 @relation("UserSentMessages")
+  notifications           Notification[]
+  orders                  Order[]                   @relation("BuyerOrders")
+  paymentMethods          PaymentMethod[]           @relation("UserPayments")
+  payouts                 Payout[]                  @relation("SellerPayouts")
+  productAnswers          ProductAnswer[]           @relation("SellerAnswers")
+  productQuestions        ProductQuestion[]
+  products                Product[]                 @relation("SellerProducts")
+  ReviewVote              ReviewVote[]
+  reviews                 Review[]
+  sellerOrders            SellerOrder[]             @relation("SellerOrders")
+  sellerProfile           SellerProfile?
+  roles                   UserRole[]
+  wishlists               Wishlist[]
 
-    addresses               Address[]                 @relation("UserAddresses")
-    paymentMethods          PaymentMethod[]           @relation("UserPayments")
-    cartItems               CartItem[]                @relation("UserCartItems")
-    orders                  Order[]                   @relation("BuyerOrders")
-    reviews                 Review[]
-    products                Product[]                 @relation("SellerProducts")
-    payouts                 Payout[]                  @relation("SellerPayouts")
-    sellerOrders            SellerOrder[]             @relation("SellerOrders")
-    wishlists               Wishlist[]
-    // discountUsage  DiscountUsage[] @relation("UserDiscountUsage")
-    ReviewVote              ReviewVote[]
-    buyerConversations      Conversation[]            @relation("BuyerConversations")
-    sellerConversations     Conversation[]            @relation("SellerConversations")
-    sentMessages            Message[]                 @relation("UserSentMessages")
-    ConversationParticipant ConversationParticipant[]
-    notifications           Notification[]
-    sellerProfile           SellerProfile?
-    roles                   UserRole[]
-    
-    productQuestions        ProductQuestion[]
-    productAnswers          ProductAnswer[]           @relation("SellerAnswers")
-
-    @@index([email])
-    @@map("users")
+  @@index([email])
+  @@map("users")
 }
 
 model UserRole {
-    id        String   @id @default(cuid())
-    userId    String
-    role      Role
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@unique([userId, role]) // One user can't have same role twice
-    @@index([userId])
-    @@index([role])
-    @@map("user_roles")
+  @@unique([userId, role])
+  @@index([userId])
+  @@index([role])
+  @@map("user_roles")
 }
 
 model SellerProfile {
-    id          String  @id @default(cuid())
-    userId      String  @unique
-    shopName    String  @unique
-    slug        String  @unique
-    logo        String?
-    banner      String?
-    description String? @db.Text
-    tagline     String?
+  id                 String             @id @default(cuid())
+  userId             String             @unique
+  shopName           String             @unique
+  slug               String             @unique
+  logo               String?
+  banner             String?
+  description        String?
+  tagline            String?
+  businessName       String?
+  businessRegNo      String?
+  businessType       String?
+  phone              String             @db.VarChar(20)
+  altPhone           String?            @db.VarChar(20)
+  email              String?
+  pickupAddressId    String?
+  returnPolicy       String?
+  shippingPolicy     String?
+  about              String?
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  isActive           Boolean            @default(false)
+  averageRating      Decimal?           @default(0) @db.Decimal(3, 2)
+  totalReviews       Int?               @default(0)
+  totalSales         Int?               @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  pickupAddress      Address?           @relation("SellerPickupAddress", fields: [pickupAddressId], references: [id])
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    businessName  String?
-    businessRegNo String?
-    businessType  String?
-
-    phone    String  @db.VarChar(20)
-    altPhone String? @db.VarChar(20)
-    email    String?
-
-    // Only ONE address relation → pickup/warehouse
-    pickupAddressId String?
-    pickupAddress   Address? @relation("SellerPickupAddress", fields: [pickupAddressId], references: [id])
-
-    returnPolicy   String? @db.Text
-    shippingPolicy String? @db.Text
-    about          String? @db.Text
-
-    verificationStatus VerificationStatus @default(PENDING)
-    verifiedAt         DateTime?
-    isActive           Boolean            @default(false)
-
-    averageRating Decimal? @default(0) @db.Decimal(3, 2)
-    totalReviews  Int?     @default(0)
-    totalSales    Int?     @default(0)
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@index([slug])
-    @@index([shopName])
-    @@index([verificationStatus])
-    @@map("seller_profiles")
+  @@index([slug])
+  @@index([shopName])
+  @@index([verificationStatus])
+  @@map("seller_profiles")
 }
 
 model Notification {
-    id        String   @id @default(cuid())
-    userId    String
-    title     String
-    body      String
-    type      String // "MESSAGE", "ORDER_STATUS", "SYSTEM"
-    data      Json? // { orderId, conversationId, etc }
-    isRead    Boolean  @default(false)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  type      String
+  data      Json?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@index([userId, createdAt])
-    @@index([userId, isRead])
-    @@map("notifications")
+  @@index([userId, createdAt])
+  @@index([userId, isRead])
+  @@map("notifications")
 }
 
 model Conversation {
-    id         String   @id @default(cuid())
-    productId  String // Ties chat to a specific product
-    senderId   String // Buyer who initiates
-    recieverId String // Seller of the product
-    title      String? // Auto-generated, e.g., "Chat about iPhone 14"
-    isActive   Boolean  @default(true)
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id                      String                    @id @default(cuid())
+  productId               String
+  senderId                String
+  recieverId              String
+  title                   String?
+  isActive                Boolean                   @default(true)
+  createdAt               DateTime                  @default(now())
+  updatedAt               DateTime                  @updatedAt
+  ConversationParticipant ConversationParticipant[]
+  product                 Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  reciever                User                      @relation("SellerConversations", fields: [recieverId], references: [id], onDelete: Cascade)
+  sender                  User                      @relation("BuyerConversations", fields: [senderId], references: [id], onDelete: Cascade)
+  messages                Message[]
 
-    // Relations
-    product                 Product                   @relation(fields: [productId], references: [id], onDelete: Cascade)
-    sender                  User                      @relation("BuyerConversations", fields: [senderId], references: [id], onDelete: Cascade)
-    reciever                User                      @relation("SellerConversations", fields: [recieverId], references: [id], onDelete: Cascade)
-    messages                Message[]
-    ConversationParticipant ConversationParticipant[]
-
-    @@unique([senderId, recieverId, productId]) // Ensures one chat per buyer-product pair
-    @@index([productId, createdAt])
-    @@map("conversations")
+  @@unique([senderId, recieverId, productId])
+  @@index([productId, createdAt])
+  @@map("conversations")
 }
 
-// Model for individual messages in a conversation
 model Message {
-    id             String      @id @default(cuid())
-    conversationId String
-    senderId       String // Who sent it (buyer or seller)
-    content        String? // Text content
-    type           MessageType @default(TEXT)
-    fileUrl        String? // For images/videos
-    isRead         Boolean     @default(false)
-    sentAt         DateTime    @default(now())
-    clientId       String?
-    createdAt      DateTime    @default(now())
-    updatedAt      DateTime    @updatedAt
+  id                String              @id @default(cuid())
+  conversationId    String
+  senderId          String
+  content           String?
+  type              MessageType         @default(TEXT)
+  fileUrl           String?
+  isRead            Boolean             @default(false)
+  sentAt            DateTime            @default(now())
+  clientId          String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  MessageAttachment MessageAttachment[]
+  conversation      Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender            User                @relation("UserSentMessages", fields: [senderId], references: [id])
 
-    // Relations
-    conversation      Conversation        @relation(fields: [conversationId], references: [id], onDelete: Cascade)
-    sender            User                @relation("UserSentMessages", fields: [senderId], references: [id])
-    MessageAttachment MessageAttachment[]
-
-    @@index([conversationId, sentAt]) // For efficient fetching of recent messages
-    @@map("messages")
+  @@index([conversationId, sentAt])
+  @@map("messages")
 }
 
 model MessageAttachment {
-    id        String   @id @default(cuid())
-    messageId String
-    url       String
-    type      FileType
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  messageId String
+  url       String
+  type      FileType
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  message   Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
-    message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
-
-    @@index([messageId])
-    @@map("message_attachments")
+  @@index([messageId])
+  @@map("message_attachments")
 }
 
 model ConversationParticipant {
-    id             String    @id @default(cuid())
-    conversationId String
-    userId         String
-    lastReadAt     DateTime?
+  id             String       @id @default(cuid())
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
 
-    user         User         @relation(fields: [userId], references: [id])
-    conversation Conversation @relation(fields: [conversationId], references: [id])
-
-    @@unique([conversationId, userId])
-    @@map("conversation_participants")
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
 }
 
 model Address {
-    id         String      @id @default(cuid())
-    userId     String
-    type       AddressType
-    label      String?
-    line1      String
-    line2      String?
-    city       String
-    state      String
-    country    String      @default("NP")
-    postalCode String
-    phone      String?     @db.VarChar(20)
-    isDefault  Boolean     @default(false)
-    createdAt  DateTime    @default(now())
-    updatedAt  DateTime    @updatedAt
+  id                    String          @id @default(cuid())
+  userId                String
+  type                  AddressType
+  label                 String?
+  line1                 String
+  line2                 String?
+  city                  String
+  state                 String
+  country               String          @default("NP")
+  postalCode            String
+  phone                 String?         @db.VarChar(20)
+  isDefault             Boolean         @default(false)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  user                  User            @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
+  sellerPickupAddresses SellerProfile[] @relation("SellerPickupAddress")
 
-    user                  User            @relation("UserAddresses", fields: [userId], references: [id], onDelete: Cascade)
-    sellerPickupAddresses SellerProfile[] @relation("SellerPickupAddress")
-
-    @@index([userId, type])
-    @@map("addresses")
+  @@index([userId, type])
+  @@map("addresses")
 }
 
 model CategorySpecification {
-    id          String   @id @default(cuid())
-    categoryId  String
-    key         String
-    label       String
-    placeholder String?
-    options     Json?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+  id          String   @id @default(cuid())
+  categoryId  String
+  key         String
+  label       String
+  placeholder String?
+  options     Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
-    category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-    @@unique([categoryId, key])
-    @@map("category_specifications")
+  @@unique([categoryId, key])
+  @@map("category_specifications")
 }
 
 model Category {
-    id          String   @id @default(cuid())
-    name        String   @unique
-    slug        String   @unique
-    description String?
-    parentId    String?
-    isActive    Boolean  @default(true)
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+  id                    String                  @id @default(cuid())
+  name                  String                  @unique
+  slug                  String                  @unique
+  description           String?
+  parentId              String?
+  isActive              Boolean                 @default(true)
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  parent                Category?               @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children              Category[]              @relation("CategoryHierarchy")
+  categoryOffers        CategoryOffer[]
+  categorySpecification CategorySpecification[]
+  products              Product[]
 
-    parent                Category?               @relation("CategoryHierarchy", fields: [parentId], references: [id])
-    children              Category[]              @relation("CategoryHierarchy")
-    products              Product[]
-    categorySpecification CategorySpecification[]
-    // categoryDiscounts     CategoryDiscount[] // Add this line
-    categoryOffers        CategoryOffer[]
-
-    @@index([slug])
-    @@map("categories")
+  @@index([slug])
+  @@map("categories")
 }
 
 model Offer {
-    id          String       @id @default(cuid())
-    title       String
-    description String?
-    type        DiscountType
-    value       Decimal      @db.Money
-    bannerImage String?
-    startDate   DateTime
-    endDate     DateTime
-    isActive    Boolean      @default(true)
-    createdAt   DateTime     @default(now())
-    updatedAt   DateTime     @updatedAt
+  id             String          @id @default(cuid())
+  title          String
+  description    String?
+  type           DiscountType
+  value          Decimal         @db.Money
+  bannerImage    String?
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  categoryOffers CategoryOffer[]
+  Order          Order[]
+  productOffers  ProductOffer[]
 
-    // Relations
-    productOffers  ProductOffer[]
-    categoryOffers CategoryOffer[]
-    Order          Order[]
-
-    @@index([isActive, startDate, endDate])
-    @@map("offers")
+  @@index([isActive, startDate, endDate])
+  @@map("offers")
 }
 
 model ProductOffer {
-    id        String   @id @default(cuid())
-    offerId   String
-    productId String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  offerId   String
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  offer     Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    offer   Offer   @relation(fields: [offerId], references: [id], onDelete: Cascade)
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    @@unique([offerId, productId])
-    @@map("product_offers")
+  @@unique([offerId, productId])
+  @@map("product_offers")
 }
 
 model CategoryOffer {
-    id         String   @id @default(cuid())
-    offerId    String
-    categoryId String
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id         String   @id @default(cuid())
+  offerId    String
+  categoryId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  offer      Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
 
-    offer    Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
-    category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-
-    @@unique([offerId, categoryId])
-    @@map("category_offers")
+  @@unique([offerId, categoryId])
+  @@map("category_offers")
 }
 
 model DeliveryOption {
-    id          String   @id @default(cuid())
-    productId   String
-    title       String
-    description String?
-    isDefault   Boolean  @default(false)
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+  id          String   @id @default(cuid())
+  productId   String
+  title       String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    @@index([productId])
-    @@map("delivery_options")
+  @@index([productId])
+  @@map("delivery_options")
 }
 
 model Warranty {
-    id          String       @id @default(cuid())
-    productId   String
-    type        WarrantyType @default(SELLER)
-    duration    Int?
-    unit        String?
-    description String?
-    createdAt   DateTime     @default(now())
-    updatedAt   DateTime     @updatedAt
+  id          String       @id @default(cuid())
+  productId   String
+  type        WarrantyType @default(SELLER)
+  duration    Int?
+  unit        String?
+  description String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    @@index([productId, type])
-    @@map("warranties")
+  @@index([productId, type])
+  @@map("warranties")
 }
 
 model ReturnPolicy {
-    id         String     @id @default(cuid())
-    productId  String
-    type       ReturnType @default(NO_RETURN)
-    duration   Int?
-    unit       String?
-    conditions String?
-    createdAt  DateTime   @default(now())
-    updatedAt  DateTime   @updatedAt
+  id         String     @id @default(cuid())
+  productId  String
+  type       ReturnType @default(NO_RETURN)
+  duration   Int?
+  unit       String?
+  conditions String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  product    Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    @@index([productId, type])
-    @@map("return_policies")
+  @@index([productId, type])
+  @@map("return_policies")
 }
 
 model Product {
-    id          String        @id @default(cuid())
-    sellerId    String
-    name        String
-    slug        String        @unique
-    description String?
-    status      ProductStatus @default(INACTIVE)
+  id              String                 @id @default(cuid())
+  sellerId        String
+  name            String
+  slug            String                 @unique
+  description     String?
+  status          ProductStatus          @default(INACTIVE)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  categoryId      String?
+  brand           String
+  embedding       Unsupported("vector")?
+  features        String[]
+  Conversation    Conversation[]
+  deliveryOptions DeliveryOption[]
+  images          ProductImage[]
+  productOffers   ProductOffer[]
+  questions       ProductQuestion[]
+  variants        ProductVariant[]
+  category        Category?              @relation(fields: [categoryId], references: [id])
+  seller          User                   @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: Cascade)
+  returnPolicy    ReturnPolicy[]
+  reviews         Review[]
+  warranty        Warranty[]
+  wishlistItems   WishlistItem[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    seller          User                         @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: Cascade)
-    variants        ProductVariant[]
-    images          ProductImage[]
-    reviews         Review[]
-    category        Category?                    @relation(fields: [categoryId], references: [id])
-    categoryId      String?
-    brand           String
-    embedding       Unsupported("vector(3072)")?
-    wishlistItems   WishlistItem[]
-    productOffers   ProductOffer[]
-    deliveryOptions DeliveryOption[]
-    warranty        Warranty[]
-    returnPolicy    ReturnPolicy[]
-    Conversation    Conversation[]
-    questions       ProductQuestion[]
-
-    @@index([slug, sellerId])
-    @@map("products")
+  @@index([slug, sellerId])
+  @@map("products")
 }
 
 model ProductVariant {
-    id         String   @id @default(cuid())
-    productId  String
-    sku        String   @unique
-    price      Decimal  @db.Money //highlighted price
-    mrp        Decimal  @db.Money //cute price
-    stock      Int      @default(0)
-    soldCount  Int      @default(0)
-    attributes Json?
-    isDefault  Boolean  @default(false)
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id              String                 @id @default(cuid())
+  productId       String
+  sku             String                 @unique
+  price           Decimal                @db.Money
+  mrp             Decimal                @db.Money
+  stock           Int                    @default(0)
+  soldCount       Int                    @default(0)
+  attributes      Json?
+  isDefault       Boolean                @default(false)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  cartItems       CartItem[]
+  orderItems      OrderItem[]
+  specifications  ProductSpecification[]
+  product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
+  SellerOrderItem SellerOrderItem[]
 
-    specifications  ProductSpecification[]
-    product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
-    cartItems       CartItem[]
-    orderItems      OrderItem[]
-    SellerOrderItem SellerOrderItem[]
-
-    @@index([sku, price])
-    @@map("product_variants")
+  @@index([sku, price])
+  @@map("product_variants")
 }
 
 model ProductSpecification {
-    id        String   @id @default(cuid())
-    variantId String
-    key       String
-    value     String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String         @id @default(cuid())
+  variantId String
+  key       String
+  value     String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-    variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-    @@unique([variantId, key]) // Ensure no duplicate keys per variant
-    @@index([variantId])
-    @@map("product_specifications")
+  @@unique([variantId, key])
+  @@index([variantId])
+  @@map("product_specifications")
 }
 
-// Modified ProductImage model
 model ProductImage {
-    id        String    @id @default(cuid())
-    variantId String?
-    productId String
-    url       String
-    altText   String?   @default("")
-    sortOrder Int       @default(0)
-    mediaType MediaType @default(PRIMARY)
-    fileType  FileType
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
+  id        String    @id @default(cuid())
+  variantId String?
+  productId String
+  url       String
+  altText   String?   @default("")
+  sortOrder Int       @default(0)
+  mediaType MediaType @default(PRIMARY)
+  fileType  FileType
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    @@map("product_images")
+  @@map("product_images")
 }
 
 model CartItem {
-    id        String   @id @default(cuid())
-    userId    String
-    variantId String
-    quantity  Int      @default(1)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String         @id @default(cuid())
+  userId    String
+  variantId String
+  quantity  Int            @default(1)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  user      User           @relation("UserCartItems", fields: [userId], references: [id], onDelete: Cascade)
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
 
-    user    User           @relation("UserCartItems", fields: [userId], references: [id], onDelete: Cascade)
-    variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-
-    @@unique([userId, variantId])
-    @@index([userId])
-    @@map("cart_items")
+  @@unique([userId, variantId])
+  @@index([userId])
+  @@map("cart_items")
 }
 
 model Order {
-    id               String      @id @default(cuid())
-    orderNumber      String      @unique
-    buyerId          String
-    status           OrderStatus @default(PENDING)
-    shippingSnapshot Json
-    billingSnapshot  Json?
-    subtotal         Decimal     @db.Money
-    tax              Decimal     @default(0) @db.Money
-    shippingFee      Decimal     @default(0) @db.Money
-    discount         Decimal     @default(0) @db.Money
-    total            Decimal     @db.Money
-    createdAt        DateTime    @default(now())
-    updatedAt        DateTime    @updatedAt
-    offerId          String?
+  id               String        @id @default(cuid())
+  orderNumber      String        @unique
+  buyerId          String
+  status           OrderStatus   @default(PENDING)
+  shippingSnapshot Json
+  billingSnapshot  Json?
+  subtotal         Decimal       @db.Money
+  tax              Decimal       @default(0) @db.Money
+  shippingFee      Decimal       @default(0) @db.Money
+  discount         Decimal       @default(0) @db.Money
+  total            Decimal       @db.Money
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  offerId          String?
+  items            OrderItem[]
+  buyer            User          @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade)
+  offer            Offer?        @relation(fields: [offerId], references: [id])
+  payments         Payment[]
+  sellerOrders     SellerOrder[]
+  shipments        Shipment[]
 
-    offer        Offer?        @relation(fields: [offerId], references: [id], onDelete: SetNull)
-    buyer        User          @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: Cascade)
-    items        OrderItem[]
-    payments     Payment[]
-    shipments    Shipment[]
-    // appliedDiscounts AppliedDiscount[] // Add this line
-    // discountUsage    DiscountUsage[]
-    sellerOrders SellerOrder[]
-
-    @@index([buyerId, status])
-    @@index([createdAt])
-    @@map("orders")
+  @@index([buyerId, status])
+  @@index([createdAt])
+  @@map("orders")
 }
 
 model OrderItem {
-    id         String   @id @default(cuid())
-    orderId    String
-    variantId  String
-    quantity   Int
-    unitPrice  Decimal  @db.Money
-    totalPrice Decimal  @db.Money
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id         String         @id @default(cuid())
+  orderId    String
+  variantId  String
+  quantity   Int
+  unitPrice  Decimal        @db.Money
+  totalPrice Decimal        @db.Money
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  order      Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variant    ProductVariant @relation(fields: [variantId], references: [id])
 
-    order   Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
-    variant ProductVariant @relation(fields: [variantId], references: [id])
-
-    @@index([orderId])
-    @@map("order_items")
+  @@index([orderId])
+  @@map("order_items")
 }
 
 model PaymentMethod {
-    id          String            @id @default(cuid())
-    userId      String
-    type        PaymentMethodType
-    provider    String
-    last4       String?
-    expiryMonth Int?
-    expiryYear  Int?
-    upiId       String?
-    isDefault   Boolean           @default(false)
-    createdAt   DateTime          @default(now())
-    updatedAt   DateTime          @updatedAt
+  id          String            @id @default(cuid())
+  userId      String
+  type        PaymentMethodType
+  provider    String
+  last4       String?
+  expiryMonth Int?
+  expiryYear  Int?
+  upiId       String?
+  isDefault   Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation("UserPayments", fields: [userId], references: [id], onDelete: Cascade)
+  Payment     Payment[]
 
-    user    User      @relation("UserPayments", fields: [userId], references: [id], onDelete: Cascade)
-    Payment Payment[]
-
-    @@index([userId, type])
-    @@map("payment_methods")
+  @@index([userId, type])
+  @@map("payment_methods")
 }
 
-// Update your Payment model to include eSewa-specific fields
 model Payment {
-    id            String        @id @default(cuid())
-    orderId       String
-    methodId      String?
-    amount        Decimal       @db.Money
-    currency      String        @default("NPR")
-    status        PaymentStatus @default(PENDING)
-    transactionId String?       @unique @default(cuid())
-    provider      String        @default("ESEWA")
+  id            String         @id @default(cuid())
+  orderId       String
+  methodId      String?
+  amount        Decimal        @db.Money
+  currency      String         @default("NPR")
+  status        PaymentStatus  @default(PENDING)
+  transactionId String?        @unique @default(cuid())
+  provider      String         @default("ESEWA")
+  esewaRefId    String?        @unique
+  productCode   String?
+  signature     String?
+  verifiedAt    DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  method        PaymentMethod? @relation(fields: [methodId], references: [id])
+  order         Order          @relation(fields: [orderId], references: [id])
 
-    // eSewa specific fields
-    esewaRefId  String?   @unique
-    productCode String?
-    signature   String?
-    verifiedAt  DateTime?
-
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-
-    order  Order          @relation(fields: [orderId], references: [id])
-    method PaymentMethod? @relation(fields: [methodId], references: [id])
-
-    @@index([orderId, status])
-    @@index([esewaRefId])
-    @@map("payments")
+  @@index([orderId, status])
+  @@index([esewaRefId])
+  @@map("payments")
 }
 
 model Shipment {
-    id                String         @id @default(cuid())
-    orderId           String
-    trackingNumber    String?        @unique
-    carrier           String?
-    method            ShippingMethod @default(STANDARD)
-    status            ShipmentStatus @default(PENDING)
-    shippedAt         DateTime?
-    deliveredAt       DateTime?
-    estimatedDelivery DateTime?
-    createdAt         DateTime       @default(now())
-    updatedAt         DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  orderId           String
+  trackingNumber    String?        @unique
+  carrier           String?
+  method            ShippingMethod @default(STANDARD)
+  status            ShipmentStatus @default(PENDING)
+  shippedAt         DateTime?
+  deliveredAt       DateTime?
+  estimatedDelivery DateTime?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  order             Order          @relation(fields: [orderId], references: [id])
 
-    order Order @relation(fields: [orderId], references: [id])
-
-    @@index([orderId, status])
-    @@map("shipments")
+  @@index([orderId, status])
+  @@map("shipments")
 }
 
 model Review {
-    id               String       @id @default(cuid())
-    userId           String
-    productId        String
-    rating           Int
-    comment          String?
-    status           ReviewStatus @default(PENDING)
-    isFeatured       Boolean      @default(false) //good reviews seller wants to show at top
-    helpfulCount     Int          @default(0)
-    verifiedPurchase Boolean?     @default(false)
-    orderItemId      String? //to verify wheather reviewer has bought theis product or not or is verified reviewer
-    createdAt        DateTime     @default(now())
-    updatedAt        DateTime     @updatedAt
+  id               String        @id @default(cuid())
+  userId           String
+  productId        String
+  rating           Int
+  comment          String?
+  status           ReviewStatus  @default(PENDING)
+  isFeatured       Boolean       @default(false)
+  helpfulCount     Int           @default(0)
+  verifiedPurchase Boolean?      @default(false)
+  orderItemId      String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  media            ReviewMedia[]
+  votes            ReviewVote[]
+  product          Product       @relation(fields: [productId], references: [id])
+  user             User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-    product Product @relation(fields: [productId], references: [id])
-
-    media ReviewMedia[]
-    votes ReviewVote[]
-
-    @@unique([userId, productId])
-    @@index([productId, rating])
-    @@map("reviews")
+  @@unique([userId, productId])
+  @@index([productId, rating])
+  @@map("reviews")
 }
 
 model ReviewVote {
-    id        String   @id @default(cuid())
-    reviewId  String
-    userId    String
-    vote      Boolean
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  reviewId  String
+  userId    String
+  vote      Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@unique([reviewId, userId])
-    @@map("review_votes")
+  @@unique([reviewId, userId])
+  @@map("review_votes")
 }
 
 model ReviewMedia {
-    id        String   @id @default(cuid())
-    reviewId  String
-    type      FileType
-    url       String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  reviewId  String
+  type      FileType
+  url       String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
-    review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
-
-    @@map("review_medias")
+  @@map("review_medias")
 }
 
 model Wishlist {
-    id        String   @id @default(cuid())
-    userId    String
-    name      String   @default("My Wishlist")
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String         @id @default(cuid())
+  userId    String
+  name      String         @default("My Wishlist")
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  items     WishlistItem[]
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-    items WishlistItem[]
-
-    @@index([userId])
-    @@map("wishlists")
+  @@index([userId])
+  @@map("wishlists")
 }
 
 model WishlistItem {
-    id         String   @id @default(cuid())
-    wishlistId String
-    productId  String
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id         String   @id @default(cuid())
+  wishlistId String
+  productId  String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
 
-    wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
-    product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-
-    @@unique([wishlistId, productId])
-    @@map("wishlist_items")
+  @@unique([wishlistId, productId])
+  @@map("wishlist_items")
 }
 
 model SellerOrder {
-    id           String      @id @default(cuid())
-    sellerId     String
-    buyerOrderId String
-    status       OrderStatus @default(PENDING)
-    subtotal     Decimal     @db.Money
-    tax          Decimal     @default(0) @db.Money
-    shippingFee  Decimal     @default(0) @db.Money
-    commission   Decimal     @default(0) @db.Money
-    total        Decimal     @db.Money
-    createdAt    DateTime    @default(now())
-    updatedAt    DateTime    @updatedAt
+  id           String            @id @default(cuid())
+  sellerId     String
+  buyerOrderId String
+  status       OrderStatus       @default(PENDING)
+  subtotal     Decimal           @db.Money
+  tax          Decimal           @default(0) @db.Money
+  shippingFee  Decimal           @default(0) @db.Money
+  commission   Decimal           @default(0) @db.Money
+  total        Decimal           @db.Money
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  items        SellerOrderItem[]
+  order        Order             @relation(fields: [buyerOrderId], references: [id], onDelete: Cascade)
+  seller       User              @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
 
-    // Relations
-    seller User              @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
-    items  SellerOrderItem[]
-    order  Order             @relation(fields: [buyerOrderId], references: [id], onDelete: Cascade) // ✅ Add this line
-
-    @@index([sellerId, status])
-    @@map("seller_orders")
+  @@index([sellerId, status])
+  @@map("seller_orders")
 }
 
 model SellerOrderItem {
-    id            String   @id @default(cuid())
-    sellerOrderId String
-    variantId     String
-    quantity      Int
-    unitPrice     Decimal  @db.Money
-    totalPrice    Decimal  @db.Money
-    commission    Decimal  @db.Money
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
+  id            String         @id @default(cuid())
+  sellerOrderId String
+  variantId     String
+  quantity      Int
+  unitPrice     Decimal        @db.Money
+  totalPrice    Decimal        @db.Money
+  commission    Decimal        @db.Money
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  sellerOrder   SellerOrder    @relation(fields: [sellerOrderId], references: [id], onDelete: Cascade)
+  variant       ProductVariant @relation(fields: [variantId], references: [id])
 
-    sellerOrder SellerOrder    @relation(fields: [sellerOrderId], references: [id], onDelete: Cascade)
-    variant     ProductVariant @relation(fields: [variantId], references: [id])
-
-    @@map("seller_order_items")
+  @@map("seller_order_items")
 }
 
 model Payout {
-    id           String        @id @default(cuid())
-    sellerId     String
-    amount       Decimal       @db.Money
-    currency     String        @default("USD")
-    status       PaymentStatus @default(PENDING)
-    scheduledFor DateTime
-    processedAt  DateTime?
-    createdAt    DateTime      @default(now())
-    updatedAt    DateTime      @updatedAt
+  id           String        @id @default(cuid())
+  sellerId     String
+  amount       Decimal       @db.Money
+  currency     String        @default("USD")
+  status       PaymentStatus @default(PENDING)
+  scheduledFor DateTime
+  processedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  seller       User          @relation("SellerPayouts", fields: [sellerId], references: [id], onDelete: Cascade)
 
-    seller User @relation("SellerPayouts", fields: [sellerId], references: [id], onDelete: Cascade)
-
-    @@index([sellerId, status])
-    @@map("payouts")
+  @@index([sellerId, status])
+  @@map("payouts")
 }
 
 model ProductQuestion {
-    id        String   @id @default(cuid())
-    productId String
-    userId    String
-    content   String
-    isPublic  Boolean  @default(true)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String          @id @default(cuid())
+  productId String
+  userId    String
+  content   String
+  isPublic  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  answers   ProductAnswer[]
+  product   Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-    user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    answers ProductAnswer[]
-
-    @@index([productId])
-    @@map("product_questions")
+  @@index([productId])
+  @@map("product_questions")
 }
 
 model ProductAnswer {
-    id         String   @id @default(cuid())
-    questionId String
-    sellerId   String
-    content    String
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+  id         String          @id @default(cuid())
+  questionId String
+  sellerId   String
+  content    String
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+  question   ProductQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  seller     User            @relation("SellerAnswers", fields: [sellerId], references: [id], onDelete: Cascade)
 
-    question ProductQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-    seller   User            @relation("SellerAnswers", fields: [sellerId], references: [id], onDelete: Cascade)
+  @@index([questionId])
+  @@map("product_answers")
+}
 
-    @@index([questionId])
-    @@map("product_answers")
+enum Role {
+  BUYER
+  SELLER
+  ADMIN
+}
+
+enum AddressType {
+  SHIPPING
+  BILLING
+  BUSINESS
+  WAREHOUSE
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  SYSTEM
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum PaymentMethodType {
+  CREDIT_CARD
+  DEBIT_CARD
+  UPI
+  NET_BANKING
+  WALLET
+  CASH_ON_DELIVERY
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
+
+enum ShipmentStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RETURNED
+  LOST
+}
+
+enum ShippingMethod {
+  STANDARD
+  EXPRESS
+  OVERNIGHT
+  SAME_DAY
+}
+
+enum MediaType {
+  PRIMARY
+  PROMOTIONAL
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  BUY_X_GET_Y
+  FREE_SHIPPING
+}
+
+enum DiscountScope {
+  PRODUCT
+  CATEGORY
+  CART
+  SHIPPING
+  USER_SPECIFIC
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+  USED_UP
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHERS
+  NOT_TO_SAY
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum FileType {
+  IMAGE
+  VIDEO
+}
+
+enum WarrantyType {
+  MANUFACTURER
+  SELLER
+  NO_WARRANTY
+}
+
+enum ReturnType {
+  NO_RETURN
+  REPLACEMENT
+  REFUND
+  REPLACEMENT_OR_REFUND
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
 }

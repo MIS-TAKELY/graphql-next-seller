@@ -40,6 +40,7 @@ import { shipmentTypeDefs } from "./modules/shipment/shipment.typeDefs";
 import { sellerProfileResolvers } from "./modules/sellerProfile/sellerProfile.resolvers";
 import { sellerProfileTypeDefs } from "./modules/sellerProfile/sellerProfile.typeDefs";
 import { userTypeDefs } from "./modules/user/user.typeDefs";
+import { userResolvers } from "./modules/user/user.resolvers";
 import { warrentyTypeDefs } from "./modules/warrenty/warrenty.typeDefs";
 import { wishlistTypeDefs } from "./modules/wishlist/wishlist.typeDefs";
 import { wishlistItemTypeDefs } from "./modules/wishlistItem/wishlistItem.typeDefs";
@@ -101,6 +102,7 @@ const resolvers = mergeResolvers([
   analyticsResolvers,
   customerResolvers,
   sellerProfileResolvers,
+  userResolvers,
 ]);
 
 export const schema = makeExecutableSchema({ typeDefs, resolvers });

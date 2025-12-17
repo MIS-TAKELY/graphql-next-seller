@@ -68,6 +68,7 @@ export function useSellerFAQ(productId: string) {
         setQuestions((prev) =>
             prev.map((q) => {
                 if (q.id === payload.questionId) {
+                    if (q.answers.some(a => a.id === payload.id)) return q;
                     return {
                         ...q,
                         answers: [
@@ -103,7 +104,27 @@ export function useSellerFAQ(productId: string) {
 
     const submitAnswer = async (questionId: string, content: string) => {
         try {
-            await replyToQuestion(questionId, content);
+            const answer = await replyToQuestion(questionId, content);
+
+            setQuestions((prev) =>
+                prev.map((q) => {
+                    if (q.id === questionId) {
+                        return {
+                            ...q,
+                            answers: [
+                                ...q.answers,
+                                {
+                                    id: answer.id,
+                                    content: answer.content,
+                                    createdAt: new Date(answer.createdAt),
+                                    seller: { shopName: (answer as any).seller?.sellerProfile?.shopName || "You" },
+                                },
+                            ],
+                        };
+                    }
+                    return q;
+                })
+            );
             toast.success("Answer sent");
         } catch (error) {
             console.error(error);

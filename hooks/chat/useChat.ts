@@ -10,7 +10,9 @@ import {
   FetchPolicy,
   useLazyQuery,
   useMutation,
+  useQuery,
 } from "@apollo/client";
+import { GET_ME } from "@/client/user/user.query";
 import { useRealtime } from "@upstash/realtime/client";
 import { useAuth } from "@clerk/nextjs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -111,6 +113,12 @@ export const useSellerChat = (conversationId?: string | null) => {
     }
   }, [conversationId]);
 
+  /* 1. Fetch Current User DB ID for correct 'isMe' check */
+  const { data: userData } = useQuery(GET_ME, {
+    fetchPolicy: "cache-first", // user 'me' doesn't change often
+  });
+  const currentDbId = userData?.me?.id;
+
   const normalizeServerMessage = useCallback(
     (msg: MessageInput): LocalMessage => {
       const attachments: MessageAttachment[] | undefined = msg.attachments?.length
@@ -135,17 +143,13 @@ export const useSellerChat = (conversationId?: string | null) => {
           ]
           : undefined;
 
-      const isSeller = Array.isArray(msg.sender?.roles)
-        ? msg.sender!.roles!.some((r: any) => r.role === "SELLER")
-        : false;
-
-      // Debug logging
-      console.log("Message sender detection:", {
-        messageId: msg.id,
-        roles: msg.sender?.roles,
-        isSeller,
-        determinedSender: isSeller ? "seller" : "buyer"
-      });
+      // Robust sender check using Database ID
+      // If we don't have currentDbId yet (loading), we might fallback or default to false
+      // but usually 'me' query is fast.
+      const isMe =
+        (currentDbId && (msg.sender?.id === currentDbId || (msg as any).senderId === currentDbId)) ||
+        (msg.sender?.id && msg.sender.id === clerkId) || // Fallback if backend used clerkId (unlikely)
+        (msg as any).senderId === clerkId;
 
       // Logic to resolve timestamp from various possible keys
       const rawDate =
@@ -160,13 +164,13 @@ export const useSellerChat = (conversationId?: string | null) => {
         id: msg.id || crypto.randomUUID(),
         clientId: msg.clientId ?? undefined,
         text: msg.content || "",
-        sender: isSeller ? "seller" : "buyer",
+        sender: isMe ? "seller" : "buyer",
         timestamp,
         status: "sent" as const,
         attachments,
       };
     },
-    []
+    [clerkId, currentDbId]
   );
 
   const upsertServerMessage = useCallback((incoming: LocalMessage) => {
@@ -285,22 +289,7 @@ export const useSellerChat = (conversationId?: string | null) => {
     loadMessages(false);
   }, [loadMessages]);
 
-  useEffect(() => {
-    if (!conversationId) return;
-
-    const interval = setInterval(() => {
-      loadMessages(true);
-    }, 10000);
-
-    return () => clearInterval(interval);
-  }, [conversationId, loadMessages]);
-
-  const refetchMessages = useCallback(
-    async (silent: boolean = false) => {
-      await loadMessages(silent);
-    },
-    [loadMessages]
-  );
+  /* Polling removed in favor of Realtime */
 
   const [sendMessageMutation] = useMutation(SEND_MESSAGE, {
     onError: (error) => {
@@ -412,38 +401,35 @@ export const useSellerChat = (conversationId?: string | null) => {
     ]
   );
 
-  const handleRealtimeNewMessage = useCallback(
-    (payload: NewMessagePayload) => {
+  // Unified Realtime Subscription
+  useRealtime({
+    channels: [
+      conversationId ? `conversation:${conversationId}` : undefined,
+      clerkId ? `user:${clerkId}` : undefined
+    ].filter(Boolean) as string[],
+    event: "message.newMessage",
+    onData: (payload: any) => {
+      console.log("[Seller Chat] 📨 New realtime message received:", payload);
+      console.log("[Seller Chat] 🔍 Current Conversation ID:", conversationId);
+      console.log("[Seller Chat] 👤 Current User ID:", clerkId);
+
       if (!payload) return;
 
-      // Force cast payload to RealtimeMessageInput to satisfy the generic MessageInput union
-      // This is safe assuming your realtime payload contains the necessary fields used in normalizeServerMessage
-      const normalized = normalizeServerMessage(payload as unknown as RealtimeMessageInput);
-      upsertServerMessage(normalized);
+      // Prevent cross-talk: Only accept messages for the current conversation if viewing one
+      if (conversationId && payload.conversationId && payload.conversationId !== conversationId) {
+        console.log("[Seller Chat] ⚠️ Message belongs to another conversation. Ignored.", payload.conversationId);
+        return;
+      }
+
+      try {
+        // Force cast payload to RealtimeMessageInput to satisfy the generic MessageInput union
+        const normalized = normalizeServerMessage(payload as unknown as RealtimeMessageInput);
+        console.log("[Seller Chat] Normalized message:", normalized);
+        upsertServerMessage(normalized);
+      } catch (err) {
+        console.error("[Seller Chat] Error processing message:", err);
+      }
     },
-    [normalizeServerMessage, upsertServerMessage]
-  );
-
-  const events = useMemo(
-    () => ({
-      message: {
-        newMessage: handleRealtimeNewMessage,
-      },
-    }),
-    [handleRealtimeNewMessage]
-  );
-
-  // Subscribe to conversation-level channel
-  // useRealtime types don't match the actual runtime API perfectly in some versions
-  (useRealtime as any)({
-    channel: conversationId ? `conversation:${conversationId}` : undefined,
-    events,
-  });
-
-  // Subscribe to user-level channel for seller to receive messages even when not in a specific conversation
-  (useRealtime as any)({
-    channel: clerkId ? `user:${clerkId}` : undefined,
-    events,
   });
 
   return {
@@ -451,6 +437,5 @@ export const useSellerChat = (conversationId?: string | null) => {
     handleSend,
     isLoading,
     error,
-    refetchMessages,
   };
 };

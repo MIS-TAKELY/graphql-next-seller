@@ -16,6 +16,18 @@ export async function replyToQuestion(questionId: string, content: string) {
 
     if (!user || !user.sellerProfile) throw new Error("Not a seller");
 
+    // Verify ownership
+    // @ts-ignore
+    const question = await prisma.productQuestion.findUnique({
+        where: { id: questionId },
+        include: { product: true }
+    });
+
+    // @ts-ignore
+    if (!question || question.product.sellerId !== user.id) {
+        throw new Error("Unauthorized to reply to this question");
+    }
+
     // @ts-ignore
     const answer = await prisma.productAnswer.create({
         data: {
@@ -24,10 +36,16 @@ export async function replyToQuestion(questionId: string, content: string) {
             content,
         },
         include: {
-            question: true
+            question: true,
+            seller: {
+                include: {
+                    sellerProfile: true
+                }
+            }
         }
     });
 
+    // @ts-ignore
     await realtime.channel(`product:${answer.question.productId}:faq`).emit("faq.newAnswer", {
         id: answer.id,
         questionId: answer.questionId,
@@ -50,6 +68,41 @@ export async function getQuestionsForProduct(productId: string) {
                 select: { firstName: true, lastName: true }
             },
             answers: true
+        },
+        orderBy: { createdAt: "desc" }
+    });
+}
+
+export async function getSellerQuestions() {
+    const { userId: clerkId } = await auth();
+    if (!clerkId) throw new Error("Unauthorized");
+
+    const user = await prisma.user.findUnique({
+        where: { clerkId },
+        include: { sellerProfile: true }
+    });
+
+    if (!user || !user.sellerProfile) throw new Error("Not a seller");
+
+    // @ts-ignore
+    return await prisma.productQuestion.findMany({
+        where: {
+            product: {
+                sellerId: user.id
+            }
+        },
+        include: {
+            product: {
+                select: { name: true, images: true }
+            },
+            user: {
+                select: { firstName: true, lastName: true }
+            },
+            answers: {
+                include: {
+                    seller: { include: { sellerProfile: true } }
+                }
+            }
         },
         orderBy: { createdAt: "desc" }
     });

@@ -101,7 +101,7 @@ export const conversationResolvers = {
 
       const conversations = await prisma.conversation.findMany({
         where: {
-          recieverId: user.id,
+          OR: [{ recieverId: user.id }, { senderId: user.id }],
           isActive: true,
         },
         include: {

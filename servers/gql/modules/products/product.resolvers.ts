@@ -6,6 +6,10 @@ import { delCache, getCache, setCache } from "@/services/redis.services";
 import { requireAuth, requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
+// Product cache version - increment when product data structure changes
+const PRODUCT_CACHE_VERSION = 'v2';
+const getProductCacheKey = (slug: string) => `product:details:${PRODUCT_CACHE_VERSION}:${slug}`;
+
 export const productResolvers = {
   Query: {
     getProducts: async (_: any, __: any, ctx: GraphQLContext) => {
@@ -131,7 +135,7 @@ export const productResolvers = {
       if (!slug) throw new Error("Product slug is required");
 
       try {
-        const cacheKey = `product:details:${slug}`;
+        const cacheKey = getProductCacheKey(slug);
 
         // Try cache first
         const cached = await getCache(cacheKey);
@@ -421,7 +425,7 @@ export const productResolvers = {
 
         // 5. Cleanup Cache
         await Promise.all([
-          delCache(`product:details:${slug}`), // Invalidate detail cache for buyer
+          delCache(getProductCacheKey(slug)), // Invalidate detail cache for buyer
           delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
@@ -612,7 +616,7 @@ export const productResolvers = {
         // Cache Invalidation
         await Promise.all([
           delCache(`product:${input.id}`), // Used by list query individual cache
-          delCache(`product:details:${existingProduct.slug}`), // New details cache
+          delCache(getProductCacheKey(existingProduct.slug)), // Invalidate versioned details cache
           delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
@@ -662,7 +666,7 @@ export const productResolvers = {
 
         await Promise.all([
           delCache(`product:${productId}`),
-          delCache(`product:details:${product.slug}`),
+          delCache(getProductCacheKey(product.slug)),
           delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
         ]);

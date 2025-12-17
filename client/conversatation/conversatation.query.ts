@@ -10,6 +10,14 @@ export const GET_CONVERSATIONS = gql`
         firstName
         lastName
         email
+        avatarImageUrl
+      }
+      sender {
+        id
+        firstName
+        lastName
+        email
+        avatarImageUrl
       }
       product {
         id

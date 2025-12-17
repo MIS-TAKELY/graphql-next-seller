@@ -216,13 +216,15 @@ export const messageResolvers = {
       };
 
       const channel = `conversation:${conversationId}`;
-      try {
-        await realtime
-          .channel(channel)
-          .emit("message.newMessage", realtimePayload);
-      } catch (error) {
-        console.error("Failed to publish to Upstash Realtime:", error);
-      }
+
+      console.log("chennals-->",channel)
+
+      realtime
+        .channel(channel)
+        .emit("message.newMessage", realtimePayload)
+        .catch((error) => {
+          console.error("Failed to publish to Upstash Realtime:", error);
+        });
 
       const participantClerkIds = new Set<string>();
       if (conversation.sender?.clerkId) {
@@ -238,16 +240,15 @@ export const messageResolvers = {
 
       for (const clerkId of participantClerkIds) {
         if (!clerkId || clerkId === user.clerkId) continue;
-        try {
-          await realtime
-            .channel(`user:${clerkId}`)
-            .emit("message.newMessage", realtimePayload);
-        } catch (error) {
-          console.error(
-            "Failed to publish user-level message notification:",
-            error
-          );
-        }
+        realtime
+          .channel(`user:${clerkId}`)
+          .emit("message.newMessage", realtimePayload)
+          .catch((error) => {
+            console.error(
+              "Failed to publish user-level message notification:",
+              error
+            );
+          });
       }
 
       // Send push notification to receiver
@@ -263,20 +264,19 @@ export const messageResolvers = {
 
       if (receiverId && receiverClerkId) {
         const senderName =
-          `${result.sender?.firstName || ""} ${result.sender?.lastName || ""
-            }`.trim() || "A seller";
+          `${result.sender?.firstName || ""} ${
+            result.sender?.lastName || ""
+          }`.trim() || "A seller";
 
-        try {
-          await createAndPushNotification({
-            userId: receiverId,
-            recieverClerkId: receiverClerkId,
-            title: "New Message",
-            body: `${senderName} sent you a message`,
-            type: "NEW_MESSAGE",
-          });
-        } catch (error) {
+        createAndPushNotification({
+          userId: receiverId,
+          recieverClerkId: receiverClerkId,
+          title: "New Message",
+          body: `${senderName} sent you a message`,
+          type: "NEW_MESSAGE",
+        }).catch((error) => {
           console.error("Failed to send push notification:", error);
-        }
+        });
       }
 
       await prisma.conversationParticipant.updateMany({

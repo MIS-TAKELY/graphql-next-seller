@@ -1,6 +1,6 @@
 // lib/notifications.ts
 import { prisma } from "@/lib/db/prisma";
-import { realtime } from "@/lib/realtime";
+import { realtime } from "./realtime";
 
 type NotificationType = "NEW_MESSAGE" | "NEW_ORDER" | "ORDER_STATUS" | "SYSTEM";
 
@@ -45,7 +45,6 @@ export async function createAndPushNotification({
                 title,
                 body,
                 type,
-                data: null,
                 createdAt: notification.createdAt.toISOString(),
                 isRead: false,
             });

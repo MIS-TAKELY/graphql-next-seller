@@ -5,6 +5,7 @@ import { useQuery } from "@apollo/client";
 import { useAuth } from "@clerk/nextjs";
 import { useSearchParams } from "next/navigation";
 import MessagesSection from "./MessagesSection";
+import { useConversationRealtime } from "@/hooks/chat/useConversationRealtime";
 
 export default function MessagesClient() {
   const { userId, isLoaded } = useAuth();
@@ -15,7 +16,11 @@ export default function MessagesClient() {
     variables: { recieverId: userId },
     skip: !isLoaded || !userId,
     fetchPolicy: "cache-and-network",
-    pollInterval: 10000, // Poll every 10 seconds for new messages
+  });
+
+  // Listen for real-time updates to refresh the conversation list
+  useConversationRealtime(() => {
+    refetch();
   });
 
   if (!isLoaded) {

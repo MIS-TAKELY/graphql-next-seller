@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useAuth } from "@clerk/nextjs";
@@ -39,9 +39,9 @@ export const RealtimeNotifications = () => {
       const formattedTotal =
         typeof payload.total === "number"
           ? payload.total.toLocaleString(undefined, {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })
           : null;
       toast.success("New order received", {
         description:
@@ -89,9 +89,9 @@ export const RealtimeNotifications = () => {
 
       let action:
         | {
-            label: string;
-            onClick: () => void;
-          }
+          label: string;
+          onClick: () => void;
+        }
         | undefined;
 
       if (conversationId) {
@@ -135,10 +135,12 @@ export const RealtimeNotifications = () => {
     ]
   );
 
+  // Subscribe to user channel with safety wrapper - MOVED TO TOP LEVEL
+  // Note: useRealtime handles its own lifecycle.
+
   (useRealtime as any)({
-    channel: userId ? `user:${userId}` : undefined,
+    channel: (isLoaded && userId) ? `user:${userId}` : undefined,
     events,
-    disabled: !isLoaded || !userId,
   });
 
   return null;
