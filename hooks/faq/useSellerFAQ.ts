@@ -1,137 +1,183 @@
 "use client";
 
-import { getQuestionsForProduct, replyToQuestion } from "@/app/actions/faq";
+import { useMutation, useQuery, useApolloClient } from "@apollo/client";
+import { GET_PRODUCT_QUESTIONS, REPLY_TO_QUESTION } from "@/client/faq/faq.queries";
 import { NewAnswerPayload, NewQuestionPayload } from "@/lib/realtime";
 import { useRealtime } from "@upstash/realtime/client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
 
-export interface SellerAnswer {
-    id: string;
-    content: string;
-    createdAt: Date;
-    seller: { shopName: string };
-}
-export interface SellerQuestion {
-    id: string;
-    content: string;
-    createdAt: Date;
-    user: { firstName: string | null; lastName: string | null };
-    answers: SellerAnswer[];
-}
-
 export function useSellerFAQ(productId: string) {
-    const [questions, setQuestions] = useState<SellerQuestion[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const client = useApolloClient();
 
-    useEffect(() => {
-        getQuestionsForProduct(productId)
-            .then((data: any) => {
-                setQuestions(
-                    data.map((q: any) => ({
-                        ...q,
-                        createdAt: new Date(q.createdAt),
-                        answers: q.answers.map((a: any) => ({
-                            ...a,
-                            createdAt: new Date(a.createdAt),
-                            seller: { shopName: "You" }, // Simplified
-                        })),
-                    }))
-                );
-            })
-            .catch((err) => {
-                console.error(err);
-                toast.error("Failed to fetch questions");
-            })
-            .finally(() => setIsLoading(false));
-    }, [productId]);
-
-    const handleNewQuestion = useCallback(
-        (payload: NewQuestionPayload) => {
-            if (payload.productId !== productId) return;
-            setQuestions((prev) => [
-                {
-                    id: payload.id,
-                    content: payload.content,
-                    createdAt: new Date(payload.createdAt),
-                    user: payload.user as any,
-                    answers: [],
-                },
-                ...prev,
-            ]);
-            toast.info("New question received!");
-        },
-        [productId]
-    );
-
-    const handleNewAnswer = useCallback((payload: NewAnswerPayload) => {
-        setQuestions((prev) =>
-            prev.map((q) => {
-                if (q.id === payload.questionId) {
-                    if (q.answers.some(a => a.id === payload.id)) return q;
-                    return {
-                        ...q,
-                        answers: [
-                            ...q.answers,
-                            {
-                                id: payload.id,
-                                content: payload.content,
-                                createdAt: new Date(payload.createdAt),
-                                seller: { shopName: payload.seller.shopName },
-                            },
-                        ],
-                    };
-                }
-                return q;
-            })
-        );
-    }, []);
-
-    const events = useMemo(
-        () => ({
-            faq: {
-                newQuestion: handleNewQuestion,
-                newAnswer: handleNewAnswer,
-            },
-        }),
-        [handleNewQuestion, handleNewAnswer]
-    );
-
-    (useRealtime as any)({
-        channel: `product:${productId}:faq`,
-        events,
+    const { data, loading: isLoading } = useQuery(GET_PRODUCT_QUESTIONS, {
+        variables: { productId },
+        skip: !productId,
+        fetchPolicy: "cache-and-network"
     });
 
-    const submitAnswer = async (questionId: string, content: string) => {
-        try {
-            const answer = await replyToQuestion(questionId, content);
+    const [replyToQuestionMutation] = useMutation(REPLY_TO_QUESTION);
 
-            setQuestions((prev) =>
-                prev.map((q) => {
-                    if (q.id === questionId) {
+    // Realtime Handlers
+    const handleNewQuestion = useCallback((payload: NewQuestionPayload) => {
+        if (payload.productId !== productId) return;
+
+        try {
+            const queryData = client.readQuery<any>({
+                query: GET_PRODUCT_QUESTIONS,
+                variables: { productId }
+            });
+
+            if (queryData?.getProductQuestions) {
+                // Check dup
+                if (queryData.getProductQuestions.some((q: any) => q.id === payload.id)) return;
+
+                client.writeQuery({
+                    query: GET_PRODUCT_QUESTIONS,
+                    variables: { productId },
+                    data: {
+                        getProductQuestions: [
+                            {
+                                id: payload.id,
+                                productId: payload.productId,
+                                content: payload.content,
+                                createdAt: payload.createdAt,
+                                user: {
+                                    firstName: payload.user.firstName,
+                                    lastName: payload.user.lastName,
+                                    __typename: "User"
+                                },
+                                answers: [],
+                                __typename: "ProductQuestion"
+                            },
+                            ...queryData.getProductQuestions
+                        ]
+                    }
+                });
+                toast.info("New question received!");
+            }
+        } catch (error) {
+            console.error(error);
+        }
+    }, [client, productId]);
+
+    const handleNewAnswer = useCallback((payload: NewAnswerPayload) => {
+        // Update cache when real-time answer comes (e.g. from another tab or mobile)
+        try {
+            const queryData = client.readQuery<any>({
+                query: GET_PRODUCT_QUESTIONS,
+                variables: { productId }
+            });
+
+            if (queryData?.getProductQuestions) {
+                const updatedQuestions = queryData.getProductQuestions.map((q: any) => {
+                    if (q.id === payload.questionId) {
+                        if (q.answers.some((a: any) => a.id === payload.id)) return q;
                         return {
                             ...q,
                             answers: [
                                 ...q.answers,
                                 {
-                                    id: answer.id,
-                                    content: answer.content,
-                                    createdAt: new Date(answer.createdAt),
-                                    seller: { shopName: (answer as any).seller?.sellerProfile?.shopName || "You" },
-                                },
-                            ],
+                                    id: payload.id,
+                                    content: payload.content,
+                                    createdAt: payload.createdAt,
+                                    seller: {
+                                        sellerProfile: {
+                                            shopName: payload.seller.shopName,
+                                            __typename: "SellerProfile"
+                                        },
+                                        __typename: "User"
+                                    },
+                                    __typename: "ProductAnswer"
+                                }
+                            ]
                         };
                     }
                     return q;
-                })
-            );
+                });
+
+                client.writeQuery({
+                    query: GET_PRODUCT_QUESTIONS,
+                    variables: { productId },
+                    data: {
+                        getProductQuestions: updatedQuestions
+                    }
+                });
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }, [client, productId]);
+
+    useRealtime({
+        channels: [`product:${productId}:faq`],
+        event: "faq.newQuestion",
+        onData: handleNewQuestion,
+    });
+
+    useRealtime({
+        channels: [`product:${productId}:faq`],
+        event: "faq.newAnswer",
+        onData: handleNewAnswer,
+    });
+
+    const submitAnswer = async (questionId: string, content: string) => {
+        try {
+            await replyToQuestionMutation({
+                variables: { questionId, content },
+                optimisticResponse: {
+                    replyToQuestion: {
+                        id: `temp-${Date.now()}`,
+                        questionId,
+                        content,
+                        createdAt: new Date().toISOString(),
+                        seller: {
+                            sellerProfile: {
+                                shopName: "You",
+                                __typename: "SellerProfile"
+                            },
+                            __typename: "User"
+                        },
+                        __typename: "ProductAnswer"
+                    }
+                },
+                update: (cache, { data: { replyToQuestion } }) => {
+                    const existingData = cache.readQuery<any>({
+                        query: GET_PRODUCT_QUESTIONS,
+                        variables: { productId }
+                    });
+
+                    if (existingData?.getProductQuestions) {
+                        const updatedQuestions = existingData.getProductQuestions.map((q: any) => {
+                            if (q.id === questionId) {
+                                return {
+                                    ...q,
+                                    answers: [...q.answers, replyToQuestion]
+                                };
+                            }
+                            return q;
+                        });
+
+                        cache.writeQuery({
+                            query: GET_PRODUCT_QUESTIONS,
+                            variables: { productId },
+                            data: {
+                                getProductQuestions: updatedQuestions
+                            }
+                        });
+                    }
+                }
+            });
             toast.success("Answer sent");
         } catch (error) {
             console.error(error);
             toast.error("Failed to send answer");
-            throw error;
         }
     };
 
-    return { questions, isLoading, submitAnswer };
+    return {
+        questions: data?.getProductQuestions || [],
+        isLoading,
+        submitAnswer
+    };
 }

@@ -18,6 +18,8 @@ import { analyticsTypeDefs } from "./modules/analytics/analytics.typeDefs";
 import { dashboardResolvers } from "./modules/dashboard/dashboard.resolvers";
 import { dashboardTypeDefs } from "./modules/dashboard/dashboard.typeDefs";
 import { deliveryTypedefs } from "./modules/delivery/delivery.typeDefs";
+import { faqResolvers } from "./modules/faq/faq.resolvers";
+import { faqTypeDefs } from "./modules/faq/faq.typeDefs";
 import { messageResolvers } from "./modules/message/message.resolvers";
 import { messageTypedefs } from "./modules/message/message.typeDefs";
 import { offerTypeDefs } from "./modules/offer/offer.typedefs";
@@ -87,11 +89,13 @@ const typeDefs = mergeTypeDefs([
   dashboardTypeDefs,
   analyticsTypeDefs,
   customerTypeDefs,
+  faqTypeDefs,
   sellerProfileTypeDefs,
 ]);
 
 const resolvers = mergeResolvers([
   addressResolvers,
+  faqResolvers,
   productResolvers,
   categoryResolvers,
   categorySpecificationResolvers,
