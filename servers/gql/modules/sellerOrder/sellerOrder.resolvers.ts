@@ -551,5 +551,297 @@ export const sellerOrderResolver = {
         });
       }
     },
+
+    bulkUpdateSellerOrderStatus: async (
+      _: unknown,
+      { sellerOrderIds, status }: { sellerOrderIds: string[]; status: string },
+      context: ResolverContext
+    ) => {
+      requireSeller(context);
+      const prisma = context.prisma;
+      const sellerId = context.user?.id;
+
+      const validStatuses = [
+        "PENDING",
+        "CONFIRMED",
+        "PROCESSING",
+        "SHIPPED",
+        "DELIVERED",
+        "CANCELLED",
+        "RETURNED",
+      ];
+
+      if (!validStatuses.includes(status)) {
+        throw new ApolloError({
+          errorMessage: `Invalid status: ${status}`,
+          extraInfo: { code: "INVALID_INPUT" },
+        });
+      }
+
+      const sellerOrders = await prisma.sellerOrder.findMany({
+        where: {
+          id: { in: sellerOrderIds },
+          sellerId,
+        },
+        include: {
+          seller: true,
+          order: {
+            include: {
+              buyer: { select: { id: true, clerkId: true } },
+              sellerOrders: true,
+            },
+          },
+        },
+      });
+
+      if (sellerOrders.length !== sellerOrderIds.length) {
+        throw new ApolloError({
+          errorMessage: "One or more orders not found or unauthorized",
+          extraInfo: { code: "NOT_FOUND" },
+        });
+      }
+
+      const validTransitions: Record<SellerOrderStatus, string[]> = {
+        PENDING: ["CONFIRMED", "CANCELLED"],
+        CONFIRMED: ["PROCESSING", "CANCELLED"],
+        PROCESSING: ["SHIPPED", "CANCELLED"],
+        SHIPPED: ["DELIVERED", "RETURNED"],
+        DELIVERED: ["RETURNED"],
+        CANCELLED: [],
+        RETURNED: [],
+      };
+
+      for (const so of sellerOrders) {
+        const currentStatus = so.status as SellerOrderStatus;
+        if (!validTransitions[currentStatus]?.includes(status)) {
+          throw new ApolloError({
+            errorMessage: `Cannot transition order ${so.id} from ${so.status} to ${status}`,
+            extraInfo: { code: "INVALID_STATE" },
+          });
+        }
+      }
+
+      try {
+        await prisma.$transaction(async (tx) => {
+          // Perform bulk update on seller orders
+          await tx.sellerOrder.updateMany({
+            where: { id: { in: sellerOrderIds } },
+            data: {
+              status: status as any,
+              updatedAt: new Date(),
+            },
+          });
+
+          // Handle parent Order updates if status is CONFIRMED
+          if (status === "CONFIRMED") {
+            const uniqueBuyerOrderIds = [...new Set(sellerOrders.map(so => so.buyerOrderId))];
+
+            // Optimization: Fetch all seller orders for these buyer orders in one go
+            const relevantSellerOrders = await tx.sellerOrder.findMany({
+              where: { buyerOrderId: { in: uniqueBuyerOrderIds } }
+            });
+
+            // Group by buyerOrderId and check if all are confirmed
+            const ordersToConfirm = uniqueBuyerOrderIds.filter(buyerOrderId => {
+              const ordersForThisBuyer = relevantSellerOrders.filter(so => so.buyerOrderId === buyerOrderId);
+              return ordersForThisBuyer.every(so => so.status === "CONFIRMED");
+            });
+
+            if (ordersToConfirm.length > 0) {
+              await tx.order.updateMany({
+                where: { id: { in: ordersToConfirm } },
+                data: {
+                  status: "CONFIRMED",
+                  updatedAt: new Date(),
+                },
+              });
+            }
+          }
+        }, {
+          timeout: 15000 // Increase timeout to 15 seconds
+        });
+
+        // 2. Fetch updated orders outside transaction for return and notifications
+        const results = await prisma.sellerOrder.findMany({
+          where: { id: { in: sellerOrderIds } },
+          include: {
+            seller: { select: { id: true, clerkId: true } },
+            order: {
+              include: {
+                buyer: { select: { id: true, clerkId: true } },
+                sellerOrders: true,
+              },
+            },
+          },
+        });
+
+        // Emit notifications outside transaction
+        for (const updatedSO of results) {
+          const previousOrder = sellerOrders.find(o => o.id === updatedSO.id);
+          const typedSO = updatedSO as any;
+          await emitOrderStatusChanged(
+            [
+              typedSO.seller?.clerkId,
+              typedSO.order?.buyer?.clerkId,
+            ],
+            {
+              sellerId: typedSO.sellerId,
+              sellerOrderId: typedSO.id,
+              buyerOrderId: typedSO.buyerOrderId,
+              status: typedSO.status as SellerOrderStatus,
+              total: typedSO.total.toNumber(),
+              updatedAt: typedSO.updatedAt.toISOString(),
+              previousStatus: previousOrder?.status as SellerOrderStatus,
+            }
+          );
+        }
+
+        return results.map(o => ({
+          ...o,
+          subtotal: o.subtotal.toNumber(),
+          tax: o.tax.toNumber(),
+          shippingFee: o.shippingFee.toNumber(),
+          commission: o.commission.toNumber(),
+          total: o.total.toNumber(),
+        }));
+      } catch (error) {
+        console.error("Error in bulkUpdateSellerOrderStatus:", error);
+        throw new ApolloError({
+          errorMessage: "Failed to perform bulk status update",
+          extraInfo: { code: "INTERNAL_SERVER_ERROR" },
+        });
+      }
+    },
+
+    bulkCreateShipments: async (
+      _: unknown,
+      { orderIds, trackingNumber, carrier }: { orderIds: string[]; trackingNumber: string; carrier: string },
+      context: ResolverContext
+    ) => {
+      requireSeller(context);
+      const prisma = context.prisma;
+      const sellerId = context.user?.id;
+
+      // 1. Verify ownership and state
+      const sellerOrders = await prisma.sellerOrder.findMany({
+        where: {
+          id: { in: orderIds },
+          sellerId,
+        },
+        include: {
+          seller: true,
+          order: {
+            include: {
+              buyer: { select: { id: true, clerkId: true } },
+            },
+          },
+        },
+      });
+
+      if (sellerOrders.length !== orderIds.length) {
+        throw new ApolloError({
+          errorMessage: "One or more orders not found or unauthorized",
+          extraInfo: { code: "NOT_FOUND" },
+        });
+      }
+
+      // Verify status (should be confirmed or processing to be shippable)
+      for (const so of sellerOrders) {
+        if (so.status !== "CONFIRMED" && so.status !== "PROCESSING") {
+          throw new ApolloError({
+            errorMessage: `Order ${so.id} cannot be shipped from its current state: ${so.status}`,
+            extraInfo: { code: "INVALID_STATE" },
+          });
+        }
+      }
+
+      try {
+        await prisma.$transaction(async (tx) => {
+          const uniqueBuyerOrderIds = [...new Set(sellerOrders.map(so => so.buyerOrderId))];
+
+          // 2. Create Shipment records for unique parent Orders
+          for (const buyerOrderId of uniqueBuyerOrderIds) {
+            await tx.shipment.create({
+              data: {
+                orderId: buyerOrderId,
+                trackingNumber,
+                carrier,
+                status: "SHIPPED",
+              },
+            });
+          }
+
+          // 3. Update parent Order statuses in bulk
+          await tx.order.updateMany({
+            where: { id: { in: uniqueBuyerOrderIds } },
+            data: {
+              status: "SHIPPED",
+              updatedAt: new Date(),
+            },
+          });
+
+          // 4. Update all SellerOrders to SHIPPED
+          await tx.sellerOrder.updateMany({
+            where: { id: { in: orderIds } },
+            data: {
+              status: "SHIPPED",
+              updatedAt: new Date(),
+            },
+          });
+        }, {
+          timeout: 15000
+        });
+
+        // 4. Fetch final updated orders for return outside transaction
+        const results = await prisma.sellerOrder.findMany({
+          where: { id: { in: orderIds } },
+          include: {
+            seller: true,
+            order: {
+              include: {
+                buyer: { select: { id: true, clerkId: true } },
+                shipments: true,
+              },
+            },
+          },
+        });
+
+        // 5. Emit notifications
+        for (const updatedSO of results) {
+          const previousOrder = sellerOrders.find(o => o.id === updatedSO.id);
+          const typedSO = updatedSO as any;
+          await emitOrderStatusChanged(
+            [
+              typedSO.seller?.clerkId,
+              typedSO.order?.buyer?.clerkId,
+            ],
+            {
+              sellerId: typedSO.sellerId,
+              sellerOrderId: typedSO.id,
+              buyerOrderId: typedSO.buyerOrderId,
+              status: "SHIPPED",
+              total: typedSO.total.toNumber(),
+              updatedAt: typedSO.updatedAt.toISOString(),
+              previousStatus: previousOrder?.status as SellerOrderStatus,
+            }
+          );
+        }
+
+        return results.map(o => ({
+          ...o,
+          subtotal: o.subtotal.toNumber(),
+          tax: o.tax.toNumber(),
+          shippingFee: o.shippingFee.toNumber(),
+          commission: o.commission.toNumber(),
+          total: o.total.toNumber(),
+        }));
+      } catch (error) {
+        console.error("Error in bulkCreateShipments:", error);
+        throw new ApolloError({
+          errorMessage: "Failed to perform bulk shipment creation",
+          extraInfo: { code: "INTERNAL_SERVER_ERROR" },
+        });
+      }
+    },
   },
 };

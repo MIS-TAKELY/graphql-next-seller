@@ -15,6 +15,8 @@ export const metadata: Metadata = {
   generator: "v0.dev",
 };
 
+import { MobileNav } from "@/components/layout/MobileNav";
+
 export default function RootLayout({
   children,
 }: {
@@ -36,11 +38,12 @@ export default function RootLayout({
             </div>
             <div className="flex flex-col flex-1 overflow-hidden">
               <Header />
-              <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background p-2 sm:p-4 md:p-6 lg:p-8">
+              <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background p-2 sm:p-4 md:p-6 lg:p-8 pb-20 md:pb-6 lg:pb-8">
                 {children}
               </main>
             </div>
           </div>
+          <MobileNav />
           <RealtimeNotifications />
           <Toaster position="top-right" />
         </ThemeProvider>

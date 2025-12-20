@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { FormData } from "@/types/pages/product";
 import React from "react";
+import { SpecificationTable } from "../SpecificationTable";
 
 // New ProductPreview component import
 export const ProductPreview = React.memo(
@@ -56,7 +57,7 @@ export const ProductPreview = React.memo(
           </div>
 
           {/* Specifications */}
-          {formData.specifications.length > 0 && (
+          {(formData.specifications.length > 0 || (formData.specificationDisplayFormat === "custom_table" && formData.specificationTable)) && (
             <div>
               <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
                 Specifications
@@ -75,9 +76,9 @@ export const ProductPreview = React.memo(
                       </li>
                     ))}
                 </ul>
-              ) : (
+              ) : formData.specificationDisplayFormat === "table" ? (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm text-gray-700 dark:text-gray-300">
+                  <table className="w-full text-sm text-gray-700 dark:text-gray-300 border-collapse">
                     <tbody>
                       {formData.specifications
                         .filter((spec) => spec.key && spec.value)
@@ -90,16 +91,18 @@ export const ProductPreview = React.memo(
                                 : "bg-white dark:bg-gray-800"
                             }
                           >
-                            <td className="px-4 py-2 font-medium border-r">
+                            <td className="px-4 py-2 font-medium border border-gray-200 dark:border-gray-700">
                               {spec.key}
                             </td>
-                            <td className="px-4 py-2">{spec.value}</td>
+                            <td className="px-4 py-2 border border-gray-200 dark:border-gray-700">{spec.value}</td>
                           </tr>
                         ))}
                     </tbody>
                   </table>
                 </div>
-              )}
+              ) : formData.specificationDisplayFormat === "custom_table" && formData.specificationTable ? (
+                <SpecificationTable data={formData.specificationTable} />
+              ) : null}
             </div>
           )}
 
@@ -233,10 +236,9 @@ export const ProductPreview = React.memo(
                 {formData.freeDeliveryOption === "all_nepal"
                   ? "Free delivery across Nepal"
                   : formData.freeDeliveryOption === "selected_provinces"
-                  ? `Free delivery in: ${
-                      formData.freeDeliveryProvinces?.join(", ") || "None"
+                    ? `Free delivery in: ${formData.freeDeliveryProvinces?.join(", ") || "None"
                     }`
-                  : "No free delivery"}
+                    : "No free delivery"}
               </p>
               <p>
                 <span className="font-medium">International Shipping:</span>{" "}
@@ -260,25 +262,23 @@ export const ProductPreview = React.memo(
               <p>
                 <span className="font-medium">Return Policy:</span>{" "}
                 {formData.returnPolicy ||
-                formData.returnPeriod ||
-                formData.returnConditions
-                  ? `${formData.returnPeriod || "Not specified"} - ${
-                      formData.returnConditions ||
-                      formData.returnPolicy ||
-                      "Not specified"
-                    }`
+                  formData.returnPeriod ||
+                  formData.returnConditions
+                  ? `${formData.returnPeriod || "Not specified"} - ${formData.returnConditions ||
+                  formData.returnPolicy ||
+                  "Not specified"
+                  }`
                   : "Not provided"}
               </p>
               <p>
                 <span className="font-medium">Warranty:</span>{" "}
                 {formData.warranty ||
-                formData.warrantyDuration ||
-                formData.warrantyConditions
-                  ? `${formData.warrantyDuration || "Not specified"} - ${
-                      formData.warrantyConditions ||
-                      formData.warranty ||
-                      "Not specified"
-                    }`
+                  formData.warrantyDuration ||
+                  formData.warrantyConditions
+                  ? `${formData.warrantyDuration || "Not specified"} - ${formData.warrantyConditions ||
+                  formData.warranty ||
+                  "Not specified"
+                  }`
                   : "Not provided"}
               </p>
             </div>

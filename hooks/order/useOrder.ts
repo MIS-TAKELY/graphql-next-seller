@@ -4,6 +4,8 @@ import {
   CONFIRM_ORDER,
   CREATE_SHIPMENT,
   UPDATE_SELLER_ORDER_STATUS,
+  BULK_UPDATE_SELLER_ORDER_STATUS,
+  BULK_CREATE_SHIPMENTS,
 } from "@/client/order/order.mutation";
 import { GET_SELLER_ORDER } from "@/client/order/order.query";
 import {
@@ -14,7 +16,7 @@ import {
   Shipment,
 } from "@/types/pages/order.types";
 import { OrderStatus as OrderStatusEnum, ShipmentStatus as ShipmentStatusEnum } from "@/types/common/enums";
-import { useMutation } from "@apollo/client";
+import { useMutation, useQuery } from "@apollo/client";
 import { toast } from "sonner";
 
 interface ShipmentInput {
@@ -42,65 +44,98 @@ interface UpdateSellerOrderStatusResponse {
 }
 
 interface ConfirmOrderResponse {
-  confirmOrder: boolean;
+  confirmOrder: SellerOrder;
+}
+
+interface BulkUpdateSellerOrderStatusResponse {
+  bulkUpdateSellerOrderStatus: SellerOrder[];
+}
+
+interface BulkUpdateOrderStatusInput {
+  sellerOrderIds: string[];
+  status: OrderStatus;
+}
+
+interface BulkCreateShipmentsResponse {
+  bulkCreateShipments: SellerOrder[];
+}
+
+interface BulkCreateShipmentsInput {
+  orderIds: string[];
+  trackingNumber: string;
+  carrier: string;
 }
 
 export const useOrder = () => {
+  const [confirmOrder] = useMutation<ConfirmOrderResponse, { input: ConfirmOrderInput }>(
+    CONFIRM_ORDER,
+    {
+      refetchQueries: ["GetSellerOrders"],
+      awaitRefetchQueries: true,
+    }
+  );
+
   const [updateSellerOrderStatus] = useMutation<
     UpdateSellerOrderStatusResponse,
     UpdateOrderStatusInput
   >(UPDATE_SELLER_ORDER_STATUS, {
-    refetchQueries: [{ query: GET_SELLER_ORDER }],
+    refetchQueries: ["GetSellerOrders"],
     awaitRefetchQueries: true,
   });
+
+  const [bulkUpdateSellerOrderStatus] = useMutation<
+    BulkUpdateSellerOrderStatusResponse,
+    BulkUpdateOrderStatusInput
+  >(BULK_UPDATE_SELLER_ORDER_STATUS, {
+    refetchQueries: ["GetSellerOrders"],
+    awaitRefetchQueries: true,
+  });
+
+  const [bulkCreateShipmentsMutation] = useMutation<
+    BulkCreateShipmentsResponse,
+    BulkCreateShipmentsInput
+  >(BULK_CREATE_SHIPMENTS, {
+    refetchQueries: ["GetSellerOrders"],
+    awaitRefetchQueries: true,
+  });
+
+  const { data, loading, error, refetch } = useQuery<GetSellerOrdersResponse>(
+    GET_SELLER_ORDER,
+    {
+      notifyOnNetworkStatusChange: true,
+    }
+  );
+
+  const sellerOrders = data?.getSellerOrders?.sellerOrders || [];
 
   const [createShipment] = useMutation<CreateShipmentResponse, ShipmentInput>(
     CREATE_SHIPMENT
   );
 
-  const [confirmOrder] = useMutation<ConfirmOrderResponse, { input: ConfirmOrderInput }>(
-    CONFIRM_ORDER,
-    {
-      refetchQueries: [{ query: GET_SELLER_ORDER }],
-      awaitRefetchQueries: true,
-    }
-  );
-
   // Confirm a single SellerOrder
-  const confirmSingleOrder = async (sellerOrderId: string) => {
+  const confirmSingleOrder = async (orderId: string) => {
     try {
       const { data } = await confirmOrder({
-        variables: { input: { sellerOrderId } },
+        variables: { input: { sellerOrderId: orderId } },
         optimisticResponse: {
-          confirmOrder: true,
+          confirmOrder: {
+            id: orderId,
+            status: OrderStatus.CONFIRMED,
+            __typename: "SellerOrder",
+          } as any,
         },
         update: (cache) => {
-          try {
-            // Read the existing cache
-            const existing = cache.readQuery<GetSellerOrdersResponse>({
-              query: GET_SELLER_ORDER,
-            });
-
-            if (existing?.getSellerOrders?.sellerOrders) {
-              // Write back to cache with updated status
-              cache.writeQuery<GetSellerOrdersResponse>({
-                query: GET_SELLER_ORDER,
-                data: {
-                  getSellerOrders: {
-                    ...existing.getSellerOrders,
-                    sellerOrders: existing.getSellerOrders.sellerOrders.map(
-                      (order) =>
-                        order.id === sellerOrderId
-                          ? { ...order, status: OrderStatusEnum.CONFIRMED, updatedAt: new Date().toISOString() }
-                          : order
-                    ),
-                  },
-                },
-              });
-            }
-          } catch (error) {
-            console.error("Cache update error:", error);
-          }
+          cache.modify({
+            id: cache.identify({ __typename: 'SellerOrder', id: orderId }),
+            fields: {
+              status() {
+                return OrderStatusEnum.CONFIRMED;
+              },
+              updatedAt() {
+                return new Date().toISOString();
+              }
+            },
+          });
         },
       });
 
@@ -193,12 +228,12 @@ export const useOrder = () => {
                     sellerOrders: existing.sellerOrders.map((o: SellerOrder) =>
                       o.buyerOrderId === orderId
                         ? {
-                            ...o,
-                            order: {
-                              ...o.order,
-                              shipments: [...(o.order.shipments || []), newShipment],
-                            },
-                          }
+                          ...o,
+                          order: {
+                            ...o.order,
+                            shipments: [...(o.order.shipments || []), newShipment],
+                          },
+                        }
                         : o
                     ),
                   };
@@ -226,41 +261,35 @@ export const useOrder = () => {
     }
 
     try {
-      await Promise.all(
-        orderIds.map((orderId) =>
-          updateSellerOrderStatus({
-            variables: { sellerOrderId: orderId, status },
-            optimisticResponse: {
-              updateSellerOrderStatus: {
-                id: orderId,
-                status,
-              } as unknown as SellerOrder,
-            },
-            update: (cache) => {
-              cache.modify({
-                fields: {
-                  getSellerOrders(
-                    existing: any = { sellerOrders: [] }
-                  ) {
-                    if (!existing || !existing.sellerOrders) {
-                      return { sellerOrders: [] };
-                    }
-                    return {
-                      ...existing,
-                      sellerOrders: existing.sellerOrders.map((order: SellerOrder) =>
-                        order.id === orderId ? { ...order, status } : order
-                      ),
-                    };
-                  },
+      const { data } = await bulkUpdateSellerOrderStatus({
+        variables: { sellerOrderIds: orderIds, status },
+        optimisticResponse: {
+          bulkUpdateSellerOrderStatus: orderIds.map((id) => ({
+            id,
+            status,
+            __typename: "SellerOrder",
+            // Add other required fields for SellerOrder if any, or cast to any if confident
+          })) as any,
+        },
+        update: (cache) => {
+          orderIds.forEach((id) => {
+            cache.modify({
+              id: cache.identify({ __typename: "SellerOrder", id }),
+              fields: {
+                status() {
+                  return status;
                 },
-              });
-            },
-          })
-        )
-      );
+              },
+            });
+          });
+        },
+      });
+
       toast.success(`${orderIds.length} orders updated to ${status}`);
+      return data?.bulkUpdateSellerOrderStatus;
     } catch (error) {
-      toast.error("Failed to perform bulk update");
+      const message = error instanceof Error ? error.message : "Failed to perform bulk update";
+      toast.error(message);
       console.error(error);
       throw error;
     }
@@ -268,11 +297,9 @@ export const useOrder = () => {
 
   // Bulk create shipments and update order statuses
   const bulkCreateShipments = async (
-    orders: SellerOrder[],
     orderIds: string[],
     trackingNumber: string,
-    carrier: string,
-    status: OrderStatus
+    carrier: string
   ) => {
     if (orderIds.length === 0) {
       toast.error("Please select orders first");
@@ -280,90 +307,49 @@ export const useOrder = () => {
     }
 
     try {
-      await Promise.all(
-        orderIds.map((orderId) => {
-          const order = orders.find((o) => o.id === orderId);
-          if (!order) throw new Error(`Order ${orderId} not found`);
-
-          return Promise.all([
-            createShipment({
-              variables: {
-                orderId: order.buyerOrderId,
-                trackingNumber,
-                carrier,
-                status: ShipmentStatusEnum.SHIPPED, // createShipment expects ShipmentStatus
-              },
-              update: (cache, { data }) => {
-                const newShipment = data?.createShipment;
-                if (newShipment) {
-                  cache.modify({
-                    fields: {
-                      getSellerOrders(
-                        existing: any = { sellerOrders: [] }
-                      ) {
-                        if (!existing || !existing.sellerOrders) {
-                          return { sellerOrders: [] };
-                        }
-                        return {
-                          ...existing,
-                          sellerOrders: existing.sellerOrders.map((o: SellerOrder) =>
-                            o.id === orderId
-                              ? {
-                                  ...o,
-                                  order: {
-                                    ...o.order,
-                                    shipments: [...(o.order.shipments || []), newShipment],
-                                  },
-                                }
-                              : o
-                          ),
-                        };
-                      },
-                    },
-                  });
+      const { data } = await bulkCreateShipmentsMutation({
+        variables: { orderIds, trackingNumber, carrier },
+        optimisticResponse: {
+          bulkCreateShipments: orderIds.map((id) => ({
+            id,
+            status: OrderStatusEnum.SHIPPED,
+            __typename: "SellerOrder",
+            // Note: full optimistic response for nested structure is complex, 
+            // relying on cache.modify or refetch for consistency
+          })) as any,
+        },
+        update: (cache) => {
+          orderIds.forEach((id) => {
+            cache.modify({
+              id: cache.identify({ __typename: "SellerOrder", id }),
+              fields: {
+                status() {
+                  return OrderStatusEnum.SHIPPED;
+                },
+                updatedAt() {
+                  return new Date().toISOString();
                 }
               },
-            }),
-            updateSellerOrderStatus({
-              variables: { sellerOrderId: orderId, status },
-              optimisticResponse: {
-                updateSellerOrderStatus: {
-                  id: orderId,
-                  status,
-                } as unknown as SellerOrder,
-              },
-              update: (cache) => {
-                cache.modify({
-                  fields: {
-                    getSellerOrders(
-                      existing: any = { sellerOrders: [] }
-                    ) {
-                      if (!existing || !existing.sellerOrders) {
-                        return { sellerOrders: [] };
-                      }
-                      return {
-                        ...existing,
-                        sellerOrders: existing.sellerOrders.map((order: SellerOrder) =>
-                          order.id === orderId ? { ...order, status } : order
-                        ),
-                      };
-                    },
-                  },
-                });
-              },
-            }),
-          ]);
-        })
-      );
-      toast.success(`${orderIds.length} orders marked as ${status}`);
+            });
+          });
+        },
+      });
+
+      toast.success(`${orderIds.length} orders marked as shipped`);
+      return data?.bulkCreateShipments;
     } catch (error) {
-      toast.error("Failed to perform bulk shipment creation");
+      const message = error instanceof Error ? error.message : "Failed to perform bulk shipment";
+      toast.error(message);
       console.error(error);
       throw error;
     }
   };
 
   return {
+    sellerOrders,
+    loading,
+    error,
+    refetch,
     confirmSingleOrder,
     updateOrderStatus,
     createSingleShipment,

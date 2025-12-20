@@ -14,6 +14,7 @@ export const productVariantTypeDefs = gql`
     soldCount: Int
     attributes: Json
     isDefault: Boolean!
+    specificationTable: Json
     createdAt: String!
     updatedAt: String!
 
@@ -29,9 +30,11 @@ export const productVariantTypeDefs = gql`
     attributes: Json
     isDefault: Boolean
     specifications: [CreateSpecificationInput!]
+    specificationTable: Json
   }
 
   input UpdateProductVariantInput {
+    id: ID # Only for updating existing variants
     sku: String
     price: Float
     mrp: Float
@@ -39,5 +42,6 @@ export const productVariantTypeDefs = gql`
     attributes: Json
     isDefault: Boolean
     specifications: [CreateSpecificationInput]
+    specificationTable: Json
   }
 `;

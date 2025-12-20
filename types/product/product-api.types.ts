@@ -22,6 +22,7 @@ export interface ICreateProductVariantInput {
   attributes?: Record<string, any>;
   isDefault?: boolean;
   specifications?: Array<{ key: string; value: string }>;
+  specificationTable?: any;
 }
 
 export interface ICreateProductInput {
@@ -32,6 +33,7 @@ export interface ICreateProductInput {
   brand?: string;
   status?: ProductStatus;
   variants: ICreateProductVariantInput[];
+  specificationTable?: any;
   images: Array<{
     url: string;
     altText?: string;

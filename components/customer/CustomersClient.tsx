@@ -3,6 +3,7 @@
 import { GET_CUSTOMERS } from "@/client/customer/customer.queries";
 import { useQuery } from "@apollo/client";
 import ClientCustomersPage from "./ClientCustomersPage";
+import { CustomersSkeleton } from "./CustomersSkeleton";
 
 export default function CustomersClient() {
   const { data, loading, error, refetch } = useQuery(GET_CUSTOMERS, {
@@ -11,14 +12,7 @@ export default function CustomersClient() {
   });
 
   if (loading && !data) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center space-y-4">
-          <div className="h-8 w-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-muted-foreground">Loading customers...</p>
-        </div>
-      </div>
-    );
+    return <CustomersSkeleton />;
   }
 
   if (error) {

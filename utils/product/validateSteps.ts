@@ -31,22 +31,19 @@ export const validateStep = (
         } else {
           formData.variants.forEach((variant, index) => {
             if (!variant.sku?.trim()) {
-              newErrors[`variant_sku_${index}`] = `Variant ${
-                index + 1
-              }: SKU is required`;
+              newErrors[`variant_sku_${index}`] = `Variant ${index + 1
+                }: SKU is required`;
             }
             if (!variant.price || parseFloat(variant.price) <= 0) {
-              newErrors[`variant_price_${index}`] = `Variant ${
-                index + 1
-              }: Valid price is required`;
+              newErrors[`variant_price_${index}`] = `Variant ${index + 1
+                }: Valid price is required`;
             }
             if (
               variant.stock === "" ||
               parseInt(String(variant.stock), 10) < 0
             ) {
-              newErrors[`variant_stock_${index}`] = `Variant ${
-                index + 1
-              }: Valid stock is required`;
+              newErrors[`variant_stock_${index}`] = `Variant ${index + 1
+                }: Valid stock is required`;
             }
           });
         }
@@ -101,10 +98,15 @@ export const buildProductInput = (
       stock: parseInt(String(v.stock), 10) || 0,
       attributes: v.attributes,
       isDefault: v.isDefault,
+      specificationTable: v.specificationTable,
       // Pass global specs to variants
-      specifications: formData.specifications
-        .filter((s) => s.key && s.value)
-        .map((s) => ({ key: s.key, value: s.value })),
+      specifications: Array.from(
+        new Map(
+          formData.specifications
+            .filter((s) => s.key && s.value)
+            .map((s) => [s.key, s.value])
+        )
+      ).map(([key, value]) => ({ key, value })),
     }));
   } else {
     // Create single variant for simple product
@@ -117,9 +119,14 @@ export const buildProductInput = (
         stock: parseInt(String(formData.stock), 10) || 0,
         attributes: {}, // Empty for simple
         isDefault: true,
-        specifications: formData.specifications
-          .filter((s) => s.key && s.value)
-          .map((s) => ({ key: s.key, value: s.value })),
+        specificationTable: formData.specificationTable,
+        specifications: Array.from(
+          new Map(
+            formData.specifications
+              .filter((s) => s.key && s.value)
+              .map((s) => [s.key, s.value])
+          )
+        ).map(([key, value]) => ({ key, value })),
       },
     ];
   }
@@ -134,6 +141,7 @@ export const buildProductInput = (
       formData.subSubcategory || formData.subcategory || formData.categoryId,
     brand: formData.brand || "Generic",
     status: formData.status,
+    specificationTable: formData.specificationTable,
 
     variants: apiVariants,
 
@@ -156,51 +164,51 @@ export const buildProductInput = (
 
     productOffers: formData.hasOffer
       ? [
-          {
-            offer: {
-              title: formData.offerTitle,
-              description: "", // Added to satisfy type
-              type: formData.offerType,
-              value: parseFloat(formData.offerValue) || 0,
-              startDate: formData.offerStart,
-              endDate: formData.offerEnd,
-              isActive: true,
-            },
+        {
+          offer: {
+            title: formData.offerTitle,
+            description: "", // Added to satisfy type
+            type: formData.offerType,
+            value: parseFloat(formData.offerValue) || 0,
+            startDate: formData.offerStart,
+            endDate: formData.offerEnd,
+            isActive: true,
           },
-        ]
+        },
+      ]
       : undefined,
 
     deliveryOptions:
       formData.deliveryOptions.length > 0
         ? formData.deliveryOptions.map((opt) => ({
-            title: opt.title,
-            description: opt.description,
-            isDefault: opt.isDefault,
-          }))
+          title: opt.title,
+          description: opt.description,
+          isDefault: opt.isDefault,
+        }))
         : undefined,
 
     warranty:
       formData.warrantyType !== "NO_WARRANTY"
         ? [
-            {
-              type: formData.warrantyType,
-              duration: parseInt(formData.warrantyDuration, 10) || 0,
-              unit: formData.warrantyUnit,
-              description: formData.warrantyDescription,
-            },
-          ]
+          {
+            type: formData.warrantyType,
+            duration: parseInt(formData.warrantyDuration, 10) || 0,
+            unit: formData.warrantyUnit,
+            description: formData.warrantyDescription,
+          },
+        ]
         : undefined,
 
     returnPolicy:
       formData.returnType !== "NO_RETURN"
         ? [
-            {
-              type: formData.returnType,
-              duration: parseInt(formData.returnDuration, 10) || 0,
-              unit: formData.returnUnit,
-              conditions: formData.returnConditions,
-            },
-          ]
+          {
+            type: formData.returnType,
+            duration: parseInt(formData.returnDuration, 10) || 0,
+            unit: formData.returnUnit,
+            conditions: formData.returnConditions,
+          },
+        ]
         : undefined,
   };
 };

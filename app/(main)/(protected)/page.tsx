@@ -3,6 +3,8 @@ import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
 import { SalesChart } from "@/components/dashboard/SalesChart";
 import { TopProducts } from "@/components/dashboard/TopProducts";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
+import { Suspense } from "react";
 import {
   Card,
   CardContent,
@@ -32,61 +34,62 @@ export default async function DashboardPage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="space-y-3 sm:space-y-4">
-          <DashboardOverview />
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-7">
-            <Card className="col-span-1 lg:col-span-4 overflow-hidden">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">
-                  Sales Overview
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0 sm:p-2">
-                <SalesChart />
-              </CardContent>
-            </Card>
-            <Card className="col-span-1 lg:col-span-3">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">
-                  Recent Orders
-                </CardTitle>
-                {/* <CardDescription className="text-sm">
-                  You have 265 orders this month.
-                </CardDescription> */}
-              </CardHeader>
-              <CardContent>
-                <RecentOrders />
-              </CardContent>
-            </Card>
-          </div>
-          <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-7">
-            <Card className="col-span-1 lg:col-span-4">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">
-                  Top Products
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TopProducts />
-              </CardContent>
-            </Card>
-            <Card className="col-span-1 lg:col-span-3">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base sm:text-lg">
-                  Quick Actions
-                </CardTitle>
-                <CardDescription className="text-sm">
-                  Manage your store efficiently
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <QuickActions />
-              </CardContent>
-            </Card>
-          </div>
+          <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardOverview />
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-7">
+              <Card className="col-span-1 lg:col-span-4 overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">
+                    Sales Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0 sm:p-2">
+                  <SalesChart />
+                </CardContent>
+              </Card>
+              <Card className="col-span-1 lg:col-span-3">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">
+                    Recent Orders
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RecentOrders />
+                </CardContent>
+              </Card>
+            </div>
+            <div className="grid gap-3 sm:gap-4 grid-cols-1 lg:grid-cols-7">
+              <Card className="col-span-1 lg:col-span-4">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">
+                    Top Products
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TopProducts />
+                </CardContent>
+              </Card>
+              <Card className="col-span-1 lg:col-span-3">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base sm:text-lg">
+                    Quick Actions
+                  </CardTitle>
+                  <CardDescription className="text-sm">
+                    Manage your store efficiently
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <QuickActions />
+                </CardContent>
+              </Card>
+            </div>
+          </Suspense>
         </TabsContent>
         <TabsContent value="analytics" className="space-y-3 sm:space-y-4">
-          <DashboardOverview />
-          <SalesChart />
+          <Suspense fallback={<DashboardSkeleton />}>
+            <DashboardOverview />
+            <SalesChart />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>

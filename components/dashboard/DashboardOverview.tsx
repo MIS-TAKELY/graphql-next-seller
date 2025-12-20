@@ -7,19 +7,44 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
 import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
+import { getCachedData, setCachedData } from "@/lib/cache";
+import { auth } from "@clerk/nextjs/server";
 
 export async function DashboardOverview() {
-  const client = await getServerApolloClient();
+  const { userId } = await auth();
+  const cacheKey = `dashboard_overview_${userId}`;
 
-  const { data: revenueData } = await client.query({ query: GET_REVENUE });
-  const { data: activeUserData } = await client.query({
-    query: DASHBOARD_ACTIVE_CUSTOMER,
-  });
-  const { data: orderData } = await client.query({ query: GET_SELLER_ORDER_FOR_DASHBOARD });
-  const { data: productData } = await client.query({
-    query: DASHBOARD_PRODUCTS,
-  });
+  // Try to get cached data first
+  const cachedData = await getCachedData<any>(cacheKey);
 
+  let revenueData, activeUserData, orderData, productData;
+
+  if (cachedData) {
+    ({ revenueData, activeUserData, orderData, productData } = cachedData);
+  } else {
+    const client = await getServerApolloClient();
+
+    // Fetch all data in parallel
+    const [revRes, activeRes, orderRes, prodRes] = await Promise.all([
+      client.query({ query: GET_REVENUE }),
+      client.query({ query: DASHBOARD_ACTIVE_CUSTOMER }),
+      client.query({ query: GET_SELLER_ORDER_FOR_DASHBOARD }),
+      client.query({ query: DASHBOARD_PRODUCTS }),
+    ]);
+
+    revenueData = revRes.data;
+    activeUserData = activeRes.data;
+    orderData = orderRes.data;
+    productData = prodRes.data;
+
+    // Cache the fetched data for 5 minutes
+    await setCachedData(cacheKey, {
+      revenueData,
+      activeUserData,
+      orderData,
+      productData
+    }, 300);
+  }
 
   return (
     <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
@@ -88,7 +113,7 @@ export async function DashboardOverview() {
           <CardContent>
             <div className="text-lg sm:text-xl md:text-2xl font-bold">{activeUserData?.getActiveUsersForSeller?.currentActiveUsers}</div>
             <p className="text-xs text-muted-foreground">
-              +{activeUserData?.getActiveUsersForSeller?.percentChange } since last hour
+              +{activeUserData?.getActiveUsersForSeller?.percentChange} since last hour
             </p>
           </CardContent>
         )}

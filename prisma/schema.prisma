@@ -336,6 +336,7 @@ model Product {
   brand           String
   embedding       Unsupported("vector")?
   features        String[]
+  specificationTable Json?
   Conversation    Conversation[]
   deliveryOptions DeliveryOption[]
   images          ProductImage[]
@@ -363,6 +364,7 @@ model ProductVariant {
   soldCount       Int                    @default(0)
   attributes      Json?
   isDefault       Boolean                @default(false)
+  specificationTable Json?
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
   cartItems       CartItem[]
@@ -508,7 +510,7 @@ model Payment {
 model Shipment {
   id                String         @id @default(cuid())
   orderId           String
-  trackingNumber    String?        @unique
+  trackingNumber    String?
   carrier           String?
   method            ShippingMethod @default(STANDARD)
   status            ShipmentStatus @default(PENDING)

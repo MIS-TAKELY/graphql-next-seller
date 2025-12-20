@@ -21,8 +21,9 @@ import {
   ProductAttribute,
   ProductVariantData,
 } from "@/types/pages/product";
-import { Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Copy, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface VariantsStepProps {
   formData: FormData;
@@ -101,9 +102,17 @@ export const VariantsStep = ({
 
   // 3. Handlers for Attributes
   const addValue = () => {
-    if (attrValue.trim() && !currentValues.includes(attrValue.trim())) {
-      setCurrentValues([...currentValues, attrValue.trim()]);
-      setAttrValue("");
+    if (attrValue.trim()) {
+      // Split by comma, trim, and filter out empty strings
+      const valuesToAdd = attrValue
+        .split(",")
+        .map((v) => v.trim())
+        .filter((v) => v !== "" && !currentValues.includes(v));
+
+      if (valuesToAdd.length > 0) {
+        setCurrentValues([...currentValues, ...valuesToAdd]);
+        setAttrValue("");
+      }
     }
   };
 
@@ -141,6 +150,17 @@ export const VariantsStep = ({
     }
 
     updateFormData("variants", newVariants);
+  };
+
+  const applyToAll = (field: keyof ProductVariantData) => {
+    if (formData.variants.length <= 1) return;
+    const firstVal = formData.variants[0][field];
+    const updated = formData.variants.map((v) => ({
+      ...v,
+      [field]: firstVal,
+    }));
+    updateFormData("variants", updated);
+    toast.success(`Applied first variant's ${field} to all others!`);
   };
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -233,6 +253,9 @@ export const VariantsStep = ({
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
+                <p className="text-[10px] text-muted-foreground mt-1 italic">
+                  Tip: Enter comma-separated values (e.g. Red, Blue, Green) to add multiple at once.
+                </p>
               </div>
               <Button
                 type="button"
@@ -297,10 +320,46 @@ export const VariantsStep = ({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Variant</TableHead>
-                    <TableHead>Price (NPR)</TableHead>
-                    <TableHead>MRP (NPR)</TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-2">
+                        Price (NPR)
+                        <button
+                          type="button"
+                          onClick={() => applyToAll("price")}
+                          className="p-1 hover:bg-muted rounded transition-colors"
+                          title="Apply first variant's price to all"
+                        >
+                          <Copy className="w-3 h-3 text-primary" />
+                        </button>
+                      </div>
+                    </TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-2">
+                        MRP (NPR)
+                        <button
+                          type="button"
+                          onClick={() => applyToAll("mrp")}
+                          className="p-1 hover:bg-muted rounded transition-colors"
+                          title="Apply first variant's MRP to all"
+                        >
+                          <Copy className="w-3 h-3 text-primary" />
+                        </button>
+                      </div>
+                    </TableHead>
                     <TableHead>SKU</TableHead>
-                    <TableHead>Stock</TableHead>
+                    <TableHead>
+                      <div className="flex items-center gap-2">
+                        Stock
+                        <button
+                          type="button"
+                          onClick={() => applyToAll("stock")}
+                          className="p-1 hover:bg-muted rounded transition-colors"
+                          title="Apply first variant's stock to all"
+                        >
+                          <Copy className="w-3 h-3 text-primary" />
+                        </button>
+                      </div>
+                    </TableHead>
                     <TableHead className="w-[50px]">Default</TableHead>
                   </TableRow>
                 </TableHeader>

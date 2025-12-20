@@ -25,6 +25,8 @@ interface OrderStatusTabProps {
   onOrderConfirmed?: (orderId: string) => void;
   onProcessingStarted?: (orderId: string) => void;
   onOrderDelivered?: (orderId: string) => void;
+  selectedOrders: string[];
+  onSelectionChange: (selectedIds: string[]) => void;
 }
 
 export function OrderStatusTab({
@@ -36,6 +38,8 @@ export function OrderStatusTab({
   onOrderConfirmed,
   onProcessingStarted,
   onOrderDelivered,
+  selectedOrders,
+  onSelectionChange,
 }: OrderStatusTabProps) {
   const { confirmSingleOrder, updateOrderStatus } = useOrder();
 
@@ -206,11 +210,13 @@ export function OrderStatusTab({
         {orders.length > 0 ? (
           <OrderTable
             orders={orders}
-            showCheckbox={tabValue === 'all'}
+            showCheckbox={true}
             showTracking={tabValue === 'shipped'}
             customActions={customActions}
             filters={filters}
             onShipmentSuccess={onShipmentSuccess}
+            selectedOrders={selectedOrders}
+            onSelectionChange={onSelectionChange}
           />
         ) : (
           <div className="text-center py-6 sm:py-8">
@@ -222,12 +228,11 @@ export function OrderStatusTab({
               {tabValue === 'new'
                 ? 'New orders will appear here when received.'
                 : tabValue === 'confirmed'
-                ? 'Confirmed orders will appear here.'
-                : tabValue === 'returns'
-                ? 'Return requests will appear here.'
-                : `${
-                    tabValue.charAt(0).toUpperCase() + tabValue.slice(1)
-                  } orders will appear here.`}
+                  ? 'Confirmed orders will appear here.'
+                  : tabValue === 'returns'
+                    ? 'Return requests will appear here.'
+                    : `${tabValue.charAt(0).toUpperCase() + tabValue.slice(1)
+                    } orders will appear here.`}
             </p>
           </div>
         )}

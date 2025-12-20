@@ -10,13 +10,15 @@ import { BulkActions } from "./BulkActions";
 import { OrderSearchFilter } from "./OrderSearchFilter";
 import { OrderStatusTab } from "./OrderStatusTab";
 import { OrderTabs } from "./OrderTabs";
+import { useOrder } from "@/hooks/order/useOrder";
 
 interface OrdersAllPageProps {
   orders: SellerOrder[];
   onRefetch?: () => void;
 }
 
-export function OrdersAllPage({ orders }: OrdersAllPageProps) {
+export function OrdersAllPage({ orders: initialOrders }: OrdersAllPageProps) {
+  const { sellerOrders: currentOrders, loading, error, refetch, confirmSingleOrder, updateOrderStatus } = useOrder();
   const [isPending, startTransition] = useTransition();
   const [orderFilters, setOrderFilters] = useState<OrderFilters>({
     search: "",
@@ -34,13 +36,10 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
     | "returns"
   >("all");
 
-  // Store the orders in state to manage updates
-  const [currentOrders, setCurrentOrders] = useState<SellerOrder[]>(orders);
-
-  // Update orders when prop changes
-  useEffect(() => {
-    setCurrentOrders(orders);
-  }, [orders]);
+  // Update orders when prop changes - This useEffect is no longer needed if useOrder hook manages state
+  // useEffect(() => {
+  //   setCurrentOrders(orders);
+  // }, [orders]);
 
   const handleFiltersChange = useCallback(
     (partialFilters: Partial<OrderFilters>) => {
@@ -57,13 +56,6 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
   // Handle order confirmation - auto-switch to confirmed tab
   const handleOrderConfirmed = useCallback((orderId: string) => {
     startTransition(() => {
-      // Update the order status in local state immediately
-      setCurrentOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: OrderStatus.CONFIRMED } : order
-        )
-      );
-
       // Switch to confirmed tab
       setActiveTab("confirmed");
 
@@ -78,13 +70,6 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
   // Handle processing started - auto-switch to processing tab
   const handleProcessingStarted = useCallback((orderId: string) => {
     startTransition(() => {
-      // Update the order status in local state immediately
-      setCurrentOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: OrderStatus.PROCESSING } : order
-        )
-      );
-
       // Switch to processing tab
       setActiveTab("processing");
 
@@ -99,13 +84,6 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
   // Handle successful shipment creation - auto-switch to shipped tab
   const handleShipmentSuccess = useCallback((orderId: string) => {
     startTransition(() => {
-      // Update the order status in local state immediately
-      setCurrentOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: OrderStatus.SHIPPED } : order
-        )
-      );
-
       // Switch to shipped tab
       setActiveTab("shipped");
 
@@ -120,13 +98,6 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
   // Handle order delivered - auto-switch to delivered tab
   const handleOrderDelivered = useCallback((orderId: string) => {
     startTransition(() => {
-      // Update the order status in local state immediately
-      setCurrentOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order.id === orderId ? { ...order, status: OrderStatus.DELIVERED } : order
-        )
-      );
-
       // Switch to delivered tab
       setActiveTab("delivered");
 
@@ -174,7 +145,7 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
   const currentConfig = statusMap[activeTab] || statusMap.all;
 
   // Filter orders based on current tab and search
-  const filteredOrders = currentOrders.filter((order) => {
+  const filteredOrders = currentOrders.filter((order: SellerOrder) => {
     const customerName = order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Unknown Customer';
     const matchesSearch =
       customerName.toLowerCase().includes(orderFilters.search.toLowerCase()) ||
@@ -242,7 +213,7 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
       <BulkActions
         orders={currentOrders}
         selectedOrders={selectedOrders}
-        setSelectedOrders={setSelectedOrders}
+        onClearSelection={() => setSelectedOrders([])}
       />
 
       <OrderTabs
@@ -261,6 +232,8 @@ export function OrdersAllPage({ orders }: OrdersAllPageProps) {
         onOrderConfirmed={handleOrderConfirmed}
         onProcessingStarted={handleProcessingStarted}
         onOrderDelivered={handleOrderDelivered}
+        selectedOrders={selectedOrders}
+        onSelectionChange={setSelectedOrders}
       />
 
       {/* Optional loading indicator for transitions */}

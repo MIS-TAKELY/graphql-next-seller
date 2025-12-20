@@ -2,103 +2,90 @@
 import { GET_DASHBOARD_RECENT_ORDERS } from "@/client/dashboard/dashboard.query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@apollo/client";
-
-// const recentOrders = [
-//   {
-//     id: "ORD-001",
-//     customer: "Olivia Martin",
-//     email: "olivia.martin@email.com",
-//     amount: "+$1,999.00",
-//     status: "completed",
-//     avatar: "/placeholder-user.jpg",
-//   },
-//   {
-//     id: "ORD-002",
-//     customer: "Jackson Lee",
-//     email: "jackson.lee@email.com",
-//     amount: "+$39.00",
-//     status: "processing",
-//     avatar: "/placeholder-user.jpg",
-//   },
-//   {
-//     id: "ORD-003",
-//     customer: "Isabella Nguyen",
-//     email: "isabella.nguyen@email.com",
-//     amount: "+$299.00",
-//     status: "shipped",
-//     avatar: "/placeholder-user.jpg",
-//   },
-//   {
-//     id: "ORD-004",
-//     customer: "William Kim",
-//     email: "will@email.com",
-//     amount: "+$99.00",
-//     status: "completed",
-//     avatar: "/placeholder-user.jpg",
-//   },
-//   {
-//     id: "ORD-005",
-//     customer: "Sofia Davis",
-//     email: "sofia.davis@email.com",
-//     amount: "+$39.00",
-//     status: "pending",
-//     avatar: "/placeholder-user.jpg",
-//   },
-// ];
 
 export function RecentOrders() {
   const { data, loading, error } = useQuery(GET_DASHBOARD_RECENT_ORDERS);
 
   console.log("recent orders-->", data);
 
-  if (loading) return <div>loading</div>;
-  if (error) console.log("error", error);
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <div key={i} className="flex items-center">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <div className="ml-4 space-y-1">
+              <Skeleton className="h-4 w-[150px]" />
+              <Skeleton className="h-3 w-[100px]" />
+            </div>
+            <div className="ml-auto flex flex-col items-end gap-1">
+              <Skeleton className="h-4 w-[60px]" />
+              <Skeleton className="h-4 w-[80px]" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    console.error("error", error);
+    return <div className="text-sm text-destructive">Error loading recent orders</div>;
+  }
 
   const recentData = data?.getSellerOrders?.sellerOrders;
 
   return (
     <div className="space-y-8">
-      {recentData?.map((order: any) => (
-        <div key={order.id} className="flex items-center">
+      {recentData?.map((order: any, index: number) => (
+        <div key={order.order?.id || index} className="flex items-center">
           <Avatar className="h-9 w-9">
             <AvatarImage
-              src={order?.avatar || "/placeholder.svg"}
+              src={order?.order?.buyer?.avatarImageUrl || "/placeholder.svg"}
               alt="Avatar"
             />
-            <AvatarFallback>{order?.order.buyer.firstName}</AvatarFallback>
+            <AvatarFallback>
+              {order?.order?.buyer?.firstName?.[0]}
+              {order?.order?.buyer?.lastName?.[0]}
+            </AvatarFallback>
           </Avatar>
           <div className="ml-4 space-y-1">
-            <p className="text-sm font-medium leading-none flexPseed gap-x-2">
-              <div>{order?.order.buyer.firstName}</div>
-              <div>{order?.order.buyer.lastName}</div>
+            <p className="text-sm font-medium leading-none flex gap-x-1">
+              <span>{order?.order?.buyer?.firstName}</span>
+              <span>{order?.order?.buyer?.lastName}</span>
             </p>
-
-            <p className="text-sm text-muted-foreground">
-              {order?.order.buyer?.email}
+            <p className="text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-none">
+              {order?.order?.buyer?.email}
             </p>
           </div>
           <div className="ml-auto font-medium">
             <div className="text-right">
-              <div>{order.order.total}</div>
+              <div className="text-sm">Rs. {order.order?.total}</div>
               <Badge
                 variant={
-                  order.order.status === "CONFIRMED"
+                  order.order?.status === "DELIVERED"
                     ? "default"
-                    : order.order.status === "PROCESSING"
-                    ? "secondary"
-                    : order.order.status === "SHIPPED"
-                    ? "outline"
-                    : "destructive"
+                    : order.order?.status === "PROCESSING" || order.order?.status === "CONFIRMED"
+                      ? "secondary"
+                      : order.order?.status === "SHIPPED"
+                        ? "outline"
+                        : "destructive"
                 }
-                className="text-xs"
+                className="text-[10px] h-5 px-1.5"
               >
-                {order.order.status}
+                {order.order?.status}
               </Badge>
             </div>
           </div>
         </div>
       ))}
+      {!recentData?.length && (
+        <div className="text-center py-4 text-sm text-muted-foreground">
+          No recent orders found
+        </div>
+      )}
     </div>
   );
 }

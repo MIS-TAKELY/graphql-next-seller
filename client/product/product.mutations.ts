@@ -17,3 +17,4 @@ export const DELETE_PRODUCT = gql`
     deleteProduct(productId: $productId)
   }
 `;
+

@@ -335,6 +335,8 @@ export const productResolvers = {
                 brand: input.brand || "Generic",
                 sellerId,
 
+                specificationTable: input.specificationTable || null,
+
                 // A. Create Variants (One-to-Many)
                 variants: {
                   create: input.variants.map((variant: any, idx: number) => ({
@@ -344,6 +346,7 @@ export const productResolvers = {
                     stock: variant.stock,
                     attributes: variant.attributes || {}, // Store JSON attributes
                     isDefault: variant.isDefault ?? idx === 0, // Default to first if not set
+                    specificationTable: variant.specificationTable || null,
 
                     // Nested Specifications per Variant
                     specifications:
@@ -472,6 +475,8 @@ export const productResolvers = {
         if (input.categoryId !== undefined)
           productData.categoryId = input.categoryId;
         if (input.brand !== undefined) productData.brand = input.brand;
+        if (input.specificationTable !== undefined)
+          productData.specificationTable = input.specificationTable;
 
         await prisma.$transaction(
           async (tx) => {
@@ -509,6 +514,7 @@ export const productResolvers = {
                   stock: v.stock,
                   attributes: v.attributes || {},
                   isDefault: v.isDefault || false,
+                  specificationTable: v.specificationTable || null,
                 };
 
                 if (v.id) {

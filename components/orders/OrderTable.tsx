@@ -27,6 +27,10 @@ import { toast } from 'sonner';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { CreateShipmentDialog } from './CreateShipmentDialog';
 import { SellerOrder, OrderFilters, OrderStatus } from '@/types/pages/order.types';
+import Image from 'next/image';
+import { Package } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 interface OrderTableProps {
   orders: SellerOrder[];
@@ -35,7 +39,9 @@ interface OrderTableProps {
   customActions?: any;
   filters?: OrderFilters;
   onShipmentSuccess?: (orderId: string) => void;
-  onConfirmationSuccess?: (orderId: string) => void; // Added callback
+  onConfirmationSuccess?: (orderId: string) => void;
+  selectedOrders?: string[];
+  onSelectionChange?: (selectedIds: string[]) => void;
 }
 
 export function OrderTable({
@@ -46,23 +52,23 @@ export function OrderTable({
   filters,
   onShipmentSuccess,
   onConfirmationSuccess,
+  selectedOrders = [],
+  onSelectionChange,
 }: OrderTableProps) {
-  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
   const { confirmSingleOrder, updateOrderStatus } = useOrder();
 
   const selectOrder = (orderId: string) => {
-    setSelectedOrders((prev) =>
-      prev.includes(orderId)
-        ? prev.filter((id) => id !== orderId)
-        : [...prev, orderId]
-    );
+    const newSelected = selectedOrders.includes(orderId)
+      ? selectedOrders.filter((id) => id !== orderId)
+      : [...selectedOrders, orderId];
+    onSelectionChange?.(newSelected);
   };
 
   const selectAllOrders = () => {
     if (selectedOrders.length === orders.length) {
-      setSelectedOrders([]);
+      onSelectionChange?.([]);
     } else {
-      setSelectedOrders(orders.map((order) => order.id));
+      onSelectionChange?.(orders.map((order) => order.id));
     }
   };
 
@@ -127,7 +133,13 @@ export function OrderTable({
         </TableHeader>
         <TableBody>
           {orders.map((order) => (
-            <TableRow key={order.id}>
+            <TableRow
+              key={order.id}
+              className={cn(
+                "transition-colors duration-200",
+                selectedOrders.includes(order.id) && "bg-primary/5 hover:bg-primary/10"
+              )}
+            >
               {showCheckbox && (
                 <TableCell>
                   <Checkbox
@@ -158,7 +170,28 @@ export function OrderTable({
                 {formatTotal(order.total)}
               </TableCell>
               <TableCell className="hidden md:table-cell text-xs sm:text-sm">
-                {order.items.length}
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-md bg-muted border overflow-hidden flex-shrink-0 relative shadow-sm">
+                    {order.items[0]?.variant?.product?.images?.[0] ? (
+                      <Image
+                        src={order.items[0].variant.product.images[0].url}
+                        alt={order.items[0].variant.product.name}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <Package className="h-5 w-5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="truncate max-w-[150px] font-medium leading-tight">
+                      {order.items[0]?.variant?.product?.name || 'Unknown Product'}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground mt-0.5">
+                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
+                    </span>
+                  </div>
+                </div>
               </TableCell>
               <TableCell className="hidden lg:table-cell text-xs sm:text-sm">
                 {order.createdAt ? formatDate(order.createdAt) : 'N/A'}

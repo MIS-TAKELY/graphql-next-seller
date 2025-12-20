@@ -26,6 +26,7 @@ export interface ProductVariant extends BaseEntity {
   attributes?: Record<string, any>;
   isDefault: boolean;
   specifications?: ProductSpecification[];
+  specificationTable?: any;
 }
 
 export interface ProductSpecification extends BaseEntity {
@@ -111,6 +112,7 @@ export interface Product extends BaseEntity {
   warranty?: Warranty[];
   returnPolicy?: ReturnPolicy[];
   features?: string[];
+  specificationTable?: any;
   isFragile?: boolean;
   noInternationalShipping?: boolean;
   restrictedStates?: string[];

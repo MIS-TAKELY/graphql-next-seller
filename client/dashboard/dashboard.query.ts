@@ -12,7 +12,7 @@ export const GET_REVENUE = gql`
 
 export const GET_SELLER_ORDER_FOR_DASHBOARD = gql`
   query GetSellerOrders {
-    getSellerOrders {
+    getSellerOrders(limit: 5) {
       currentOrderCount
       previousOrderCount
       percentChange
@@ -55,13 +55,14 @@ export const DASHBOARD_GET_MONTHLY_SALES = gql`
 
 export const GET_DASHBOARD_RECENT_ORDERS = gql`
   query getRecentOrders {
-    getSellerOrders {
+    getSellerOrders(limit: 5) {
       sellerOrders {
         order {
           buyer {
             email
             firstName
             lastName
+            avatarImageUrl
           }
           total
           status
