@@ -31,6 +31,7 @@ type FormData = {
   line1: string;
   line2?: string;
   city: string;
+  state: string;
   postalCode: string;
 
   documents: {
@@ -52,7 +53,6 @@ import siteLogo from "@/public/final_blue_logo_500by500.svg";
 import siteLogoText from "@/public/final_blue_text_500by500.svg";
 import { Check, AlertCircle } from "lucide-react";
 
-// Validation patterns
 const validationPatterns = {
   phone: /^[0-9]{10}$/,
   email: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
@@ -62,6 +62,16 @@ const validationPatterns = {
   personName: /^[a-zA-Z\s]{3,50}$/,
   businessName: /^[a-zA-Z0-9\s&'.-]{3,100}$/,
 };
+
+const NEPAL_PROVINCES = [
+  "Koshi Province",
+  "Madhesh Province",
+  "Bagmati Province",
+  "Gandaki Province",
+  "Lumbini Province",
+  "Karnali Province",
+  "Sudurpashchim Province",
+];
 
 export default function SellerOnboarding() {
   const [step, setStep] = useState(1);
@@ -105,7 +115,7 @@ export default function SellerOnboarding() {
         fields = ["businessName", "businessRegNo", "phone", "supportEmail"];
         break;
       case 4:
-        fields = ["addressLabel", "fullName", "addressPhone", "line1", "city", "postalCode"];
+        fields = ["addressLabel", "fullName", "addressPhone", "line1", "city", "state", "postalCode"];
         break;
       // case 6:
       //   fields = [
@@ -133,7 +143,7 @@ export default function SellerOnboarding() {
         line1: data.line1,
         line2: data.line2 || "",
         city: data.city,
-        state: data.city,
+        state: data.state,
         country: "NP",
         postalCode: data.postalCode,
         phone: data.addressPhone || data.phone,
@@ -168,15 +178,14 @@ export default function SellerOnboarding() {
 
   // Helper function to determine input styling based on error state
   const getInputClassName = (fieldName: keyof FormData | string) => {
-    const hasError = fieldName.includes('.') 
+    const hasError = fieldName.includes('.')
       ? fieldName.split('.').reduce((obj: any, key) => obj?.[key], errors)
       : errors[fieldName as keyof FormData];
-    
-    return `w-full px-4 py-3 border rounded-lg transition-all duration-200 ${
-      hasError 
-        ? 'border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500 bg-red-50' 
+
+    return `w-full px-4 py-3 border rounded-lg transition-all duration-200 ${hasError
+        ? 'border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500 bg-red-50'
         : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400'
-    }`;
+      }`;
   };
 
   return (
@@ -272,7 +281,7 @@ export default function SellerOnboarding() {
                 <h2 className="text-xl font-semibold text-gray-800 pb-4 border-b">
                   Shop Information
                 </h2>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Shop Name <span className="text-red-500">*</span>
@@ -375,7 +384,7 @@ export default function SellerOnboarding() {
                     Legal Business Name <span className="text-red-500">*</span>
                   </label>
                   <input
-                    {...register("businessName", { 
+                    {...register("businessName", {
                       required: "Business name is required",
                       pattern: {
                         value: validationPatterns.businessName,
@@ -398,7 +407,7 @@ export default function SellerOnboarding() {
                     PAN / VAT Number <span className="text-red-500">*</span>
                   </label>
                   <input
-                    {...register("businessRegNo", { 
+                    {...register("businessRegNo", {
                       required: "PAN/VAT number is required",
                       pattern: {
                         value: validationPatterns.panVat,
@@ -437,7 +446,7 @@ export default function SellerOnboarding() {
                     Business Phone <span className="text-red-500">*</span>
                   </label>
                   <input
-                    {...register("phone", { 
+                    {...register("phone", {
                       required: "Phone number is required",
                       pattern: {
                         value: validationPatterns.phone,
@@ -487,7 +496,7 @@ export default function SellerOnboarding() {
                 <h2 className="text-xl font-semibold text-gray-800 pb-4 border-b">
                   Pickup / Warehouse Address
                 </h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -559,7 +568,7 @@ export default function SellerOnboarding() {
                       Address Line 1 <span className="text-red-500">*</span>
                     </label>
                     <input
-                      {...register("line1", { 
+                      {...register("line1", {
                         required: "Address is required",
                         minLength: { value: 5, message: "Address too short" }
                       })}
@@ -590,7 +599,7 @@ export default function SellerOnboarding() {
                       City <span className="text-red-500">*</span>
                     </label>
                     <input
-                      {...register("city", { 
+                      {...register("city", {
                         required: "City is required",
                         minLength: { value: 2, message: "City name too short" }
                       })}
@@ -601,6 +610,31 @@ export default function SellerOnboarding() {
                       <div className="flex items-center gap-1 mt-2 text-red-500">
                         <AlertCircle className="w-4 h-4" />
                         <p className="text-sm">{errors.city.message}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Province <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      {...register("state", {
+                        required: "Province is required"
+                      })}
+                      className={getInputClassName("state")}
+                    >
+                      <option value="">Select Province</option>
+                      {NEPAL_PROVINCES.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.state && (
+                      <div className="flex items-center gap-1 mt-2 text-red-500">
+                        <AlertCircle className="w-4 h-4" />
+                        <p className="text-sm">{errors.state.message}</p>
                       </div>
                     )}
                   </div>

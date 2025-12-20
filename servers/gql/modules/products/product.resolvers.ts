@@ -428,7 +428,8 @@ export const productResolvers = {
 
         // 5. Cleanup Cache
         await Promise.all([
-          delCache(getProductCacheKey(slug)), // Invalidate detail cache for buyer
+          delCache(getProductCacheKey(slug)), // Invalidate versioned detail cache
+          delCache(`product:${slug}`), // Invalidate list internal cache
           delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
         ]);
@@ -621,7 +622,7 @@ export const productResolvers = {
 
         // Cache Invalidation
         await Promise.all([
-          delCache(`product:${input.id}`), // Used by list query individual cache
+          delCache(`product:${existingProduct.slug}`), // Invalidate list internal cache
           delCache(getProductCacheKey(existingProduct.slug)), // Invalidate versioned details cache
           delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
@@ -671,7 +672,7 @@ export const productResolvers = {
           throw new Error("Unable to to delete the product");
 
         await Promise.all([
-          delCache(`product:${productId}`),
+          delCache(`product:${product.slug}`),
           delCache(getProductCacheKey(product.slug)),
           delCache("products:all"),
           delCache(`products:seller:${sellerId}`),
