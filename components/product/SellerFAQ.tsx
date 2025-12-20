@@ -6,8 +6,34 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea"; // Assuming present
 
+interface ProductAnswer {
+    id: string;
+    content: string;
+    createdAt: string;
+    seller: {
+        sellerProfile: {
+            shopName: string;
+        }
+    }
+}
+
+interface ProductQuestion {
+    id: string;
+    content: string;
+    createdAt: string;
+    user: {
+        firstName: string;
+        lastName: string;
+    }
+    answers: ProductAnswer[];
+}
+
 export default function SellerFAQ({ productId }: { productId: string }) {
-    const { questions, isLoading, submitAnswer } = useSellerFAQ(productId);
+    const { questions, isLoading, submitAnswer } = useSellerFAQ(productId) as {
+        questions: ProductQuestion[],
+        isLoading: boolean,
+        submitAnswer: (id: string, text: string) => Promise<void>
+    };
     const [replyText, setReplyText] = useState<Record<string, string>>({});
     const [isSubmitting, setIsSubmitting] = useState<Record<string, boolean>>({});
 

@@ -45,10 +45,10 @@ export default function OrderStatusPage({ orders, status, tabValue }: OrderStatu
           {tabValue === 'new'
             ? 'New Orders'
             : tabValue === 'confirmed'
-            ? 'Confirmed Orders'
-            : tabValue === 'returns'
-            ? 'Returns & Refunds'
-            : `${tabValue.charAt(0).toUpperCase() + tabValue.slice(1)} Orders`}
+              ? 'Confirmed Orders'
+              : tabValue === 'returns'
+                ? 'Returns & Refunds'
+                : `${tabValue.charAt(0).toUpperCase() + tabValue.slice(1)} Orders`}
         </h2>
         <div className="flex items-center space-x-2">
           <Button
@@ -74,7 +74,7 @@ export default function OrderStatusPage({ orders, status, tabValue }: OrderStatu
       <BulkActions
         orders={orders}
         selectedOrders={selectedOrders}
-        setSelectedOrders={setSelectedOrders}
+        onClearSelection={() => setSelectedOrders([])}
       />
       <OrderTabs
         activeTab={tabValue}
@@ -89,6 +89,8 @@ export default function OrderStatusPage({ orders, status, tabValue }: OrderStatu
         orders={filteredOrders}
         tabValue={tabValue}
         filters={orderFilters}
+        selectedOrders={selectedOrders}
+        onSelectionChange={setSelectedOrders}
       />
     </div>
   );
