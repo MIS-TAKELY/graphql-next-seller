@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db/prisma";
 import { username } from "better-auth/plugins";
+import { senMail } from "@/services/nodeMailer.services";
 
 export const auth = betterAuth({
     database: prismaAdapter(prisma, {
@@ -10,6 +11,10 @@ export const auth = betterAuth({
     plugins: [
         username(),
     ],
+    accountLinking: {
+        enabled: true,
+        trustedProviders: ["google"],
+    },
     databaseHooks: {
         user: {
             create: {
@@ -31,8 +36,27 @@ export const auth = betterAuth({
         "https://vanijay.com",
     ],
     baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    advanced: {
+        useSecureCookies: true,
+    },
+    emailVerification: {
+        sendOnSignUp: true,
+        autoSignInAfterVerification: true,
+        sendVerificationEmail: async ({ user, url }: { user: any; url: string }) => {
+            console.log("BETTER-AUTH: triggering sendVerificationEmail for", user.email);
+            try {
+                // Use first name or split email for fallback name
+                const name = user.firstName || user.name || user.email.split("@")[0];
+                await senMail(user.email, "VERIFICATION", { url, name });
+                console.log("BETTER-AUTH: senMail call completed");
+            } catch (err) {
+                console.error("BETTER-AUTH: Error in sendVerificationEmail hook:", err);
+            }
+        },
+    },
     emailAndPassword: {
         enabled: true,
+        requireEmailVerification: true,
     },
     user: {
         additionalFields: {
@@ -64,6 +88,11 @@ export const auth = betterAuth({
             username: {
                 type: "string",
                 required: false,
+            },
+            hasProfile: {
+                type: "boolean",
+                required: false,
+                defaultValue: false,
             }
         }
     },
