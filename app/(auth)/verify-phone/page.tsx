@@ -1,11 +1,29 @@
-"use client";
+import SellerUnifiedAuth from "@/components/auth/SellerUnifiedAuth";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 
-import UnifiedAuth from "@/components/auth/UnifiedAuth";
+export default async function VerifyPhonePage() {
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
 
-export default function VerifyPhonePage() {
+    if (!session) {
+        redirect("/sign-in");
+    }
+
+    if ((session.user as any).phoneVerified) {
+        if ((session.user as any).hasProfile) {
+            redirect("/");
+        } else {
+            redirect("/profileSetup");
+        }
+    }
+
     return (
         <div className="flex min-h-screen items-center justify-center p-4 w-full">
-            <UnifiedAuth />
+            <SellerUnifiedAuth />
         </div>
     );
 }
+

@@ -95,7 +95,7 @@ export const sellerProfileResolvers = {
 
         // Everything in a transaction
         const result = await prisma.$transaction(
-          async (tx) => {
+          async (tx: any) => {
             console.log("[setupSellerProfile] Starting transaction...");
 
             // 1. Create pickup/warehouse address
@@ -159,6 +159,13 @@ export const sellerProfileResolvers = {
               },
             });
             console.log("[setupSellerProfile] Seller profile created:", profile.id);
+
+            // 4. Update user to have profile
+            console.log("[setupSellerProfile] Updating user hasProfile field...");
+            await tx.user.update({
+              where: { id: user.id },
+              data: { hasProfile: true },
+            });
 
             return profile;
           },

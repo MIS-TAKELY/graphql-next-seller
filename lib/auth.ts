@@ -85,10 +85,7 @@ export const auth = betterAuth({
                 type: "string",
                 required: false,
             },
-            username: {
-                type: "string",
-                required: false,
-            },
+
             hasProfile: {
                 type: "boolean",
                 required: false,
