@@ -162,7 +162,7 @@ export const sellerProfileResolvers = {
 
             return profile;
           },
-          { timeout: 300000 }
+          { timeout: 15000 }
         );
 
         return result;
