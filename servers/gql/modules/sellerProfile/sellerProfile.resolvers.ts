@@ -1,4 +1,5 @@
 import slugify from "slugify";
+import { GraphQLError } from "graphql";
 import { requireAuth } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
@@ -66,93 +67,128 @@ export const sellerProfileResolvers = {
       { input }: { input: SellerProfileSetupInput },
       ctx: GraphQLContext
     ) => {
-      const user = requireAuth(ctx);
-      console.log("user-->", user);
-      const prisma = ctx.prisma;
+      try {
+        const user = requireAuth(ctx);
+        console.log("[setupSellerProfile] User:", user);
+        console.log("[setupSellerProfile] Input:", JSON.stringify(input, null, 2));
 
-      // Prevent creating multiple profiles
-      const existing = await prisma.sellerProfile.findUnique({
-        where: { userId: user.id },
-        select: { id: true },
-      });
+        const prisma = ctx.prisma;
 
-      if (existing) {
-        throw new Error("Seller profile already exists.");
-      }
+        // Prevent creating multiple profiles
+        const existing = await prisma.sellerProfile.findUnique({
+          where: { userId: user.id },
+          select: { id: true },
+        });
 
-      const slug = await generateUniqueSlug(
-        prisma,
-        input.slug || input.shopName
-      );
+        if (existing) {
+          console.warn("[setupSellerProfile] Profile already exists for user:", user.id);
+          throw new Error("Seller profile already exists.");
+        }
 
-      const addressInput = input.address;
+        const slug = await generateUniqueSlug(
+          prisma,
+          input.slug || input.shopName
+        );
+        console.log("[setupSellerProfile] Generated slug:", slug);
 
-      // Everything in a transaction
-      const result = await prisma.$transaction(
-        async (tx) => {
-          // 1. Create pickup/warehouse address
-          const address = await tx.address.create({
-            data: {
-              userId: user.id,
-              type: "WAREHOUSE",
-              label: addressInput.label ?? "Main Warehouse / Pickup Point",
-              line1: addressInput.line1,
-              line2: addressInput.line2,
-              city: addressInput.city,
-              state: addressInput.state || addressInput.city,
-              country: addressInput.country || "NP",
-              postalCode: addressInput.postalCode,
-              phone: addressInput.phone || input.phone,
-              isDefault: true,
-            },
-          });
+        const addressInput = input.address;
 
-          // 2. Grant SELLER role if not already granted
-          await tx.userRole.upsert({
-            where: {
-              userId_role: {
+        // Everything in a transaction
+        const result = await prisma.$transaction(
+          async (tx) => {
+            console.log("[setupSellerProfile] Starting transaction...");
+
+            // 1. Create pickup/warehouse address
+            console.log("[setupSellerProfile] Creating address...");
+            const address = await tx.address.create({
+              data: {
+                userId: user.id,
+                type: "WAREHOUSE",
+                label: addressInput.label ?? "Main Warehouse / Pickup Point",
+                line1: addressInput.line1,
+                line2: addressInput.line2,
+                city: addressInput.city,
+                state: addressInput.state || addressInput.city,
+                country: addressInput.country || "NP",
+                postalCode: addressInput.postalCode,
+                phone: addressInput.phone || input.phone,
+                isDefault: true,
+              },
+            });
+            console.log("[setupSellerProfile] Address created:", address.id);
+
+            // 2. Grant SELLER role if not already granted
+            console.log("[setupSellerProfile] Upserting SELLER role...");
+            await tx.userRole.upsert({
+              where: {
+                userId_role: {
+                  userId: user.id,
+                  role: "SELLER",
+                },
+              },
+              update: {}, // Already has it → do nothing
+              create: {
                 userId: user.id,
                 role: "SELLER",
               },
-            },
-            update: {}, // Already has it → do nothing
-            create: {
-              userId: user.id,
-              role: "SELLER",
-            },
+            });
+
+            // 3. Create the seller profile
+            console.log("[setupSellerProfile] Creating seller profile...");
+            const profile = await tx.sellerProfile.create({
+              data: {
+                userId: user.id,
+                shopName: input.shopName,
+                slug,
+                tagline: input.tagline,
+                description: input.description,
+                logo: input.logo,
+                banner: input.banner,
+                businessName: input.businessName,
+                businessRegNo: input.businessRegNo,
+                businessType: input.businessType,
+                phone: input.phone,
+                altPhone: input.altPhone,
+                email: input.supportEmail,
+                pickupAddressId: address.id,
+                isActive: true,
+                verificationStatus: "PENDING", // optional: start as pending review
+              },
+              include: {
+                pickupAddress: true,
+              },
+            });
+            console.log("[setupSellerProfile] Seller profile created:", profile.id);
+
+            return profile;
+          },
+          { timeout: 300000 }
+        );
+
+        return result;
+      } catch (error: any) {
+        console.error("[setupSellerProfile] Error in mutation:", error);
+
+        // Return a more descriptive error message to the client using GraphQLError
+        if (error.code === "P2002") {
+          const target = error.meta?.target?.[0];
+          let msg = `Unique constraint failed on ${target}`;
+          if (target === "shopName") msg = "A shop with this name already exists.";
+          if (target === "slug") msg = "A shop with this URL already exists.";
+
+          throw new GraphQLError(msg, {
+            extensions: { code: "BAD_USER_INPUT", target }
           });
+        }
 
-          // 3. Create the seller profile
-          const profile = await tx.sellerProfile.create({
-            data: {
-              userId: user.id,
-              shopName: input.shopName,
-              slug,
-              tagline: input.tagline,
-              description: input.description,
-              logo: input.logo,
-              banner: input.banner,
-              businessName: input.businessName,
-              businessRegNo: input.businessRegNo,
-              businessType: input.businessType,
-              phone: input.phone,
-              altPhone: input.altPhone,
-              email: input.supportEmail,
-              pickupAddressId: address.id,
-              isActive: true,
-              verificationStatus: "PENDING", // optional: start as pending review
-            },
-            include: {
-              pickupAddress: true,
-            },
-          });
-
-          return profile;
-        },
-        { timeout: 300000 }
-      );
-
-      return result;
+        const message = error.message || "An unexpected error occurred during profile setup.";
+        throw new GraphQLError(message, {
+          extensions: {
+            code: "INTERNAL_SERVER_ERROR",
+            originalError: process.env.NODE_ENV === "development" ? error : undefined
+          }
+        });
+      }
     },
   },
 

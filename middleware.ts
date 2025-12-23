@@ -54,8 +54,26 @@ export default async function middleware(request: NextRequest) {
 
         // 3. If logged in but phone is not verified
         if (session.user && !session.user.phoneVerified) {
-            return NextResponse.redirect(new URL("/verify-phone", request.url));
+            if (nextUrl.pathname !== "/verify-phone") {
+                return NextResponse.redirect(new URL("/verify-phone", request.url));
+            }
+            return NextResponse.next();
         }
+
+        // 4. If phone is verified but profile is missing
+        if (session.user && !session.user.hasProfile) {
+            const isApiRoute = nextUrl.pathname.startsWith("/api");
+            if (nextUrl.pathname !== "/profileSetup" && !isApiRoute) {
+                return NextResponse.redirect(new URL("/profileSetup", request.url));
+            }
+            return NextResponse.next();
+        }
+
+        // 5. If profile exists and user is trying to access onboarding, redirect to dashboard
+        if (session.user && session.user.hasProfile && nextUrl.pathname === "/profileSetup") {
+            return NextResponse.redirect(new URL("/", request.url));
+        }
+
     } catch (error) {
         console.error("Middleware session check failed:", error);
         return NextResponse.redirect(new URL("/sign-in", request.url));

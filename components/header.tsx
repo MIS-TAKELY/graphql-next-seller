@@ -20,6 +20,7 @@ import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 
 type HeaderNotification = {
   id: string;
@@ -33,7 +34,7 @@ type HeaderNotification = {
 
 export function Header() {
   const { theme, setTheme } = useTheme();
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const user = session?.user;
   const router = useRouter();
 
@@ -48,7 +49,7 @@ export function Header() {
     []
   );
 
-  // Upstash Realtime – This now works perfectly with your backend
+  // Upstash Realtime
   useRealtime({
     channels: user ? [`user:${user.id}`] : [],
     event: "notification.newNotification",
@@ -57,7 +58,6 @@ export function Header() {
 
       if (!payload?.id) return;
 
-      // Optional: Auto-generate href based on type (fallback if backend doesn't send it)
       let href: string | undefined = payload.href;
 
       if (!href) {
@@ -99,17 +99,23 @@ export function Header() {
     });
   };
 
-  if (!user) {
+  if (isPending || !user) {
     return (
       <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:h-[60px] lg:px-6">
-        <div>Loading...</div>
+        <div className="flex items-center gap-4 w-full">
+          <Skeleton className="h-8 w-8 rounded-md md:hidden" />
+          <Skeleton className="h-8 w-[200px] hidden md:block" />
+          <div className="flex-1" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+          <Skeleton className="h-8 w-8 rounded-full" />
+        </div>
       </header>
     );
   }
-  // console.log(`user:${user!.id}`);
+
   return (
     <header className="flex h-14 items-center gap-2 sm:gap-4 border-b bg-background px-2 sm:px-4 lg:h-[60px] lg:px-6">
-      {/* Mobile menu */}
       <Sheet>
         <SheetTrigger asChild>
           <Button
@@ -126,7 +132,6 @@ export function Header() {
         </SheetContent>
       </Sheet>
 
-      {/* Search */}
       <div className="flex-1">
         <form>
           <div className="relative">
@@ -140,7 +145,6 @@ export function Header() {
         </form>
       </div>
 
-      {/* Notifications Dropdown */}
       <DropdownMenu
         onOpenChange={(open) => {
           if (open) markAllAsRead();
@@ -208,7 +212,6 @@ export function Header() {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {/* Theme Toggle */}
       <Button
         variant="outline"
         size="icon"
@@ -220,7 +223,6 @@ export function Header() {
         <span className="sr-only">Toggle theme</span>
       </Button>
 
-      {/* User Menu */}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
