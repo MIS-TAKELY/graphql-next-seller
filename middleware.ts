@@ -29,7 +29,7 @@ export default async function middleware(request: NextRequest) {
         nextUrl.pathname === route || nextUrl.pathname.startsWith(`${route}/`)
     );
 
-    if (isPublicRoute || nextUrl.pathname === "/verify-phone") {
+    if (isPublicRoute || nextUrl.pathname === "/verify-phone" || nextUrl.pathname.startsWith("/api/graphql")) {
         return NextResponse.next();
     }
 

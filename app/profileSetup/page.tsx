@@ -182,21 +182,34 @@ export default function SellerOnboarding() {
       console.error("Profile setup error:", error);
 
       // Extract meaningful error message
-      let errorMessage = "Submission failed. Please try again.";
+      let errorMessage = "Something went wrong during profile setup. Please try again.";
+
+      // GraphQL Errors
       if (error.graphQLErrors && error.graphQLErrors.length > 0) {
         errorMessage = error.graphQLErrors[0].message;
-      } else if (error.networkError) {
-        errorMessage = "Network error. Please check your internet connection.";
-      } else if (error.message) {
+      }
+      // Network/Parsing Errors (like the HTML response issue)
+      else if (error.networkError) {
+        console.error("Network error details:", error.networkError);
+        errorMessage = "Unable to connect to the server. Please check your connection or try again later.";
+
+        // Handle specific server parse error (HTML instead of JSON)
+        if (error.networkError.name === "ServerParseError") {
+          errorMessage = "Server configuration error. Please contact support.";
+        }
+      }
+      // Other Apollo/System Errors
+      else if (error.message && !error.message.includes("Unexpected token")) {
         errorMessage = error.message;
       }
 
-      // Show specific error messages
-      if (errorMessage.includes("already exists")) {
+      // Check for common business logic errors and provide friendly messages
+      if (errorMessage.toLowerCase().includes("already exists")) {
         toast.error("A seller profile already exists for this account.");
-      } else if (errorMessage.includes("slug")) {
-        toast.error("This shop URL is already taken. Please try a different shop name.");
+      } else if (errorMessage.toLowerCase().includes("slug") || errorMessage.toLowerCase().includes("shop name")) {
+        toast.error("This shop name or URL is already taken. Please try a different one.");
       } else {
+        // Generic fallback for system errors to avoid exposing internal details
         toast.error(errorMessage);
       }
     }
