@@ -1,4 +1,4 @@
-import { PrismaClient } from "@/app/generated/prisma";
+import { PrismaClient } from "@/app/generated/prisma/edge";
 import { withAccelerate } from "@prisma/extension-accelerate";
 
 const prismaClientSingleton = () => {
