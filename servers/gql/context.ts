@@ -1,7 +1,7 @@
 // lib/context.ts (or wherever you create context)
 import redisConfig from "@/config/redis";
-import { prisma } from "@/lib/db/prisma";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
 import { headers } from "next/headers";
 
 export interface GraphQLContext {
@@ -21,7 +21,7 @@ export interface GraphQLContext {
 export async function createContext(): Promise<GraphQLContext> {
   try {
     const session = await auth.api.getSession({
-      headers: await headers()
+      headers: await headers(),
     });
 
     console.log("[GQL Context] Session found:", !!session);
@@ -52,7 +52,7 @@ export async function createContext(): Promise<GraphQLContext> {
         user = {
           id: dbUser.id,
           email: dbUser.email,
-          roles: dbUser.roles.map((r) => r.role),
+          roles: dbUser.roles.map((r:any) => r.role),
         };
       }
     }
@@ -62,7 +62,10 @@ export async function createContext(): Promise<GraphQLContext> {
       user,
       publish: async (evt) => {
         if (!redisConfig.publisher) {
-          console.warn("Redis publisher not available — event dropped:", evt.type);
+          console.warn(
+            "Redis publisher not available — event dropped:",
+            evt.type
+          );
           return;
         }
         try {
