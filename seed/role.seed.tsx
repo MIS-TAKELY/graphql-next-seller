@@ -1,8 +1,5 @@
 // // prisma/seed-roles.ts
 
-import { Role } from "@/app/generated/prisma";
-import { prisma } from "@/lib/db/prisma";
-
 // import { Role } from "@/app/generated/prisma";
 // import { prisma } from "@/lib/db/prisma";
 
@@ -97,7 +94,6 @@ import { prisma } from "@/lib/db/prisma";
 // prisma/seed-user-roles.ts
 // prisma/seed-roles.ts
 
-
 // async function main() {
 //   // 1. Create a sample user
 //   const user = await prisma.user.create({
@@ -116,7 +112,7 @@ import { prisma } from "@/lib/db/prisma";
 //     data: [
 //       { userId: user.id, role: Role.BUYER },
 //       { userId: user.id, role: Role.SELLER },
-//       { userId: user.id, role: Role.ADMIN },  
+//       { userId: user.id, role: Role.ADMIN },
 //     ],
 //     skipDuplicates: true, // skips if the same role already exists
 //   });
