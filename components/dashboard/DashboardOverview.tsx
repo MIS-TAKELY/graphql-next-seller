@@ -8,10 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
 import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
 import { getCachedData, setCachedData } from "@/lib/cache";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export async function DashboardOverview() {
-  const { userId } = await auth();
+  const session = await auth.api.getSession({
+    headers: await headers()
+  });
+  const userId = session?.user?.id;
   const cacheKey = `dashboard_overview_${userId}`;
 
   // Try to get cached data first

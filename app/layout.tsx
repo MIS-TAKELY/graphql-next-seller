@@ -1,5 +1,4 @@
 import ApolloWrapper from "@/lib/apollo/apollo-provider";
-import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -26,13 +25,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <ClerkProvider>
-        <body
-          className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-        >
-          <ApolloWrapper>{children}</ApolloWrapper>
-        </body>
-      </ClerkProvider>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+      >
+        <ApolloWrapper>{children}</ApolloWrapper>
+      </body>
     </html>
   );
 }

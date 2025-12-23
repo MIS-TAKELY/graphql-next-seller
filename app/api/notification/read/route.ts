@@ -1,16 +1,19 @@
 // app/api/notifications/read/route.ts
 import { prisma } from "@/lib/db/prisma";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
 export async function POST() {
-  const { userId: clerkId } = await auth();
-  if (!clerkId) return new Response("Unauthorized", { status: 401 });
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  });
 
-  const user = await prisma.user.findUnique({ where: { clerkId } });
-  if (!user) return new Response("Not found", { status: 404 });
+  if (!session) return new Response("Unauthorized", { status: 401 });
+
+  const userId = session.user.id;
 
   await prisma.notification.updateMany({
-    where: { userId: user.id, isRead: false },
+    where: { userId, isRead: false },
     data: { isRead: true },
   });
 

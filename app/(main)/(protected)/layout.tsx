@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db/prisma";
-import { auth } from "@clerk/nextjs/server";
-import { unstable_noStore as noStore } from "next/cache";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 
@@ -13,27 +13,18 @@ type ProtectedLayoutProps = {
 export default async function ProtectedLayout({
   children,
 }: ProtectedLayoutProps) {
-  noStore();
-
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
-
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId: userId },
-    select: {
-      id: true,
-    },
+  const session = await auth.api.getSession({
+    headers: await headers(),
   });
 
-  const sellerProfile = dbUser
-    ? await prisma.sellerProfile.findUnique({
-        where: { userId: dbUser.id },
-        select: { id: true },
-      })
-    : null;
+  if (!session) {
+    redirect("/login");
+  }
+
+  const sellerProfile = await prisma.sellerProfile.findUnique({
+    where: { userId: session.user.id },
+    select: { id: true },
+  });
 
   if (!sellerProfile) {
     redirect("/profileSetup");

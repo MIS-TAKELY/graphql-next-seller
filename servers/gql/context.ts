@@ -1,17 +1,15 @@
 // lib/context.ts (or wherever you create context)
 import redisConfig from "@/config/redis";
 import { prisma } from "@/lib/db/prisma";
-import { getAuth } from "@clerk/nextjs/server";
-import { NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 
-// Updated context type — no more `role: string`
 export interface GraphQLContext {
   prisma: typeof prisma;
   user: {
     id: string;
-    clerkId: string;
     email: string;
-    roles: string[]; // ← Now an array of roles
+    roles: string[];
   } | null;
   publish: (evt: {
     type: string;
@@ -20,24 +18,32 @@ export interface GraphQLContext {
   }) => Promise<void>;
 }
 
-export async function createContext(request: NextRequest): Promise<GraphQLContext> {
+export async function createContext(): Promise<GraphQLContext> {
   try {
-    const { userId: clerkId } = await getAuth(request);
+    const session = await auth.api.getSession({
+      headers: await headers()
+    });
 
-    console.log("clerk id--->",clerkId)
+    console.log("[GQL Context] Session found:", !!session);
+    if (session) {
+      console.log("[GQL Context] User ID:", session.user.id);
+    }
+
+    console.log("[GQL Context] Session found:", !!session);
+    if (session) {
+      console.log("[GQL Context] User ID:", session.user.id);
+    }
 
     let user = null;
 
-    if (clerkId) {
-      // Fetch user + their roles in a single query using Prisma's nested read
+    if (session?.user) {
       const dbUser = await prisma.user.findUnique({
-        where: { clerkId },
+        where: { id: session.user.id },
         select: {
           id: true,
-          clerkId: true,
           email: true,
           roles: {
-            select: { role: true }, // This pulls from UserRole table
+            select: { role: true },
           },
         },
       });
@@ -45,9 +51,8 @@ export async function createContext(request: NextRequest): Promise<GraphQLContex
       if (dbUser) {
         user = {
           id: dbUser.id,
-          clerkId: dbUser.clerkId,
           email: dbUser.email,
-          roles: dbUser.roles.map((r) => r.role), // ← array of roles
+          roles: dbUser.roles.map((r) => r.role),
         };
       }
     }

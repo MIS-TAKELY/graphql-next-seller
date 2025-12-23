@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { useRealtime } from "@upstash/realtime/client";
 
 import type {
@@ -15,7 +15,9 @@ import type {
 
 export const RealtimeNotifications = () => {
   const router = useRouter();
-  const { userId, isLoaded } = useAuth();
+  const { data: session, isPending } = useSession();
+  const userId = session?.user?.id;
+  const isLoaded = !isPending;
 
   const handleMessageNotification = useCallback(
     (payload: NewMessagePayload) => {

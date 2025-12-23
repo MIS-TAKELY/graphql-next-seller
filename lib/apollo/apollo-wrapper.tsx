@@ -2,8 +2,6 @@
 "use client";
 
 import { ApolloClient, ApolloProvider, createHttpLink } from "@apollo/client";
-import { setContext } from "@apollo/client/link/context";
-import { useAuth } from "@clerk/nextjs";
 import { useMemo } from "react";
 import { APOLLO_CONFIG, APOLLO_DEFAULT_OPTIONS } from "./config";
 
@@ -21,41 +19,28 @@ export function SSRApolloProvider({
   children,
   initialData,
 }: SSRApolloProviderProps) {
-  const { getToken } = useAuth();
-
   const client = useMemo(() => {
-    const authLink = setContext(async (_, { headers }) => {
-      const token = await getToken();
-      return {
-        headers: { ...headers, authorization: token ? `Bearer ${token}` : "" },
-      };
-    });
-
-    // console.log("auth link-->", authLink);
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")).replace(/\/$/, "");
 
     const httpLink = createHttpLink({
-      uri:
-        `${process.env.NEXT_PUBLIC_APP_URL}/api/graphql` ||
-        "/api/graphql",
+      uri: typeof window !== "undefined"
+        ? "/api/graphql"
+        : `${baseUrl}/api/graphql`,
     });
 
     const client = new ApolloClient({
-      link: authLink.concat(httpLink),
+      link: httpLink,
       cache: APOLLO_CONFIG.cache,
       defaultOptions: APOLLO_DEFAULT_OPTIONS,
     });
 
-    // console.log("inner cllient-->",client)
-
-    // Hydrate cache with initial data
-
-
     return client;
   }, [
-    getToken,
+    initialData?.addresses,
+    initialData?.userProfile,
+    initialData?.products,
+    initialData?.currentProduct,
   ]);
-
-  // console.log("outter cllient-->",client)
 
   return <ApolloProvider client={client}>{children}</ApolloProvider>;
 }

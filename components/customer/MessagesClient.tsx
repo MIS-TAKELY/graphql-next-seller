@@ -2,13 +2,15 @@
 
 import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
 import { useQuery } from "@apollo/client";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { useSearchParams } from "next/navigation";
 import MessagesSection from "./MessagesSection";
 import { useConversationRealtime } from "@/hooks/chat/useConversationRealtime";
 
 export default function MessagesClient() {
-  const { userId, isLoaded } = useAuth();
+  const { data: session, isPending } = useSession();
+  const userId = session?.user?.id;
+  const isLoaded = !isPending;
   const searchParams = useSearchParams();
   const customerId = searchParams.get("customerId");
 

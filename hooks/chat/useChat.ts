@@ -14,7 +14,7 @@ import {
 } from "@apollo/client";
 import { GET_ME } from "@/client/user/user.query";
 import { useRealtime } from "@upstash/realtime/client";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -95,7 +95,8 @@ type MessageInput = ServerMessage | RealtimeMessageInput;
 const FETCH_POLICY_NO_CACHE: FetchPolicy = "no-cache";
 
 export const useSellerChat = (conversationId?: string | null) => {
-  const { userId: clerkId } = useAuth();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -148,8 +149,8 @@ export const useSellerChat = (conversationId?: string | null) => {
       // but usually 'me' query is fast.
       const isMe =
         (currentDbId && (msg.sender?.id === currentDbId || (msg as any).senderId === currentDbId)) ||
-        (msg.sender?.id && msg.sender.id === clerkId) || // Fallback if backend used clerkId (unlikely)
-        (msg as any).senderId === clerkId;
+        (msg.sender?.id && msg.sender.id === userId) ||
+        (msg as any).senderId === userId;
 
       // Logic to resolve timestamp from various possible keys
       const rawDate =
@@ -170,7 +171,7 @@ export const useSellerChat = (conversationId?: string | null) => {
         attachments,
       };
     },
-    [clerkId, currentDbId]
+    [userId, currentDbId]
   );
 
   const upsertServerMessage = useCallback((incoming: LocalMessage) => {
@@ -405,13 +406,13 @@ export const useSellerChat = (conversationId?: string | null) => {
   useRealtime({
     channels: [
       conversationId ? `conversation:${conversationId}` : undefined,
-      clerkId ? `user:${clerkId}` : undefined
+      userId ? `user:${userId}` : undefined
     ].filter(Boolean) as string[],
     event: "message.newMessage",
     onData: (payload: any) => {
       console.log("[Seller Chat] 📨 New realtime message received:", payload);
       console.log("[Seller Chat] 🔍 Current Conversation ID:", conversationId);
-      console.log("[Seller Chat] 👤 Current User ID:", clerkId);
+      console.log("[Seller Chat] 👤 Current User ID:", userId);
 
       if (!payload) return;
 

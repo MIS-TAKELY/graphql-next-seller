@@ -104,11 +104,11 @@ export const messageResolvers = {
       const conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
         include: {
-          sender: { select: { id: true, clerkId: true } },
-          reciever: { select: { id: true, clerkId: true } },
+          sender: { select: { id: true } },
+          reciever: { select: { id: true } },
           ConversationParticipant: {
             select: {
-              user: { select: { id: true, clerkId: true } },
+              user: { select: { id: true } },
             },
           },
         },
@@ -188,6 +188,9 @@ export const messageResolvers = {
         }
 
         return message;
+      }, {
+        maxWait: 5000, // default: 2000
+        timeout: 20000, // default: 5000
       });
 
       if (!result) throw new Error("Unable to save message in database");
@@ -228,22 +231,22 @@ export const messageResolvers = {
           console.error("Failed to publish to Upstash Realtime:", error);
         });
 
-      const participantClerkIds = new Set<string>();
-      if (conversation.sender?.clerkId) {
-        participantClerkIds.add(conversation.sender.clerkId);
+      const participantIds = new Set<string>();
+      if (conversation.sender?.id) {
+        participantIds.add(conversation.sender.id);
       }
-      if (conversation.reciever?.clerkId) {
-        participantClerkIds.add(conversation.reciever.clerkId);
+      if (conversation.reciever?.id) {
+        participantIds.add(conversation.reciever.id);
       }
       conversation.ConversationParticipant?.forEach((participant) => {
-        const clerkId = participant.user?.clerkId;
-        if (clerkId) participantClerkIds.add(clerkId);
+        const userId = participant.user?.id;
+        if (userId) participantIds.add(userId);
       });
 
-      for (const clerkId of participantClerkIds) {
-        if (!clerkId || clerkId === user.clerkId) continue;
+      for (const userId of participantIds) {
+        if (!userId || userId === user.id) continue;
         realtime
-          .channel(`user:${clerkId}`)
+          .channel(`user:${userId}`)
           .emit("message.newMessage", realtimePayload)
           .catch((error) => {
             console.error(
@@ -259,19 +262,13 @@ export const messageResolvers = {
           ? conversation.recieverId
           : conversation.senderId;
 
-      const receiverClerkId =
-        conversation.senderId === user.id
-          ? conversation.reciever?.clerkId
-          : conversation.sender?.clerkId;
-
-      if (receiverId && receiverClerkId) {
+      if (receiverId) {
         const senderName =
           `${result.sender?.firstName || ""} ${result.sender?.lastName || ""
             }`.trim() || "A seller";
 
         createAndPushNotification({
           userId: receiverId,
-          recieverClerkId: receiverClerkId,
           title: "New Message",
           body: `${senderName} sent you a message`,
           type: "NEW_MESSAGE",

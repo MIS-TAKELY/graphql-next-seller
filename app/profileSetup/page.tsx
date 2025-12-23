@@ -149,7 +149,7 @@ export default function SellerOnboarding() {
         phone: data.addressPhone || data.phone,
       };
 
-      await setupSellerProfile({
+      const result = await setupSellerProfile({
         variables: {
           input: {
             shopName: data.shopName,
@@ -169,10 +169,36 @@ export default function SellerOnboarding() {
         },
       });
 
-      toast.success("Shop submitted successfully!");
-      router.push("/");
+      if (result.data) {
+        toast.success("Shop created successfully! Redirecting to dashboard...");
+        // Force cache revalidation
+        router.refresh();
+        // Small delay to ensure cache is updated
+        setTimeout(() => {
+          router.push("/");
+        }, 500);
+      }
     } catch (error: any) {
-      toast.error(error.message || "Submission failed. Please try again.");
+      console.error("Profile setup error:", error);
+
+      // Extract meaningful error message
+      let errorMessage = "Submission failed. Please try again.";
+      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
+        errorMessage = error.graphQLErrors[0].message;
+      } else if (error.networkError) {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      // Show specific error messages
+      if (errorMessage.includes("already exists")) {
+        toast.error("A seller profile already exists for this account.");
+      } else if (errorMessage.includes("slug")) {
+        toast.error("This shop URL is already taken. Please try a different shop name.");
+      } else {
+        toast.error(errorMessage);
+      }
     }
   };
 
@@ -183,8 +209,8 @@ export default function SellerOnboarding() {
       : errors[fieldName as keyof FormData];
 
     return `w-full px-4 py-3 border rounded-lg transition-all duration-200 ${hasError
-        ? 'border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500 bg-red-50'
-        : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400'
+      ? 'border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500 bg-red-50'
+      : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400'
       }`;
   };
 

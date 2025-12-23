@@ -2,15 +2,24 @@
 
 import { prisma } from "@/lib/db/prisma";
 import { realtime } from "@/lib/realtime";
-import { auth } from "@clerk/nextjs/server";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
+
+async function getSession() {
+    return await auth.api.getSession({
+        headers: await headers(),
+    });
+}
 
 export async function replyToQuestion(questionId: string, content: string) {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) throw new Error("Unauthorized");
+    const session = await getSession();
+    if (!session) throw new Error("Unauthorized");
+
+    const userId = session.user.id;
 
     // Verify seller and get internal user ID
     const user = await prisma.user.findUnique({
-        where: { clerkId },
+        where: { id: userId },
         include: { sellerProfile: true }
     });
 
@@ -74,11 +83,13 @@ export async function getQuestionsForProduct(productId: string) {
 }
 
 export async function getSellerQuestions() {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) throw new Error("Unauthorized");
+    const session = await getSession();
+    if (!session) throw new Error("Unauthorized");
+
+    const userId = session.user.id;
 
     const user = await prisma.user.findUnique({
-        where: { clerkId },
+        where: { id: userId },
         include: { sellerProfile: true }
     });
 

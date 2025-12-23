@@ -6,7 +6,6 @@ type NotificationType = "NEW_MESSAGE" | "NEW_ORDER" | "ORDER_STATUS" | "SYSTEM";
 
 interface CreateNotificationInput {
     userId: string;
-    recieverClerkId: string;
     title: string;
     body: string;
     type: NotificationType;
@@ -15,7 +14,6 @@ interface CreateNotificationInput {
 
 export async function createAndPushNotification({
     userId,
-    recieverClerkId,
     title,
     body,
     type,
@@ -35,11 +33,11 @@ export async function createAndPushNotification({
 
     // 2. Push via Upstash Realtime (private channel per user)
 
-    console.log(`user:${recieverClerkId}`);
+    console.log(`user:${userId}`);
     // console.log("REALTIME INSTANCE (publisher):", realtime)
     try {
         await realtime
-            .channel(`user:${recieverClerkId}`)
+            .channel(`user:${userId}`)
             .emit("notification.newNotification", {
                 id: notification.id,
                 title,

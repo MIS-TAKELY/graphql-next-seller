@@ -1,36 +1,32 @@
 // lib/apollo/server.ts
 import { ApolloClient, createHttpLink } from "@apollo/client";
-import { setContext } from "@apollo/client/link/context";
+import { SchemaLink } from "@apollo/client/link/schema";
+import { schema } from "@/servers/gql";
+import { createContext } from "@/servers/gql/context";
 import { APOLLO_CONFIG, APOLLO_DEFAULT_OPTIONS } from "./config";
-import { auth } from "@clerk/nextjs/server";
 
 export async function getServerApolloClient() {
-  const { getToken } = await auth();
-  let token: string | null = null;
+  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")).replace(/\/$/, "");
+  const uri = `${baseUrl}/api/graphql`;
 
-  try {
-    token = await getToken();
-  } catch (err) {
-    if (process.env.NODE_ENV !== "production") {
-      console.error("Server token fetch error:", err);
-    }
+  // Use SchemaLink for server-side to avoid network overhead and auth issues
+  if (typeof window === "undefined") {
+    return new ApolloClient({
+      link: new SchemaLink({
+        schema,
+        context: async () => await createContext()
+      }),
+      cache: APOLLO_CONFIG.cache,
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    });
   }
 
   const httpLink = createHttpLink({
-    uri:
-      ` ${process.env.NEXT_PUBLIC_APP_URL}/api/graphql` ||
-      "http://localhost:3000/api/graphql",
+    uri,
   });
 
-  const authLink = setContext((_, { headers }) => ({
-    headers: {
-      ...headers,
-      authorization: token ? `Bearer ${token}` : "",
-    },
-  }));
-
   return new ApolloClient({
-    link: authLink.concat(httpLink),
+    link: httpLink,
     cache: APOLLO_CONFIG.cache,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });

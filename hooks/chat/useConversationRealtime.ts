@@ -1,11 +1,12 @@
 "use client";
 
 import { useRealtime } from "@upstash/realtime/client";
-import { useAuth } from "@clerk/nextjs";
+import { useSession } from "@/lib/auth-client";
 import { useMemo } from "react";
 
 export function useConversationRealtime(onNewMessage: () => void) {
-    const { userId } = useAuth();
+    const { data: session } = useSession();
+    const userId = session?.user?.id;
 
     const events = useMemo(
         () => ({

@@ -5,27 +5,72 @@ function slugify(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
 }
 
-async function createOrGetSeller(email: string, firstName: string, lastName: string) {
-  let seller = await prisma.user.findUnique({ where: { email } });
+async function createOrGetSeller(
+  email: string,
+  firstName: string = "Seller",
+  lastName: string = "Account"
+) {
+  let seller = await prisma.user.findUnique({
+    where: { email },
+    include: { roles: true },
+  });
+
   if (!seller) {
+    const baseUsername = email.split("@")[0];
+    let username = baseUsername;
+    let counter = 1;
+
+    // Ensure unique username
+    while (await prisma.user.findUnique({ where: { username } })) {
+      username = `${baseUsername}${counter}`;
+      counter++;
+    }
+
     seller = await prisma.user.create({
       data: {
-        clerkId: `clerk_${email.split("@")[0]}`,
         email,
+        username,
         firstName,
         lastName,
+        name: `${firstName} ${lastName}`.trim(),
         roles: {
-          create: {
-            role: "SELLER",
-          },
+          create: [
+            {
+              role: "SELLER",
+            },
+          ],
         },
       },
+      include: { roles: true },
     });
+    console.log(`Created seller: ${email} with username ${username} and SELLER role`);
+  } else {
+    // Check if user already has SELLER role
+    const hasSellerRole = seller.roles.some((r) => r.role === "SELLER");
+
+    if (!hasSellerRole && seller) {
+      await prisma.userRole.create({
+        data: {
+          userId: seller.id,
+          role: "SELLER",
+        },
+      });
+      console.log(`Added SELLER role to existing user: ${email}`);
+    }
   }
-  return seller;
+
+  // Return fresh user with roles
+  return await prisma.user.findUnique({
+    where: { email },
+    include: { roles: true },
+  });
 }
 
-async function createProduct(input: any, sellerId: string, categoryId: string) {
+async function createProduct(
+  input: any,
+  sellerId: string,
+  categoryId: string
+) {
   const slug = slugify(input.name);
   let uniqueSlug = slug;
   let counter = 1;
@@ -33,6 +78,21 @@ async function createProduct(input: any, sellerId: string, categoryId: string) {
     uniqueSlug = `${slug}-${counter}`;
     counter++;
   }
+
+  // Convert specifications to specificationTable (JSON)
+  const specTable = input.variants.specifications?.reduce(
+    (acc: any, spec: any) => {
+      acc[spec.key] = spec.value;
+      return acc;
+    },
+    {}
+  ) || {};
+
+  // Extract features from specifications or use empty array
+  const features =
+    input.variants.specifications?.map(
+      (spec: any) => `${spec.key}: ${spec.value}`
+    ) || [];
 
   return await prisma.$transaction(
     async (tx) => {
@@ -45,6 +105,8 @@ async function createProduct(input: any, sellerId: string, categoryId: string) {
           categoryId,
           brand: input.brand || "Generic",
           sellerId,
+          features: features,
+          specificationTable: specTable,
           variants: {
             create: {
               sku: input.variants.sku,
@@ -53,6 +115,7 @@ async function createProduct(input: any, sellerId: string, categoryId: string) {
               stock: input.variants.stock,
               attributes: input.variants.attributes || {},
               isDefault: input.variants.isDefault !== false,
+              specificationTable: specTable,
               specifications:
                 input.variants.specifications?.length > 0
                   ? {
@@ -132,6 +195,10 @@ async function main() {
   for (const productData of productsData) {
     try {
       const seller = await createOrGetSeller(productData.sellerEmail, "", "");
+      if (!seller) {
+        console.warn(`⚠️ Seller not found for product "${productData.name}" — skipping`);
+        continue;
+      }
       const category = await prisma.category.findUnique({
         where: { name: productData.categoryName },
       });

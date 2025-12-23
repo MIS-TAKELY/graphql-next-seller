@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { SignOutButton, useUser } from "@clerk/nextjs";
+import { useSession, signOut } from "@/lib/auth-client";
 import { useRealtime } from "@upstash/realtime/client";
 import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -33,7 +33,8 @@ type HeaderNotification = {
 
 export function Header() {
   const { theme, setTheme } = useTheme();
-  const { user } = useUser();
+  const { data: session } = useSession();
+  const user = session?.user;
   const router = useRouter();
 
   const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
@@ -86,6 +87,16 @@ export function Header() {
 
   const handleNotificationClick = (href?: string) => {
     if (href) router.push(href);
+  };
+
+  const handleSignOut = async () => {
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/login");
+        },
+      },
+    });
   };
 
   if (!user) {
@@ -171,9 +182,8 @@ export function Header() {
             notifications.map((n) => (
               <DropdownMenuItem
                 key={n.id}
-                className={`flex flex-col items-start gap-1 p-4 cursor-pointer ${
-                  !n.isRead ? "bg-accent/50" : ""
-                }`}
+                className={`flex flex-col items-start gap-1 p-4 cursor-pointer ${!n.isRead ? "bg-accent/50" : ""
+                  }`}
                 onSelect={(e) => e.preventDefault()}
                 onClick={() => handleNotificationClick(n.href)}
               >
@@ -219,10 +229,9 @@ export function Header() {
             className="rounded-full h-8 w-8 shrink-0"
           >
             <Avatar className="h-8 w-8">
-              <AvatarImage src={user.imageUrl} alt={user.fullName || "User"} />
+              <AvatarImage src={user.image || "/placeholder-user.jpg"} alt={user.name || "User"} />
               <AvatarFallback>
-                {user.firstName?.[0] || "U"}
-                {user.lastName?.[0] || ""}
+                {user.name?.[0] || "U"}
               </AvatarFallback>
             </Avatar>
             <span className="sr-only">User menu</span>
@@ -235,8 +244,8 @@ export function Header() {
           <DropdownMenuItem>Store Settings</DropdownMenuItem>
           <DropdownMenuItem>Billing</DropdownMenuItem>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>
-            <SignOutButton>Logout</SignOutButton>
+          <DropdownMenuItem onClick={handleSignOut}>
+            Logout
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
