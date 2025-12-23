@@ -54,7 +54,7 @@ export const customerResolvers = {
           }
         > = {};
 
-        for (const sellerOrder of sellerOrders) {
+        for (const sellerOrder of sellerOrders as any[]) {
           const buyer = sellerOrder.order.buyer;
           if (!buyer) continue;
 

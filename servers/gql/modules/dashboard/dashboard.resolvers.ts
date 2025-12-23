@@ -217,7 +217,7 @@ export const dashboardResolvers = {
         }
       >();
 
-      for (const item of orderItems) {
+      for (const item of orderItems as any[]) {
         const variant = item.variant;
         const product = variant.product;
         const key = `${product.id}_${variant.id || "novariant"}`;

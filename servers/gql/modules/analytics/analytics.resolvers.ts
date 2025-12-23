@@ -80,7 +80,7 @@ async function getSalesDataPoints(
 ): Promise<any[]> {
   const { start, end } = dateRange;
   const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
-  
+
   let groupBy: "day" | "week" | "month" = "day";
   if (daysDiff > 90) groupBy = "month";
   else if (daysDiff > 30) groupBy = "week";
@@ -505,7 +505,7 @@ export const analyticsResolvers = {
         { productId: string; productName: string; sales: number; revenue: number; orders: number }
       > = {};
 
-      for (const item of orderItems) {
+      for (const item of orderItems as any[]) {
         const productId = item.variant.product.id;
         const productName = item.variant.product.name;
 

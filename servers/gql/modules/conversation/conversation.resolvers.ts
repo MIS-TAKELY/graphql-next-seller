@@ -60,11 +60,12 @@ export const conversationResolvers = {
 
       // Compute lastMessage and unreadCount
       const lastMessage =
-        conversation.messages[conversation.messages.length - 1] || null;
+        (conversation as any).messages[(conversation as any).messages.length - 1] || null;
 
-      const participant = conversation.ConversationParticipant.find(
+      const participantRaw = (conversation as any).ConversationParticipant;
+      const participant = participantRaw ? (participantRaw as any[]).find(
         (p: any) => p.userId === user.id
-      );
+      ) : null;
       let unreadCount = 0;
       if (participant && participant.lastReadAt) {
         unreadCount = await prisma.message.count({
@@ -76,7 +77,7 @@ export const conversationResolvers = {
         });
       } else {
         // Count all messages from buyer if no lastRead
-        unreadCount = conversation.messages.filter(
+        unreadCount = (conversation as any).messages.filter(
           (msg: any) => msg.senderId !== user.id
         ).length;
       }
@@ -145,12 +146,13 @@ export const conversationResolvers = {
 
       // Compute extras for each conversation
       const conversationsWithExtras = await Promise.all(
-        conversations.map(async (conv) => {
+        conversations.map(async (conv: any) => {
           const lastMessage = conv.messages[0] || null;
 
-          const participant = conv.ConversationParticipant.find(
+          const participantRaw = conv.ConversationParticipant;
+          const participant = participantRaw ? (participantRaw as any[]).find(
             (p: any) => p.userId === user.id
-          );
+          ) : null;
           let unreadCount = 0;
           if (participant && participant.lastReadAt) {
             unreadCount = await prisma.message.count({
