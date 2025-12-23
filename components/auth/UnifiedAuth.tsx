@@ -165,6 +165,34 @@ export default function UnifiedAuth() {
         }
     };
 
+    const handleFacebookSignIn = async () => {
+        try {
+            setLoading(true);
+            await signIn.social({
+                provider: "facebook",
+            });
+        } catch (error: any) {
+            console.error("Facebook sign-in error:", error);
+            toast.error("Facebook sign-in failed. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleTikTokSignIn = async () => {
+        try {
+            setLoading(true);
+            await signIn.social({
+                provider: "tiktok",
+            });
+        } catch (error: any) {
+            console.error("TikTok sign-in error:", error);
+            toast.error("TikTok sign-in failed. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const sendOtp = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
 
@@ -319,6 +347,14 @@ export default function UnifiedAuth() {
                 <Button variant="outline" className="w-full justify-start px-4" onClick={handleGoogleSignIn} disabled={loading}>
                     <svg className="mr-3 h-5 w-5" viewBox="0 0 488 512"><path fill="#EA4335" d="M488 261.8C488 403.3 391.1 504 248 504 110.8 504 0 393.2 0 256S110.8 8 248 8c66.8 0 123 24.5 166.3 64.9l-67.5 64.9C258.5 52.6 94.3 116.6 94.3 256c0 86.5 69.1 156.6 153.7 156.6 98.2 0 135-70.4 140.8-106.9H248v-85.3h236.1c2.3 12.7 3.9 24.9 3.9 41.4z" /></svg>
                     Continue with Google
+                </Button>
+                <Button variant="outline" className="w-full justify-start px-4" onClick={handleFacebookSignIn} disabled={loading}>
+                    <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="#1877F2"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+                    Continue with Facebook
+                </Button>
+                <Button variant="outline" className="w-full justify-start px-4" onClick={handleTikTokSignIn} disabled={loading}>
+                    <svg className="mr-3 h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.17-2.89-.6-4.11-1.41-.01 2.31 0 4.62-.01 6.93 0 1.93-.45 3.96-1.8 5.37-1.35 1.41-3.38 2.06-5.3 2.13-1.91.07-3.95-.21-5.59-1.28-1.65-1.07-2.79-2.9-3.03-4.83-.24-1.93.07-4.01 1.25-5.63 1.18-1.63 3.12-2.61 5.12-2.78v4.11c-.5.06-1 .24-1.42.54-.42.3-.76.73-.9 1.21-.14.48-.13 1.01.07 1.47.2.46.56.84.99 1.08.43.24.95.34 1.44.29.49-.05.95-.27 1.3-.61.35-.34.58-.81.65-1.29.07-.48.01-1 .01-1.52 0-3.31.01-6.62.01-9.93z" /></svg>
+                    Continue with TikTok
                 </Button>
             </div>
             <div className="text-center text-sm">

@@ -13,7 +13,7 @@ export const auth = betterAuth({
     ],
     accountLinking: {
         enabled: true,
-        trustedProviders: ["google"],
+        trustedProviders: ["google", "facebook", "tiktok"],
     },
     databaseHooks: {
         user: {
@@ -111,6 +111,34 @@ export const auth = betterAuth({
                     username: (profile.email.split("@")[0] + "_" + uniqueId.slice(-5)).toLowerCase(),
                     firstName: profile.given_name,
                     lastName: profile.family_name,
+                };
+            },
+        },
+        facebook: {
+            clientId: process.env.FACEBOOK_CLIENT_ID as string,
+            clientSecret: process.env.FACEBOOK_CLIENT_SECRET as string,
+            mapProfileToUser: (profile: any) => {
+                const uniqueId = profile.id || Math.random().toString(36).slice(-5);
+                const email = profile.email || `${uniqueId}@facebook.com`;
+                return {
+                    username: (email.split("@")[0] + "_" + uniqueId.slice(-5)).toLowerCase(),
+                    firstName: profile.first_name,
+                    lastName: profile.last_name,
+                    emailVerified: true,
+                };
+            },
+        },
+        tiktok: {
+            clientId: process.env.TIKTOK_CLIENT_ID as string,
+            clientSecret: process.env.TIKTOK_CLIENT_SECRET as string,
+            mapProfileToUser: (profile: any) => {
+                const uniqueId = profile.open_id || profile.id || Math.random().toString(36).slice(-5);
+                const display_name = profile.display_name || "TikTok User";
+                return {
+                    username: ("tiktok_" + uniqueId.slice(-10)).toLowerCase(),
+                    firstName: display_name.split(" ")[0],
+                    lastName: display_name.split(" ").slice(1).join(" ") || "",
+                    emailVerified: true,
                 };
             },
         },
