@@ -18,7 +18,7 @@ export default async function ProfileSetupLayout({
   });
 
   if (!session) {
-    redirect("/login");
+    redirect("/sign-in");
   }
 
   const sellerProfile = await prisma.sellerProfile.findUnique({
