@@ -20,7 +20,6 @@ import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 type HeaderNotification = {
   id: string;
@@ -99,17 +98,10 @@ export function Header() {
     });
   };
 
-  if (isPending || !user) {
+  if (!user) {
     return (
       <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:h-[60px] lg:px-6">
-        <div className="flex items-center gap-4 w-full">
-          <Skeleton className="h-8 w-8 rounded-md md:hidden" />
-          <Skeleton className="h-8 w-[200px] hidden md:block" />
-          <div className="flex-1" />
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-8 w-8 rounded-full" />
-          <Skeleton className="h-8 w-8 rounded-full" />
-        </div>
+        <div>Loading...</div>
       </header>
     );
   }

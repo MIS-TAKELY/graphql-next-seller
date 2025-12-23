@@ -52,31 +52,41 @@ export default async function middleware(request: NextRequest) {
             return NextResponse.redirect(new URL("/sign-in", request.url));
         }
 
-        // 3. If logged in but phone is not verified
-        if (session.user && !session.user.phoneVerified) {
-            if (nextUrl.pathname !== "/verify-phone") {
+        // 2.5 If logged in, don't allow access to sign-in/sign-up
+        if (nextUrl.pathname.startsWith("/sign-in") || nextUrl.pathname.startsWith("/sign-up")) {
+            // Check verification status before redirecting to dashboard
+            if (!session.user.phoneVerified) {
                 return NextResponse.redirect(new URL("/verify-phone", request.url));
             }
-            return NextResponse.next();
-        }
-
-        // 4. If phone is verified but profile is missing
-        if (session.user && !session.user.hasProfile) {
-            const isApiRoute = nextUrl.pathname.startsWith("/api");
-            if (nextUrl.pathname !== "/profileSetup" && !isApiRoute) {
+            if (!session.user.hasProfile) {
                 return NextResponse.redirect(new URL("/profileSetup", request.url));
             }
-            return NextResponse.next();
+            return NextResponse.redirect(new URL("/", request.url));
         }
 
-        // 5. If profile exists and user is trying to access onboarding, redirect to dashboard
-        if (session.user && session.user.hasProfile && nextUrl.pathname === "/profileSetup") {
+        // 3. If logged in but phone is not verified
+        if (session.user && !session.user.phoneVerified) {
+            return NextResponse.redirect(new URL("/verify-phone", request.url));
+        }
+
+        // 4. If logged in, phone verified, but no profile
+        if (session.user && session.user.phoneVerified && !session.user.hasProfile) {
+            if (nextUrl.pathname !== "/profileSetup") {
+                return NextResponse.redirect(new URL("/profileSetup", request.url));
+            }
+        }
+
+        // 5. If logged in, verified, and has profile, prevent access to profileSetup (optional but good UX)
+        if (session.user && session.user.phoneVerified && session.user.hasProfile && nextUrl.pathname === "/profileSetup") {
             return NextResponse.redirect(new URL("/", request.url));
         }
 
     } catch (error) {
         console.error("Middleware session check failed:", error);
-        return NextResponse.redirect(new URL("/sign-in", request.url));
+        // Fallback to sign-in on error
+        if (!isPublicRoute) {
+            return NextResponse.redirect(new URL("/sign-in", request.url));
+        }
     }
 
     return NextResponse.next();

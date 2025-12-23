@@ -117,20 +117,20 @@ export default function SellerOnboarding() {
       case 4:
         fields = ["addressLabel", "fullName", "addressPhone", "line1", "city", "state", "postalCode"];
         break;
+      // case 6:
+      //   fields = [
+      //     "bankName",
+      //     "accountHolder",
+      //     "accountNumber",
+      //     "confirmAccount",
+      //   ];
+      //   break;
     }
     if (fields.length > 0) {
       const valid = await trigger(fields);
-      // If validation fails, sonner toast is handled by react-hook-form if we had it, 
-      // but here we just rely on fields showing errors.
-      if (valid) {
-        setStep((s) => Math.min(s + 1, totalSteps));
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        toast.error("Please fill in all required fields correctly.");
-      }
+      if (valid) setStep((s) => Math.min(s + 1, totalSteps));
     } else {
       setStep((s) => Math.min(s + 1, totalSteps));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -767,76 +767,62 @@ export default function SellerOnboarding() {
 
             {/* Step 7: Review & Submit */}
             {step === 5 && (
-              <div className="text-center py-6 animate-in fade-in zoom-in-95 duration-500">
-                <div className="mb-6">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-4">
-                    <Check className="w-8 h-8" />
-                  </div>
-                  <h2 className="text-3xl font-bold mb-2">Ready to Launch?</h2>
-                  <p className="text-gray-600 max-w-md mx-auto">
-                    Review your information below. Once submitted, our team will review your application within 24 hours.
-                  </p>
-                </div>
+              <div className="text-center py-10">
+                <h2 className="text-2xl font-bold mb-4">Review & Submit</h2>
+                <p className="text-gray-600 mb-8">
+                  Your shop will go live after approval (usually within 24 hours)
+                </p>
 
-                <div className="bg-white shadow-sm border border-gray-200 rounded-2xl text-left max-w-xl mx-auto mb-8 overflow-hidden">
-                  <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                    <h3 className="font-bold text-gray-900">Application Summary</h3>
-                    <button type="button" onClick={() => setStep(2)} className="text-sm text-blue-600 font-medium hover:underline">Edit</button>
-                  </div>
-                  <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                    <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Shop Details</p>
-                      <p className="text-gray-900 font-medium">{watch("shopName") || "—"}</p>
-                      <p className="text-xs text-gray-500 italic">vanijay.com/store/{slug}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Business Type</p>
-                      <p className="text-gray-900 font-medium">{watch("businessType")}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Contact Phone</p>
-                      <p className="text-gray-900 font-medium">{watch("phone") || "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Business Location</p>
-                      <p className="text-gray-900 font-medium">{watch("city")}, {watch("state")}</p>
-                    </div>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl text-left max-w-lg mx-auto mb-8 border border-blue-200">
+                  <h3 className="font-semibold text-gray-800 mb-4">Shop Summary</h3>
+                  <div className="space-y-2">
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Shop Name:</span>
+                      <strong className="text-gray-900">{watch("shopName") || "—"}</strong>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Business Name:</span>
+                      <strong className="text-gray-900">{watch("businessName") || "—"}</strong>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">Phone:</span>
+                      <strong className="text-gray-900">{watch("phone") || "—"}</strong>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-gray-600">City:</span>
+                      <strong className="text-gray-900">{watch("city") || "—"}</strong>
+                    </p>
                   </div>
                 </div>
 
-                <div className="max-w-lg mx-auto">
-                  <label className="flex items-start gap-3 mb-8 cursor-pointer group text-left">
-                    <div className="pt-0.5">
-                      <input
-                        type="checkbox"
-                        required
-                        className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition-all cursor-pointer"
-                      />
-                    </div>
-                    <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
-                      I certify that all provided information is accurate and I agree to the <a href="#" className="text-blue-600 hover:underline font-medium">Merchant Terms of Service</a> and <a href="#" className="text-blue-600 hover:underline font-medium">Commission Policy</a>.
+                <label className="flex items-center justify-center gap-3 mb-8 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    required
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                  <span className="text-gray-700 group-hover:text-gray-900">
+                    I agree to the Terms & Conditions and Commission Policy
+                  </span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="bg-gradient-to-r from-green-600 to-green-700 text-white px-12 py-4 rounded-lg font-medium hover:from-green-700 hover:to-green-800 disabled:opacity-60 transition-all transform hover:scale-105 shadow-lg"
+                >
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Submitting...
                     </span>
-                  </label>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white px-12 py-5 rounded-xl font-bold text-lg hover:from-blue-700 hover:to-indigo-800 disabled:opacity-60 transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-xl shadow-blue-500/20"
-                  >
-                    {loading ? (
-                      <span className="flex items-center justify-center gap-2">
-                        <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        Finalizing Application...
-                      </span>
-                    ) : (
-                      "Launch My Store"
-                    )}
-                  </button>
-                  <button type="button" onClick={prevStep} className="mt-4 text-sm text-gray-500 hover:text-gray-800 transition-colors">Wait, I need to check something</button>
-                </div>
+                  ) : (
+                    "Submit for Approval"
+                  )}
+                </button>
               </div>
             )}
 

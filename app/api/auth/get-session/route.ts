@@ -9,22 +9,23 @@ export const GET = async () => {
             headers: await headers(),
         });
 
-        if (!session) {
+        if (!session || !session.user) {
             return NextResponse.json(null);
         }
 
-        // Check if seller profile exists
+        // Check for seller profile
         const sellerProfile = await prisma.sellerProfile.findUnique({
-            where: { userId: session.user.id },
-            select: { id: true }
+            where: {
+                userId: session.user.id,
+            },
         });
 
         return NextResponse.json({
             ...session,
             user: {
                 ...session.user,
-                hasProfile: !!sellerProfile
-            }
+                hasProfile: !!sellerProfile,
+            },
         });
     } catch (error) {
         console.error("Error in get-session route:", error);

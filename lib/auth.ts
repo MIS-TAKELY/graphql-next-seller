@@ -93,6 +93,7 @@ export const auth = betterAuth({
                 type: "boolean",
                 required: false,
                 defaultValue: false,
+                returned: true, // Make sure better-auth knows to return this if possible, although we check it in the API route manually.
             }
         }
     },
