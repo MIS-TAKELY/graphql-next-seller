@@ -173,7 +173,7 @@ async function createProduct(
 
       return newProduct;
     },
-    { timeout: 30000 }
+    { timeout: 15000 }
   );
 }
 
@@ -1407,8 +1407,13 @@ async function main() {
   for (const productData of productsData) {
     try {
       const seller = await createOrGetSeller(productData.sellerEmail, "", "");
-      const category = await prisma.category.findUnique({
-        where: { name: productData.categoryName },
+      const category = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { name: productData.categoryName },
+            { name: { contains: productData.categoryName, mode: 'insensitive' } }
+          ]
+        },
       });
 
       if (!category) {

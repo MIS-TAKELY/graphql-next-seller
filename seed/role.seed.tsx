@@ -98,37 +98,37 @@ import { prisma } from "@/lib/db/prisma";
 // prisma/seed-roles.ts
 
 
-async function main() {
-  // 1. Create a sample user
-  const user = await prisma.user.create({
-    data: {
-      clerkId: "clerk_test_user",
-      email: "user@example.com",
-      firstName: "Test",
-      lastName: "User",
-    },
-  });
+// async function main() {
+//   // 1. Create a sample user
+//   const user = await prisma.user.create({
+//     data: {
+//       clerkId: "clerk_test_user",
+//       email: "user@example.com",
+//       firstName: "Test",
+//       lastName: "User",
+//     },
+//   });
 
-  console.log("Created user:", user);
+//   console.log("Created user:", user);
 
-  // 2. Assign multiple roles to the user
-  const roles = await prisma.userRole.createMany({
-    data: [
-      { userId: user.id, role: Role.BUYER },
-      { userId: user.id, role: Role.SELLER },
-      { userId: user.id, role: Role.ADMIN },  
-    ],
-    skipDuplicates: true, // skips if the same role already exists
-  });
+//   // 2. Assign multiple roles to the user
+//   const roles = await prisma.userRole.createMany({
+//     data: [
+//       { userId: user.id, role: Role.BUYER },
+//       { userId: user.id, role: Role.SELLER },
+//       { userId: user.id, role: Role.ADMIN },  
+//     ],
+//     skipDuplicates: true, // skips if the same role already exists
+//   });
 
-  console.log("Seeded roles:", roles);
-}
+//   console.log("Seeded roles:", roles);
+// }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
-    await prisma.$disconnect();
-  });
+// main()
+//   .catch((e) => {
+//     console.error(e);
+//     process.exit(1);
+//   })
+//   .finally(async () => {
+//     await prisma.$disconnect();
+//   });

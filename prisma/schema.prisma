@@ -2,11 +2,13 @@ generator client {
     provider      = "prisma-client-js"
     output        = "../app/generated/prisma"
     binaryTargets = ["native", "windows", "rhel-openssl-3.0.x"]
+    previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+    provider   = "postgresql"
+    url        = env("DATABASE_URL")
+    extensions = [vector]
 }
 
 // ENUMS 
@@ -158,7 +160,7 @@ model User {
     avatarImageUrl String?
     phone          String?   @unique @db.VarChar(20)
     phoneVerified  Boolean   @default(false) // Custom for WhatsApp OTP
-    otp            String?   // Custom for WhatsApp OTP
+    otp            String? // Custom for WhatsApp OTP
     otpExpiresAt   DateTime? // OTP expiry
     gender         Gender?
     dob            DateTime?
@@ -187,8 +189,8 @@ model User {
     sellerProfile           SellerProfile?
     roles                   UserRole[]
 
-    productQuestions        ProductQuestion[]
-    productAnswers          ProductAnswer[]           @relation("SellerAnswers")
+    productQuestions ProductQuestion[]
+    productAnswers   ProductAnswer[]   @relation("SellerAnswers")
 
     @@index([email])
     @@map("user")
@@ -502,12 +504,12 @@ model ReturnPolicy {
 }
 
 model Product {
-    id          String        @id @default(cuid())
-    sellerId    String
-    name        String
-    slug        String        @unique
-    description String?
-    features    String[]
+    id                 String        @id @default(cuid())
+    sellerId           String
+    name               String
+    slug               String        @unique
+    description        String?
+    features           String[]
     status             ProductStatus @default(INACTIVE)
     specificationTable Json?
 
@@ -535,18 +537,18 @@ model Product {
 }
 
 model ProductVariant {
-    id         String   @id @default(cuid())
-    productId  String
-    sku        String   @unique
-    price      Decimal  @db.Money //highlighted price
-    mrp        Decimal  @db.Money //cute price
-    stock      Int      @default(0)
-    soldCount  Int      @default(0)
-    attributes Json?
+    id                 String   @id @default(cuid())
+    productId          String
+    sku                String   @unique
+    price              Decimal  @db.Money //highlighted price
+    mrp                Decimal  @db.Money //cute price
+    stock              Int      @default(0)
+    soldCount          Int      @default(0)
+    attributes         Json?
     isDefault          Boolean  @default(false)
     specificationTable Json?
-    createdAt  DateTime @default(now())
-    updatedAt  DateTime @updatedAt
+    createdAt          DateTime @default(now())
+    updatedAt          DateTime @updatedAt
 
     specifications  ProductSpecification[]
     product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)

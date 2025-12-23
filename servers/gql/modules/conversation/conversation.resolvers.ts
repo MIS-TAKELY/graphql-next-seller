@@ -94,7 +94,7 @@ export const conversationResolvers = {
       { recieverId }: { recieverId: string },
       { prisma, user }: GraphQLContext
     ) => {
-      console.log("senderid---->", recieverId, user?.clerkId);
+      console.log("senderid---->", recieverId, user?.id);
       if (!user) {
         throw new Error("Unauthorized: User not authenticated");
       }

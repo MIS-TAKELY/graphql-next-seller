@@ -11,7 +11,6 @@ export interface GraphQLContext {
     id: string;
     email: string;
     roles: { role: Role };
-    clerkId: string;
   } | null;
 }
 

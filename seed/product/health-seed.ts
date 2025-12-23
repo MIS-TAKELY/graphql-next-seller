@@ -172,7 +172,7 @@ async function createProduct(
 
             return newProduct;
         },
-        { timeout: 30000 }
+        { timeout: 15000 }
     );
 }
 
@@ -1434,9 +1434,14 @@ async function main() {
                 console.warn(`⚠️ Seller not found for product "${productData.name}" — skipping`);
                 continue;
             }
-            const category = await prisma.category.findUnique({
-                where: { name: productData.categoryName },
-            });
+            const category = await prisma.category.findFirst({
+        where: {
+          OR: [
+            { name: productData.categoryName },
+            { name: { contains: productData.categoryName, mode: 'insensitive' } }
+          ]
+        },
+      });
 
             if (!category) {
                 console.warn(

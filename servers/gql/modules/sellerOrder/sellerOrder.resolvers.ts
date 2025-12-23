@@ -17,18 +17,18 @@ type SellerOrderStatus =
   | "RETURNED";
 
 const emitOrderStatusChanged = async (
-  clerkIds: Array<string | null | undefined>,
+  userIds: Array<string | null | undefined>,
   payload: OrderStatusChangedPayload
 ) => {
   const recipients = Array.from(
-    new Set(clerkIds.filter((id): id is string => Boolean(id)))
+    new Set(userIds.filter((id): id is string => Boolean(id)))
   );
 
   await Promise.all(
-    recipients.map(async (clerkId) => {
+    recipients.map(async (userId) => {
       try {
         await realtime
-          .channel(`user:${clerkId}`)
+          .channel(`user:${userId}`)
           .emit("order.statusChanged", payload);
       } catch (error) {
         console.error("Failed to dispatch order status notification:", error);
@@ -236,10 +236,10 @@ export const sellerOrderResolver = {
       const sellerOrder = await prisma.sellerOrder.findUnique({
         where: { id: sellerOrderId },
         include: {
-          seller: { select: { id: true, clerkId: true } },
+          seller: { select: { id: true } },
           order: {
             include: {
-              buyer: { select: { id: true, clerkId: true } },
+              buyer: { select: { id: true } },
               sellerOrders: true, // Fetch all SellerOrders for the parent Order
             },
           },
@@ -272,10 +272,10 @@ export const sellerOrderResolver = {
               updatedAt: new Date(),
             },
             include: {
-              seller: { select: { id: true, clerkId: true } },
+              seller: { select: { id: true } },
               order: {
                 include: {
-                  buyer: { select: { id: true, clerkId: true } },
+                  buyer: { select: { id: true } },
                   sellerOrders: true,
                 },
               },
@@ -301,15 +301,15 @@ export const sellerOrderResolver = {
             },
             include: {
               sellerOrders: true,
-              buyer: { select: { id: true, clerkId: true } },
+              buyer: { select: { id: true } },
             },
           });
         }
 
         await emitOrderStatusChanged(
           [
-            updatedSellerOrder.seller?.clerkId,
-            updatedSellerOrder.order.buyer?.clerkId,
+            updatedSellerOrder.seller?.id,
+            updatedSellerOrder.order.buyer?.id,
           ],
           {
             sellerId: updatedSellerOrder.sellerId,
@@ -366,7 +366,7 @@ export const sellerOrderResolver = {
           items: true,
           order: {
             include: {
-              buyer: { select: { id: true, clerkId: true } },
+              buyer: { select: { id: true } },
             },
           },
         },
@@ -420,7 +420,7 @@ export const sellerOrderResolver = {
             items: true,
             order: {
               include: {
-                buyer: { select: { id: true, clerkId: true } },
+                buyer: { select: { id: true } },
               },
             },
           },
@@ -428,8 +428,8 @@ export const sellerOrderResolver = {
 
         await emitOrderStatusChanged(
           [
-            updatedSellerOrder.seller?.clerkId,
-            updatedSellerOrder.order.buyer?.clerkId,
+            updatedSellerOrder.seller?.id,
+            updatedSellerOrder.order.buyer?.id,
           ],
           {
             sellerId: updatedSellerOrder.sellerId,
@@ -587,7 +587,7 @@ export const sellerOrderResolver = {
           seller: true,
           order: {
             include: {
-              buyer: { select: { id: true, clerkId: true } },
+              buyer: { select: { id: true } },
               sellerOrders: true,
             },
           },
@@ -665,10 +665,10 @@ export const sellerOrderResolver = {
         const results = await prisma.sellerOrder.findMany({
           where: { id: { in: sellerOrderIds } },
           include: {
-            seller: { select: { id: true, clerkId: true } },
+            seller: { select: { id: true } },
             order: {
               include: {
-                buyer: { select: { id: true, clerkId: true } },
+                buyer: { select: { id: true } },
                 sellerOrders: true,
               },
             },
@@ -681,8 +681,8 @@ export const sellerOrderResolver = {
           const typedSO = updatedSO as any;
           await emitOrderStatusChanged(
             [
-              typedSO.seller?.clerkId,
-              typedSO.order?.buyer?.clerkId,
+              typedSO.seller?.id,
+              typedSO.order?.buyer?.id,
             ],
             {
               sellerId: typedSO.sellerId,
@@ -732,7 +732,7 @@ export const sellerOrderResolver = {
           seller: true,
           order: {
             include: {
-              buyer: { select: { id: true, clerkId: true } },
+              buyer: { select: { id: true } },
             },
           },
         },
@@ -799,7 +799,7 @@ export const sellerOrderResolver = {
             seller: true,
             order: {
               include: {
-                buyer: { select: { id: true, clerkId: true } },
+                buyer: { select: { id: true } },
                 shipments: true,
               },
             },
@@ -812,8 +812,8 @@ export const sellerOrderResolver = {
           const typedSO = updatedSO as any;
           await emitOrderStatusChanged(
             [
-              typedSO.seller?.clerkId,
-              typedSO.order?.buyer?.clerkId,
+              typedSO.seller?.id,
+              typedSO.order?.buyer?.id,
             ],
             {
               sellerId: typedSO.sellerId,
