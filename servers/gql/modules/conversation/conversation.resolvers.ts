@@ -234,7 +234,7 @@ export const conversationResolvers = {
 
       // Create new conversation (transaction for atomicity)
       const result = await prisma.$transaction(
-        async (tx) => {
+        async (tx: any) => {
           // Create conversation
           const newConversation = await tx.conversation.create({
             data: {

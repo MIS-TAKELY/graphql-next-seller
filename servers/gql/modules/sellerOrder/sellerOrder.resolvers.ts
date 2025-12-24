@@ -286,7 +286,7 @@ export const sellerOrderResolver = {
         // Check if all SellerOrders for the parent Order are CONFIRMED
         const allSellerOrdersConfirmed =
           updatedSellerOrder.order.sellerOrders.every(
-            (so) => so.status === "CONFIRMED"
+            (so: any) => so.status === "CONFIRMED"
           );
 
         let updatedOrder = updatedSellerOrder.order;
@@ -512,7 +512,7 @@ export const sellerOrderResolver = {
 
       // Verify the authenticated user has a SellerOrder for this Order
       const sellerOrder = order.sellerOrders.find(
-        (so) => so.sellerId === context.user?.id
+        (so: any) => so.sellerId === context.user?.id
       );
       if (!sellerOrder) {
         throw new ApolloError({
@@ -622,7 +622,7 @@ export const sellerOrderResolver = {
       }
 
       try {
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: any) => {
           // Perform bulk update on seller orders
           await tx.sellerOrder.updateMany({
             where: { id: { in: sellerOrderIds } },
@@ -634,17 +634,17 @@ export const sellerOrderResolver = {
 
           // Handle parent Order updates if status is CONFIRMED
           if (status === "CONFIRMED") {
-            const uniqueBuyerOrderIds = [...new Set(sellerOrders.map(so => so.buyerOrderId))];
+            const uniqueBuyerOrderIds = [...new Set(sellerOrders.map((so: any) => so.buyerOrderId))];
 
             // Optimization: Fetch all seller orders for these buyer orders in one go
             const relevantSellerOrders = await tx.sellerOrder.findMany({
-              where: { buyerOrderId: { in: uniqueBuyerOrderIds } }
+              where: { buyerOrderId: { in: (uniqueBuyerOrderIds as string[]) } }
             });
 
             // Group by buyerOrderId and check if all are confirmed
-            const ordersToConfirm = uniqueBuyerOrderIds.filter(buyerOrderId => {
-              const ordersForThisBuyer = relevantSellerOrders.filter(so => so.buyerOrderId === buyerOrderId);
-              return ordersForThisBuyer.every(so => so.status === "CONFIRMED");
+            const ordersToConfirm = (uniqueBuyerOrderIds as string[]).filter((buyerOrderId: string) => {
+              const ordersForThisBuyer = relevantSellerOrders.filter((so: any) => so.buyerOrderId === buyerOrderId);
+              return ordersForThisBuyer.every((so: any) => so.status === "CONFIRMED");
             });
 
             if (ordersToConfirm.length > 0) {
@@ -677,7 +677,7 @@ export const sellerOrderResolver = {
 
         // Emit notifications outside transaction
         for (const updatedSO of results) {
-          const previousOrder = sellerOrders.find(o => o.id === updatedSO.id);
+          const previousOrder = sellerOrders.find((o: any) => o.id === updatedSO.id);
           const typedSO = updatedSO as any;
           await emitOrderStatusChanged(
             [
@@ -696,7 +696,7 @@ export const sellerOrderResolver = {
           );
         }
 
-        return results.map(o => ({
+        return results.map((o: any) => ({
           ...o,
           subtotal: o.subtotal.toNumber(),
           tax: o.tax.toNumber(),
@@ -756,11 +756,11 @@ export const sellerOrderResolver = {
       }
 
       try {
-        await prisma.$transaction(async (tx) => {
-          const uniqueBuyerOrderIds = [...new Set(sellerOrders.map(so => so.buyerOrderId))];
+        await prisma.$transaction(async (tx: any) => {
+          const uniqueBuyerOrderIds = [...new Set(sellerOrders.map((so: any) => so.buyerOrderId))];
 
           // 2. Create Shipment records for unique parent Orders
-          for (const buyerOrderId of uniqueBuyerOrderIds) {
+          for (const buyerOrderId of (uniqueBuyerOrderIds as string[])) {
             await tx.shipment.create({
               data: {
                 orderId: buyerOrderId,
@@ -773,7 +773,7 @@ export const sellerOrderResolver = {
 
           // 3. Update parent Order statuses in bulk
           await tx.order.updateMany({
-            where: { id: { in: uniqueBuyerOrderIds } },
+            where: { id: { in: (uniqueBuyerOrderIds as string[]) } },
             data: {
               status: "SHIPPED",
               updatedAt: new Date(),
@@ -808,7 +808,7 @@ export const sellerOrderResolver = {
 
         // 5. Emit notifications
         for (const updatedSO of results) {
-          const previousOrder = sellerOrders.find(o => o.id === updatedSO.id);
+          const previousOrder = sellerOrders.find((o: any) => o.id === updatedSO.id);
           const typedSO = updatedSO as any;
           await emitOrderStatusChanged(
             [
@@ -827,7 +827,7 @@ export const sellerOrderResolver = {
           );
         }
 
-        return results.map(o => ({
+        return results.map((o: any) => ({
           ...o,
           subtotal: o.subtotal.toNumber(),
           tax: o.tax.toNumber(),

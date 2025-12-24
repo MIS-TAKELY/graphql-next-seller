@@ -52,7 +52,7 @@ export async function createContext(): Promise<GraphQLContext> {
         user = {
           id: dbUser.id,
           email: dbUser.email,
-          roles: dbUser.roles.map((r:any) => r.role),
+          roles: dbUser.roles.map((r: { role: string }) => r.role),
         };
       }
     }

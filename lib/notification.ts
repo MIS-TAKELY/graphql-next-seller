@@ -9,7 +9,7 @@ interface CreateNotificationInput {
     title: string;
     body: string;
     type: NotificationType;
-    data?: Record<string, any>;
+    data?: Record<string, unknown>;
 }
 
 export async function createAndPushNotification({

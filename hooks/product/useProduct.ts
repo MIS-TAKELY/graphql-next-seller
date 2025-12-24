@@ -228,26 +228,26 @@ export const useProduct = () => {
             // Construct updated variants safely
             const updatedVariants: ProductVariant[] = actualInput.variants
               ? actualInput.variants.map((v, idx) => ({
-                  id: v.id || `${p.id}-variant-new-${idx}`,
-                  productId: p.id,
-                  sku: v.sku,
-                  price: v.price,
-                  mrp: v.mrp,
-                  stock: v.stock,
-                  soldCount: 0, // Maintain existing sold count if possible, or 0
-                  attributes: v.attributes,
-                  isDefault: v.isDefault ?? false,
-                  specifications: v.specifications?.map((s, si) => ({
-                    id: `temp-spec-${si}`,
-                    variantId: v.id || `${p.id}-variant-new-${idx}`,
-                    key: s.key,
-                    value: s.value,
-                    createdAt: new Date(),
-                    updatedAt: new Date(),
-                  })),
+                id: v.id || `${p.id}-variant-new-${idx}`,
+                productId: p.id,
+                sku: v.sku,
+                price: v.price,
+                mrp: v.mrp,
+                stock: v.stock,
+                soldCount: 0, // Maintain existing sold count if possible, or 0
+                attributes: v.attributes,
+                isDefault: v.isDefault ?? false,
+                specifications: v.specifications?.map((s, si) => ({
+                  id: `temp-spec-${si}`,
+                  variantId: v.id || `${p.id}-variant-new-${idx}`,
+                  key: s.key,
+                  value: s.value,
                   createdAt: new Date(),
                   updatedAt: new Date(),
-                }))
+                })),
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              }))
               : p.variants;
 
             return {
@@ -320,9 +320,10 @@ export const useProduct = () => {
       await addProductMutation({
         variables: { input: productInput },
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
       console.error("Submit error:", error);
-      throw error; // Let ProductForm catch and show toast
+      throw new Error(errorMessage); // Let ProductForm catch and show toast
     }
   };
 
@@ -342,7 +343,8 @@ export const useProduct = () => {
   };
 
   const handleUpdateHandler = async (
-    productInput: ICreateProductInput & { id: string }
+    productInput: ICreateProductInput,
+    _status?: ProductStatus
   ) => {
     try {
       if (!productInput.id) throw new Error("Product ID is required");
@@ -354,7 +356,7 @@ export const useProduct = () => {
 
       toast.success("Updating product...");
       router.push("/products");
-      await updateProduct({ variables: { input: productInput } });
+      await updateProduct({ variables: { input: productInput as ICreateProductInput & { id: string } } });
     } catch (error) {
       console.error("Error updating product:", error);
       toast.error(

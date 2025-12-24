@@ -178,29 +178,34 @@ export default function SellerOnboarding() {
           router.push("/");
         }, 500);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Profile setup error:", error);
 
       // Extract meaningful error message
       let errorMessage = "Something went wrong during profile setup. Please try again.";
 
-      // GraphQL Errors
-      if (error.graphQLErrors && error.graphQLErrors.length > 0) {
-        errorMessage = error.graphQLErrors[0].message;
-      }
-      // Network/Parsing Errors (like the HTML response issue)
-      else if (error.networkError) {
-        console.error("Network error details:", error.networkError);
-        errorMessage = "Unable to connect to the server. Please check your connection or try again later.";
+      // Type-safe error handling
+      if (error && typeof error === 'object') {
+        const gqlError = error as { graphQLErrors?: { message: string }[]; networkError?: { name?: string }; message?: string };
 
-        // Handle specific server parse error (HTML instead of JSON)
-        if (error.networkError.name === "ServerParseError") {
-          errorMessage = "Server configuration error. Please contact support.";
+        // GraphQL Errors
+        if (gqlError.graphQLErrors && gqlError.graphQLErrors.length > 0) {
+          errorMessage = gqlError.graphQLErrors[0].message;
         }
-      }
-      // Other Apollo/System Errors
-      else if (error.message && !error.message.includes("Unexpected token")) {
-        errorMessage = error.message;
+        // Network/Parsing Errors (like the HTML response issue)
+        else if (gqlError.networkError) {
+          console.error("Network error details:", gqlError.networkError);
+          errorMessage = "Unable to connect to the server. Please check your connection or try again later.";
+
+          // Handle specific server parse error (HTML instead of JSON)
+          if (gqlError.networkError.name === "ServerParseError") {
+            errorMessage = "Server configuration error. Please contact support.";
+          }
+        }
+        // Other Apollo/System Errors
+        else if (gqlError.message && !gqlError.message.includes("Unexpected token")) {
+          errorMessage = gqlError.message;
+        }
       }
 
       // Check for common business logic errors and provide friendly messages
@@ -218,21 +223,21 @@ export default function SellerOnboarding() {
   // Helper function to determine input styling based on error state
   const getInputClassName = (fieldName: keyof FormData | string) => {
     const hasError = fieldName.includes('.')
-      ? fieldName.split('.').reduce((obj: any, key) => obj?.[key], errors)
+      ? fieldName.split('.').reduce((obj: Record<string, any> | undefined, key) => obj?.[key], errors)
       : errors[fieldName as keyof FormData];
 
     return `w-full px-4 py-3 border rounded-lg transition-all duration-200 ${hasError
-      ? 'border-red-500 focus:ring-2 focus:ring-red-200 focus:border-red-500 bg-red-50'
-      : 'border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-gray-400'
+      ? 'border-destructive focus:ring-2 focus:ring-destructive/20 focus:border-destructive bg-destructive/5'
+      : 'border-input bg-background focus:ring-2 focus:ring-blue-500 focus:border-blue-500 hover:border-muted-foreground/30'
       }`;
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/50 py-8 px-4">
       <div className="max-w-3xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+          <h1 className="text-3xl font-bold text-foreground">
             {step === 1 ? "Welcome! Start Selling Today" : "Set Up Your Shop"}
           </h1>
           {step > 1 && (
@@ -242,7 +247,7 @@ export default function SellerOnboarding() {
           )}
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
+        <div className="bg-card rounded-xl shadow-lg border border-border p-8">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-8">
             {/* Step 1: Welcome */}
             {step === 1 && (
@@ -272,32 +277,32 @@ export default function SellerOnboarding() {
                     />
                   </div>
 
-                  <h2 className="text-2xl font-semibold text-gray-800 mb-8">
+                  <h2 className="text-2xl font-semibold text-foreground mb-8">
                     Reach Thousands of Customers
                   </h2>
 
-                  <ul className="max-w-md mx-auto text-left space-y-4 mb-12 text-gray-700 text-base">
+                  <ul className="max-w-md mx-auto text-left space-y-4 mb-12 text-muted-foreground text-base">
                     <li className="flex items-center gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-blue-600" />
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </span>
                       Zero setup fee
                     </li>
                     <li className="flex items-center gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-blue-600" />
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </span>
                       List products in minutes
                     </li>
                     <li className="flex items-center gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-blue-600" />
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </span>
                       Fast weekly payouts
                     </li>
                     <li className="flex items-center gap-3">
-                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-blue-600" />
+                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
+                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       </span>
                       Dedicated support team
                     </li>
@@ -317,12 +322,12 @@ export default function SellerOnboarding() {
             {/* Step 2: Shop Info */}
             {step === 2 && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-800 pb-4 border-b">
+                <h2 className="text-xl font-semibold text-foreground pb-4 border-b border-border">
                   Shop Information
                 </h2>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Shop Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -345,17 +350,17 @@ export default function SellerOnboarding() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Shop URL
                   </label>
-                  <div className="flex border border-gray-300 rounded-lg overflow-hidden bg-gray-50">
-                    <span className="inline-flex items-center px-4 py-3 bg-gray-100 text-gray-600 border-r">
+                  <div className="flex border border-input rounded-lg overflow-hidden bg-muted/30">
+                    <span className="inline-flex items-center px-4 py-3 bg-muted text-muted-foreground border-r border-input">
                       vanijoy.com/shop/
                     </span>
                     <input
                       value={slug || "(enter shop name)"}
                       readOnly
-                      className="flex-1 px-4 py-3 bg-gray-50 text-gray-700"
+                      className="flex-1 px-4 py-3 bg-muted/20 text-muted-foreground"
                     />
                   </div>
                 </div>
@@ -389,7 +394,7 @@ export default function SellerOnboarding() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Short Tagline <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -414,12 +419,12 @@ export default function SellerOnboarding() {
             {/* Step 3: Business Details */}
             {step === 3 && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-800 pb-4 border-b">
+                <h2 className="text-xl font-semibold text-foreground pb-4 border-b border-border">
                   Business Details
                 </h2>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Legal Business Name <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -442,7 +447,7 @@ export default function SellerOnboarding() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     PAN / VAT Number <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -466,7 +471,7 @@ export default function SellerOnboarding() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Business Type
                   </label>
                   <select
@@ -481,7 +486,7 @@ export default function SellerOnboarding() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Business Phone <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -505,7 +510,7 @@ export default function SellerOnboarding() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Support Email
                   </label>
                   <input
@@ -532,13 +537,13 @@ export default function SellerOnboarding() {
             {/* Step 4: Address */}
             {step === 4 && (
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-gray-800 pb-4 border-b">
+                <h2 className="text-xl font-semibold text-foreground pb-4 border-b border-border">
                   Pickup / Warehouse Address
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Location Name <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -557,7 +562,7 @@ export default function SellerOnboarding() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Contact Person <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -580,7 +585,7 @@ export default function SellerOnboarding() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Phone Number <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -603,7 +608,7 @@ export default function SellerOnboarding() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Address Line 1 <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -623,7 +628,7 @@ export default function SellerOnboarding() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Address Line 2 (Optional)
                     </label>
                     <input
@@ -634,7 +639,7 @@ export default function SellerOnboarding() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       City <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -654,7 +659,7 @@ export default function SellerOnboarding() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Province <span className="text-red-500">*</span>
                     </label>
                     <select
@@ -679,7 +684,7 @@ export default function SellerOnboarding() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       Postal Code <span className="text-red-500">*</span>
                     </label>
                     <input
@@ -707,7 +712,7 @@ export default function SellerOnboarding() {
             {/* Step 5: Documents */}
             {/* {step === 5 && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-5">
+                <h3 className="text-lg font-semibold text-foreground mb-5">
                   Upload Documents (KYC)
                 </h3>
                 <div className="space-y-7">
@@ -745,7 +750,7 @@ export default function SellerOnboarding() {
             {/* Step 6: Bank Details */}
             {/* {step === 6 && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-5">
+                <h3 className="text-lg font-semibold text-foreground mb-5">
                   Bank Account for Payouts
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -781,29 +786,29 @@ export default function SellerOnboarding() {
             {/* Step 7: Review & Submit */}
             {step === 5 && (
               <div className="text-center py-10">
-                <h2 className="text-2xl font-bold mb-4">Review & Submit</h2>
-                <p className="text-gray-600 mb-8">
+                <h2 className="text-2xl font-bold mb-4 text-foreground">Review & Submit</h2>
+                <p className="text-muted-foreground mb-8">
                   Your shop will go live after approval (usually within 24 hours)
                 </p>
 
-                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-xl text-left max-w-lg mx-auto mb-8 border border-blue-200">
-                  <h3 className="font-semibold text-gray-800 mb-4">Shop Summary</h3>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/10 dark:to-indigo-900/10 p-6 rounded-xl text-left max-w-lg mx-auto mb-8 border border-blue-200 dark:border-blue-800">
+                  <h3 className="font-semibold text-foreground mb-4">Shop Summary</h3>
                   <div className="space-y-2">
                     <p className="flex justify-between">
-                      <span className="text-gray-600">Shop Name:</span>
-                      <strong className="text-gray-900">{watch("shopName") || "—"}</strong>
+                      <span className="text-muted-foreground">Shop Name:</span>
+                      <strong className="text-foreground">{watch("shopName") || "—"}</strong>
                     </p>
                     <p className="flex justify-between">
-                      <span className="text-gray-600">Business Name:</span>
-                      <strong className="text-gray-900">{watch("businessName") || "—"}</strong>
+                      <span className="text-muted-foreground">Business Name:</span>
+                      <strong className="text-foreground">{watch("businessName") || "—"}</strong>
                     </p>
                     <p className="flex justify-between">
-                      <span className="text-gray-600">Phone:</span>
-                      <strong className="text-gray-900">{watch("phone") || "—"}</strong>
+                      <span className="text-muted-foreground">Phone:</span>
+                      <strong className="text-foreground">{watch("phone") || "—"}</strong>
                     </p>
                     <p className="flex justify-between">
-                      <span className="text-gray-600">City:</span>
-                      <strong className="text-gray-900">{watch("city") || "—"}</strong>
+                      <span className="text-muted-foreground">City:</span>
+                      <strong className="text-foreground">{watch("city") || "—"}</strong>
                     </p>
                   </div>
                 </div>
@@ -812,9 +817,9 @@ export default function SellerOnboarding() {
                   <input
                     type="checkbox"
                     required
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500 bg-background border-input"
                   />
-                  <span className="text-gray-700 group-hover:text-gray-900">
+                  <span className="text-muted-foreground group-hover:text-foreground">
                     I agree to the Terms & Conditions and Commission Policy
                   </span>
                 </label>
@@ -841,11 +846,11 @@ export default function SellerOnboarding() {
 
             {/* Navigation */}
             {step > 1 && step < 5 && (
-              <div className="flex justify-between pt-8 border-t border-gray-200">
+              <div className="flex justify-between pt-8 border-t border-border">
                 <button
                   type="button"
                   onClick={prevStep}
-                  className="px-6 py-3 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+                  className="px-6 py-3 border border-input rounded-lg font-medium hover:bg-muted transition-colors text-foreground"
                 >
                   ← Back
                 </button>

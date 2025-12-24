@@ -324,7 +324,7 @@ export const productResolvers = {
 
         // 4. Transaction
         const product = await prisma.$transaction(
-          async (tx) => {
+          async (tx: any) => {
             const newProduct = await tx.product.create({
               data: {
                 name: input.name,
@@ -480,7 +480,7 @@ export const productResolvers = {
           productData.specificationTable = input.specificationTable;
 
         await prisma.$transaction(
-          async (tx) => {
+          async (tx: any) => {
             // A. Update Product Root
             if (Object.keys(productData).length > 0) {
               await tx.product.update({

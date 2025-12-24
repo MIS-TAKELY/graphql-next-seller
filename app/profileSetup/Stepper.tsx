@@ -28,11 +28,10 @@ export default function Stepper({ currentStep }: StepperProps) {
               <div className="relative flex flex-col items-center">
                 {/* Circle */}
                 <div
-                  className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 z-10 shadow-md ${
-                    isActive
+                  className={`w-12 h-12 rounded-full flex items-center justify-center text-sm font-semibold transition-all duration-300 z-10 shadow-sm ${isActive
                       ? "bg-gradient-to-br from-blue-600 to-blue-700 text-white shadow-blue-200"
-                      : "bg-gray-200 text-gray-500"
-                  }`}
+                      : "bg-muted text-muted-foreground"
+                    }`}
                 >
                   {isCompleted ? (
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,9 +44,8 @@ export default function Stepper({ currentStep }: StepperProps) {
 
                 {/* Label */}
                 <span
-                  className={`absolute top-14 text-xs mt-2 whitespace-nowrap font-medium transition-colors ${
-                    isActive ? "text-blue-600" : "text-gray-400"
-                  }`}
+                  className={`absolute top-14 text-xs mt-2 whitespace-nowrap font-medium transition-colors ${isActive ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground"
+                    }`}
                 >
                   {label}
                 </span>
@@ -57,11 +55,10 @@ export default function Stepper({ currentStep }: StepperProps) {
               {index < steps.length - 1 && (
                 <div className="flex-1 mx-3">
                   <div
-                    className={`h-1 rounded-full transition-all duration-500 ${
-                      isCompleted 
-                        ? "bg-gradient-to-r from-blue-600 to-blue-500" 
-                        : "bg-gray-200"
-                    }`}
+                    className={`h-1 rounded-full transition-all duration-500 ${isCompleted
+                        ? "bg-gradient-to-r from-blue-600 to-blue-500"
+                        : "bg-muted"
+                      }`}
                   />
                 </div>
               )}

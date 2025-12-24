@@ -51,11 +51,11 @@ export default function ImageUpload({
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label className="block text-sm font-medium text-foreground mb-1">
           {label}
         </label>
         {recommended && (
-          <p className="text-xs text-gray-500">{recommended}</p>
+          <p className="text-xs text-muted-foreground">{recommended}</p>
         )}
       </div>
 
@@ -63,7 +63,7 @@ export default function ImageUpload({
         {/* Preview */}
         <div className="shrink-0">
           {preview ? (
-            <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-300">
+            <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-input">
               <Image
                 src={preview}
                 alt="Preview"
@@ -72,8 +72,8 @@ export default function ImageUpload({
               />
             </div>
           ) : (
-            <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 flex items-center justify-center">
-              <span className="text-4xl text-gray-400 font-light">+</span>
+            <div className="w-32 h-32 border-2 border-dashed border-input rounded-lg bg-muted flex items-center justify-center">
+              <span className="text-4xl text-muted-foreground font-light">+</span>
             </div>
           )}
         </div>
@@ -87,24 +87,25 @@ export default function ImageUpload({
                 accept="image/jpeg,image/png,image/webp"
                 onChange={handleFile}
                 disabled={isUploading}
-                className="block w-full text-sm text-gray-600
+                className="block w-full text-sm text-foreground
                   file:mr-4 file:py-2.5 file:px-5 
                   file:rounded-md file:border-0
                   file:text-sm file:font-medium
                   file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100
+                  dark:file:bg-blue-900/30 dark:file:text-blue-400
+                  hover:file:bg-blue-100 dark:hover:file:bg-blue-900/50
                   disabled:opacity-50 disabled:cursor-not-allowed
                   cursor-pointer"
               />
             </label>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               JPG, PNG, WebP up to 5MB
             </p>
           </div>
 
           {isUploading && (
-            <div className="flex items-center gap-2 text-sm text-blue-600">
-              <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
               <span>Uploading image...</span>
             </div>
           )}

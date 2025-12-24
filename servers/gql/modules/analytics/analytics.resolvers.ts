@@ -377,7 +377,7 @@ export const analyticsResolvers = {
         select: { total: true },
       });
 
-      const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0);
+      const totalRevenue = orders.reduce((sum: number, order: { total: any }) => sum + Number(order.total), 0);
       const avgOrderValue = orders.length > 0 ? totalRevenue / orders.length : 0;
 
       // Previous period averages for comparison
@@ -390,7 +390,7 @@ export const analyticsResolvers = {
         select: { total: true },
       });
 
-      const prevTotalRevenue = prevOrders.reduce((sum, order) => sum + Number(order.total), 0);
+      const prevTotalRevenue = prevOrders.reduce((sum: number, order: { total: any }) => sum + Number(order.total), 0);
       const prevAvgOrderValue = prevOrders.length > 0 ? prevTotalRevenue / prevOrders.length : 0;
 
       // Sales trends

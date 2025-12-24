@@ -31,6 +31,8 @@ import { FormData } from "@/types/pages/product";
 import { buildProductInput, validateStep } from "@/utils/product/validateSteps";
 import { FullScreenLoader } from "./FullScreenLoader";
 import { ProgressStepper } from "./ProgressStepper";
+import { Category } from "@/types/category/category.types";
+import { ICreateProductInput } from "@/types/product/product-api.types";
 
 const steps = [
   { id: 1, title: "Basic Details", description: "Product information" },
@@ -52,9 +54,9 @@ const LOADING_STEPS = [
 
 interface Props {
   mode: "create" | "edit" | "add";
-  categoriesData?: any[];
+  categoriesData?: Category[];
   initialValues?: FormData;
-  onSubmit: (input: any, status: ProductStatus) => Promise<void>;
+  onSubmit: (input: ICreateProductInput, status: ProductStatus) => Promise<void>;
   onDelete?: () => Promise<void>;
   isDeleting?: boolean;
   isSubmitting?: boolean;
@@ -188,8 +190,7 @@ export function ProductForm({
       if (firstInvalidStep) {
         setCurrentStep(firstInvalidStep);
         toast.error(
-          `Please fix errors in step ${firstInvalidStep}: ${
-            steps[firstInvalidStep - 1].title
+          `Please fix errors in step ${firstInvalidStep}: ${steps[firstInvalidStep - 1].title
           }`
         );
       }
@@ -218,15 +219,16 @@ export function ProductForm({
         ? (input.status = ProductStatus.INACTIVE)
         : (input.status = ProductStatus.DRAFT);
 
-        console.log("input after change-->",input)
+      console.log("input after change-->", input)
       await onSubmit(input, status);
 
       const actionText = mode === "edit" ? "updated" : "created";
       const statusText = status === ProductStatus.DRAFT ? "draft" : "published";
       toast.success(`Product ${actionText} and ${statusText} successfully!`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Submit error:", err);
-      toast.error(err.message || "Failed to save product");
+      const errorMessage = err instanceof Error ? err.message : "Failed to save product";
+      toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
