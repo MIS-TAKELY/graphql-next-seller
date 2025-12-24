@@ -36,7 +36,9 @@ export default function OverviewTab({ period, chartConfig }: OverviewTabProps) {
   useEffect(() => {
     const updateRadius = () => {
       const width = window.innerWidth;
-      if (width < 640) {
+      if (width < 380) {
+        setPieRadius(40);
+      } else if (width < 640) {
         setPieRadius(50);
       } else if (width < 1024) {
         setPieRadius(60);

@@ -14,11 +14,13 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
+import Container from "@/components/ui/container";
+
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   return (
-    <div className="flex-1 space-y-3 sm:space-y-4">
+    <Container className="flex-1 space-y-3 sm:space-y-4 py-4 sm:py-6">
       <div className="flex items-center justify-between space-y-2">
         <h2 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
           Dashboard
@@ -92,6 +94,6 @@ export default async function DashboardPage() {
           </Suspense>
         </TabsContent>
       </Tabs>
-    </div>
+    </Container>
   );
 }
