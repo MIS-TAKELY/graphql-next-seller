@@ -72,3 +72,29 @@ export const GET_SELLER_ORDER = gql`
     }
   }
 `;
+
+export const GET_SELLER_DISPUTES = gql`
+  query GetSellerDisputes($limit: Int!, $offset: Int!) {
+    getSellerDisputes(limit: $limit, offset: $offset) {
+      id
+      orderId
+      userId
+      reason
+      description
+      images
+      status
+      type
+      createdAt
+      user {
+        id
+        firstName
+        lastName
+        email
+      }
+      order {
+        id
+        orderNumber
+      }
+    }
+  }
+`;

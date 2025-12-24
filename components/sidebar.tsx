@@ -40,13 +40,10 @@ const sidebarNavItems = [
     title: "Orders",
     href: "/orders",
     icon: ShoppingCart,
-    // children: [
-    //   { title: "All Orders", href: "/orders" },
-    //   { title: "New Orders", href: "/orders/new" },
-    //   { title: "Processing", href: "/orders/processing" },
-    //   { title: "Shipped", href: "/orders/shipped" },
-    //   { title: "Returns", href: "/orders/returns" },
-    // ],
+    children: [
+      { title: "All Orders", href: "/orders" },
+      { title: "Returns & Disputes", href: "/orders/disputes" },
+    ],
   },
   {
     title: "Analytics",
@@ -112,7 +109,7 @@ export function Sidebar() {
         <div className="px-3 py-2">
           <div className="flex items-center mb-2">
             {/* <Store className="h-5 w-5 sm:h-6 sm:w-6 mr-2" /> */}
-            <Image src={siteLogo} alt="site logo" width={32} height={32} className="h-5 w-5 sm:h-6 sm:w-6 mr-2"/>
+            <Image src={siteLogo} alt="site logo" width={32} height={32} className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
             <h2 className="text-base sm:text-lg font-semibold">
               Vanijoy Seller
             </h2>

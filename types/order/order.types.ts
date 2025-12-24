@@ -6,7 +6,25 @@ import type {
   PaymentStatus,
   ShipmentStatus,
   ShippingMethod,
+  DisputeStatus,
+  DisputeType,
 } from "../common/enums";
+export interface OrderDispute extends BaseEntity {
+  orderId: string;
+  sellerOrderId?: string;
+  userId: string;
+  reason: string;
+  description?: string;
+  images?: string[];
+  status: DisputeStatus;
+  type: DisputeType;
+  user?: Buyer;
+  order?: Order;
+}
+
+export interface GetSellerDisputesResponse {
+  getSellerDisputes: OrderDispute[];
+}
 import type { BaseEntity, Money, Timestamps } from "../common/primitives";
 
 // Address snapshot types (stored as JSON in DB)

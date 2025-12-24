@@ -217,6 +217,31 @@ export const sellerOrderResolver = {
         throw error;
       }
     },
+    getSellerDisputes: async (
+      _: any,
+      { limit, offset }: { limit: number; offset: number },
+      ctx: ResolverContext
+    ) => {
+      const user = requireSeller(ctx);
+      return ctx.prisma.orderDispute.findMany({
+        where: {
+          order: {
+            sellerOrders: {
+              some: {
+                sellerId: user.id,
+              },
+            },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+        skip: offset,
+        take: limit,
+        include: {
+          order: true,
+          user: true,
+        },
+      });
+    },
   },
 
   Mutation: {
@@ -842,6 +867,57 @@ export const sellerOrderResolver = {
           extraInfo: { code: "INTERNAL_SERVER_ERROR" },
         });
       }
+    },
+    updateDisputeStatus: async (
+      _: any,
+      { disputeId, status }: { disputeId: string; status: any },
+      ctx: ResolverContext
+    ) => {
+      const user = requireSeller(ctx);
+
+      const dispute = await ctx.prisma.orderDispute.findUnique({
+        where: { id: disputeId },
+        include: { order: { include: { sellerOrders: true } } },
+      });
+
+      if (!dispute) throw new Error("Dispute not found");
+
+      // Ensure the seller owns one of the sellerOrders in this order
+      const isMyOrder = dispute.order.sellerOrders.some(
+        (so: any) => so.sellerId === user.id
+      );
+      if (!isMyOrder) throw new Error("Unauthorized");
+
+      const updatedDispute = await ctx.prisma.orderDispute.update({
+        where: { id: disputeId },
+        data: { status },
+      });
+
+      // If approved, update order status
+      if (status === "APPROVED") {
+        if (updatedDispute.type === "CANCEL") {
+          await ctx.prisma.order.update({
+            where: { id: updatedDispute.orderId },
+            data: { status: "CANCELLED" },
+          });
+          // Also update seller orders
+          await ctx.prisma.sellerOrder.updateMany({
+            where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
+            data: { status: "CANCELLED" },
+          });
+        } else if (updatedDispute.type === "RETURN") {
+          await ctx.prisma.order.update({
+            where: { id: updatedDispute.orderId },
+            data: { status: "RETURNED" },
+          });
+          await ctx.prisma.sellerOrder.updateMany({
+            where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
+            data: { status: "RETURNED" },
+          });
+        }
+      }
+
+      return updatedDispute;
     },
   },
 };

@@ -138,6 +138,18 @@ export enum VerificationStatus {
   REJECTED = "REJECTED",
 }
 
+export enum DisputeStatus {
+  PENDING = "PENDING",
+  APPROVED = "APPROVED",
+  REJECTED = "REJECTED",
+  RESOLVED = "RESOLVED",
+}
+
+export enum DisputeType {
+  CANCEL = "CANCEL",
+  RETURN = "RETURN",
+}
+
 // Type aliases for backward compatibility
 export type RoleType = Role;
 export type MessageTypeType = MessageType;

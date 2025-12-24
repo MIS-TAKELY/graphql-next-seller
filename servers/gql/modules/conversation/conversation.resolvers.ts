@@ -307,7 +307,7 @@ export const conversationResolvers = {
           });
         },
         {
-          timeout: 30000,
+          timeout: 15000,
         }
       );
 

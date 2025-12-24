@@ -148,6 +148,18 @@ enum VerificationStatus {
     REJECTED
 }
 
+enum DisputeStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    RESOLVED
+}
+
+enum DisputeType {
+    CANCEL
+    RETURN
+}
+
 model User {
     id             String    @id @default(cuid())
     name           String    @default("")
@@ -191,6 +203,7 @@ model User {
     notifications           Notification[]
     sellerProfile           SellerProfile?
     roles                   UserRole[]
+    disputes                OrderDispute[]
 
     productQuestions ProductQuestion[]
     productAnswers   ProductAnswer[]   @relation("SellerAnswers")
@@ -633,6 +646,7 @@ model Order {
     items        OrderItem[]
     payments     Payment[]
     shipments    Shipment[]
+    disputes     OrderDispute[]
     // appliedDiscounts AppliedDiscount[] // Add this line
     // discountUsage    DiscountUsage[]
     sellerOrders SellerOrder[]
@@ -819,6 +833,7 @@ model SellerOrder {
     total        Decimal     @db.Money
     createdAt    DateTime    @default(now())
     updatedAt    DateTime    @updatedAt
+    disputes     OrderDispute[]
 
     // Relations
     seller User              @relation("SellerOrders", fields: [sellerId], references: [id], onDelete: Cascade)
@@ -940,4 +955,24 @@ model Verification {
     updatedAt  DateTime? @updatedAt
 
     @@map("verification")
+}
+
+model OrderDispute {
+    id            String        @id @default(cuid())
+    orderId       String
+    sellerOrderId String?
+    userId        String
+    reason        String
+    description   String?       @db.Text
+    images        String[]
+    status        DisputeStatus @default(PENDING)
+    type          DisputeType   @default(RETURN)
+    createdAt     DateTime      @default(now())
+    updatedAt     DateTime      @updatedAt
+
+    order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    sellerOrder SellerOrder? @relation(fields: [sellerOrderId], references: [id], onDelete: Cascade)
+    user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@map("order_disputes")
 }

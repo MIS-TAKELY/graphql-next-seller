@@ -56,3 +56,12 @@ export const BULK_CREATE_SHIPMENTS = gql`
     }
   }
 `;
+
+export const UPDATE_DISPUTE_STATUS = gql`
+  mutation UpdateDisputeStatus($disputeId: ID!, $status: DisputeStatus!) {
+    updateDisputeStatus(disputeId: $disputeId, status: $status) {
+      id
+      status
+    }
+  }
+`;

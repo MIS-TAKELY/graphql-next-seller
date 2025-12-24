@@ -421,7 +421,7 @@ export const productResolvers = {
 
             return newProduct;
           },
-          { timeout: 30000 }
+          { timeout: 15000 }
         );
 
         if (product) console.log("product created");
@@ -617,7 +617,7 @@ export const productResolvers = {
               });
             }
           },
-          { timeout: 30000 }
+          { timeout: 15000 }
         );
 
         // Cache Invalidation

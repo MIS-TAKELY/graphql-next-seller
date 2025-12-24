@@ -14,6 +14,34 @@ export const sellerOrderTypeDefs = gql`
   scalar Decimal
   scalar DateTime
 
+  enum DisputeStatus {
+    PENDING
+    APPROVED
+    REJECTED
+    RESOLVED
+  }
+
+  enum DisputeType {
+    CANCEL
+    RETURN
+  }
+
+  type OrderDispute {
+    id: ID!
+    orderId: ID!
+    sellerOrderId: ID
+    userId: ID!
+    reason: String!
+    description: String
+    images: [String]
+    status: DisputeStatus!
+    type: DisputeType!
+    createdAt: DateTime!
+    updatedAt: DateTime!
+    order: Order
+    user: User
+  }
+
   type SellerOrder {
     id: ID!
     sellerId: String!
@@ -57,6 +85,7 @@ export const sellerOrderTypeDefs = gql`
   type Query {
     getSellerOrders(limit:Int): getSellerOrdersResponse
     getActiveUsersForSeller: getActiveUsersForSellerResponse!
+    getSellerDisputes(limit: Int!, offset: Int!): [OrderDispute!]!
   }
 
   type Mutation {
@@ -79,5 +108,6 @@ export const sellerOrderTypeDefs = gql`
       trackingNumber: String!
       carrier: String!
     ): [SellerOrder!]!
+    updateDisputeStatus(disputeId: ID!, status: DisputeStatus!): OrderDispute!
   }
 `;

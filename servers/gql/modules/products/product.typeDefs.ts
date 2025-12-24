@@ -116,13 +116,6 @@ export const productTypeDefs = gql`
 
   # --- INPUTS ---
 
-  input SpecificationInput {
-    key: String!
-    value: String!
-  }
-
-
-
   input CreateProductImageInput {
     url: String!
     altText: String

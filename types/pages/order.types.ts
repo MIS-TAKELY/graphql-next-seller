@@ -7,6 +7,8 @@ export {
   PaymentStatus,
   ShipmentStatus,
   ShippingMethod,
+  DisputeStatus,
+  DisputeType,
 } from "../common/enums";
 
 export type {
@@ -29,6 +31,7 @@ export type {
   OrderItem,
   Order,
   SellerOrder,
+  OrderDispute,
   OrderPriority,
   OrderFilters,
   GetSellerOrdersResponse,

@@ -190,7 +190,7 @@ export const messageResolvers = {
         return message;
       }, {
         maxWait: 5000, // default: 2000
-        timeout: 20000, // default: 5000
+        timeout: 15000, // Reduced to comply with Prisma Accelerate limits
       });
 
       if (!result) throw new Error("Unable to save message in database");
