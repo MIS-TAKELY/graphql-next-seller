@@ -11,8 +11,10 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useProduct } from "@/hooks/product/useProduct";
-import { ICreateProductInput, InventoryProduct } from "@/types/pages/product";
+import { UPDATE_VARIANT_STOCK } from "@/client/product/product.mutations";
+import { GET_INVENTORY } from "@/client/product/product.queries";
+import { useMutation } from "@apollo/client";
+import { InventoryProduct } from "@/types/pages/product";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { TableCell, TableRow } from "../ui/table";
@@ -25,7 +27,10 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [adjustment, setAdjustment] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
-  const { handleUpdateHandler } = useProduct();
+
+  const [updateStock, { loading: updating }] = useMutation(UPDATE_VARIANT_STOCK, {
+    refetchQueries: [{ query: GET_INVENTORY }],
+  });
 
   const variant = item.variants[0]; // Assume at least one variant exists
   const currentStock = variant?.stock ?? 0;
@@ -55,19 +60,12 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
       return;
     }
     try {
-      const productInput: ICreateProductInput & { id: string } = {
-        id: item.id,
-        name: item.name,
-        images: [], // Images are not updated in inventory management
-        variants: [{
-          sku: variant.sku,
+      await updateStock({
+        variables: {
+          variantId: variant.id,
           stock: finalStock,
-          price: typeof variant.price === 'string' ? parseFloat(variant.price) : (variant.price ?? 0),
-          mrp: variant.mrp ? (typeof variant.mrp === 'string' ? parseFloat(variant.mrp) : variant.mrp) : undefined,
-          isDefault: true,
-        }],
-      };
-      await handleUpdateHandler(productInput);
+        },
+      });
       toast.success("Stock updated successfully!");
       setIsOpen(false);
       setAdjustment(0);
@@ -92,15 +90,15 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
             variant.stock > 0
               ? "default"
               : variant.stock < 5
-              ? "secondary"
-              : "destructive"
+                ? "secondary"
+                : "destructive"
           }
         >
           {variant.stock > 10
             ? "In Stock"
             : variant.stock > 0
-            ? "Low Stock"
-            : "Out of Stock"}
+              ? "Low Stock"
+              : "Out of Stock"}
         </Badge>
       </TableCell>
       <TableCell>

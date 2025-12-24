@@ -214,6 +214,7 @@ export const productTypeDefs = gql`
   type Mutation {
     addProduct(input: CreateProductInput!): Boolean
     updateProduct(input: UpdateProductInput!): Boolean
+    updateVariantStock(variantId: ID!, stock: Int!): Boolean
     deleteProduct(productId: ID!): Boolean
   }
 `;

@@ -64,8 +64,8 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   return (
     <EditProductClient
-      product={productData.getProduct}
-      categories={categoryData?.categories || []}
+      product={JSON.parse(JSON.stringify(productData.getProduct))}
+      categories={JSON.parse(JSON.stringify(categoryData?.categories || []))}
     />
   );
 }

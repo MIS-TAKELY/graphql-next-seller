@@ -18,3 +18,9 @@ export const DELETE_PRODUCT = gql`
   }
 `;
 
+export const UPDATE_VARIANT_STOCK = gql`
+  mutation UpdateVariantStock($variantId: ID!, $stock: Int!) {
+    updateVariantStock(variantId: $variantId, stock: $stock)
+  }
+`;
+

@@ -489,66 +489,93 @@ export const productResolvers = {
               });
             }
 
-            // B. SYNC VARIANTS (Critical for Orders)
-            // We cannot just delete all variants because OrderItems link to Variant IDs.
+            // B. SYNC VARIANTS (Robust Synchronization)
             if (input.variants) {
-              const incomingIds = input.variants
-                .filter((v: any) => v.id)
-                .map((v: any) => v.id);
+              const incomingVariants = input.variants;
 
-              // 1. Delete variants not in the input (unless they have orders - optional check)
-              // Note: Prisma will fail if foreign key constraint exists (Order) and on delete cascade is not set.
-              // Ideally, you soft delete or check orders. For now, assuming standard delete.
+              // 1. Fetch current variants to match by SKU if ID is missing
+              const currentVariants = existingProduct.variants;
+
+              const variantsToUpdate = [];
+              const variantsToCreate = [];
+              const usedCurrentVariantIds = new Set<string>();
+
+              for (const incoming of incomingVariants) {
+                let existingMatch = null;
+
+                if (incoming.id) {
+                  existingMatch = currentVariants.find((cv: any) => cv.id === incoming.id);
+                } else if (incoming.sku) {
+                  // Fallback: match by SKU if no ID provided (common in some frontend flows)
+                  existingMatch = currentVariants.find((cv: any) => cv.sku === incoming.sku);
+                }
+
+                if (existingMatch) {
+                  variantsToUpdate.push({
+                    id: existingMatch.id,
+                    data: incoming,
+                  });
+                  usedCurrentVariantIds.add(existingMatch.id);
+                } else {
+                  variantsToCreate.push(incoming);
+                }
+              }
+
+              // 2. Delete variants not in the input AND not matched by SKU
+              // Note: Only delete if they have no orders
               await tx.productVariant.deleteMany({
                 where: {
                   productId: input.id,
-                  id: { notIn: incomingIds },
+                  id: { notIn: Array.from(usedCurrentVariantIds) },
+                  orderItems: { none: {} },
+                  SellerOrderItem: { none: {} },
                 },
               });
 
-              // 2. Upsert (Update or Create)
-              for (const v of input.variants) {
-                const variantData = {
-                  sku: v.sku,
-                  price: v.price,
-                  mrp: v.mrp || v.price,
-                  stock: v.stock,
-                  attributes: v.attributes || {},
-                  isDefault: v.isDefault || false,
-                  specificationTable: v.specificationTable || null,
-                };
+              // 3. Perform Updates
+              for (const updateItem of variantsToUpdate) {
+                const { id, data: v } = updateItem;
+                await tx.productVariant.update({
+                  where: { id },
+                  data: {
+                    sku: v.sku,
+                    price: v.price,
+                    mrp: v.mrp || v.price,
+                    stock: v.stock,
+                    attributes: v.attributes || {},
+                    isDefault: v.isDefault || false,
+                    specificationTable: v.specificationTable || null,
+                    specifications: {
+                      deleteMany: {},
+                      create: v.specifications?.map((s: any) => ({
+                        key: s.key,
+                        value: s.value,
+                      })),
+                    },
+                  },
+                });
+              }
 
-                if (v.id) {
-                  // Update Existing
-                  await tx.productVariant.update({
-                    where: { id: v.id },
-                    data: {
-                      ...variantData,
-                      // Re-create specifications for this variant
-                      specifications: {
-                        deleteMany: {},
-                        create: v.specifications?.map((s: any) => ({
-                          key: s.key,
-                          value: s.value,
-                        })),
-                      },
+              // 4. Perform Creations
+              for (const v of variantsToCreate) {
+                await tx.productVariant.create({
+                  data: {
+                    productId: input.id,
+                    sku: v.sku,
+                    price: v.price,
+                    mrp: v.mrp || v.price,
+                    stock: v.stock,
+                    attributes: v.attributes || {},
+                    isDefault: v.isDefault || false,
+                    specificationTable: v.specificationTable || null,
+                    specifications: {
+                      create: v.specifications?.map((s: any) => ({
+                        key: s.key,
+                        value: s.value,
+                      })),
                     },
-                  });
-                } else {
-                  // Create New
-                  await tx.productVariant.create({
-                    data: {
-                      productId: input.id,
-                      ...variantData,
-                      specifications: {
-                        create: v.specifications?.map((s: any) => ({
-                          key: s.key,
-                          value: s.value,
-                        })),
-                      },
-                    },
-                  });
-                }
+                  },
+                });
               }
             }
 
@@ -632,6 +659,55 @@ export const productResolvers = {
       } catch (error: any) {
         console.error("Error updating product:", error);
         throw new Error(error.message || "Failed to update product");
+      }
+    },
+
+    updateVariantStock: async (
+      _: any,
+      { variantId, stock }: { variantId: string; stock: number },
+      ctx: GraphQLContext
+    ) => {
+      try {
+        const user = requireSeller(ctx);
+        const sellerId = user.id;
+
+        if (!variantId) throw new Error("Variant ID is required");
+
+        // 1. Authorization Check: Ensure the variant belongs to a product owned by the seller
+        const variant = await prisma.productVariant.findFirst({
+          where: {
+            id: variantId,
+            product: {
+              sellerId,
+            },
+          },
+          include: {
+            product: true,
+          },
+        });
+
+        if (!variant) {
+          throw new Error("Variant not found or unauthorized");
+        }
+
+        // 2. Update Stock
+        await prisma.productVariant.update({
+          where: { id: variantId },
+          data: { stock },
+        });
+
+        // 3. Cache Invalidation
+        await Promise.all([
+          delCache(`product:${variant.product.slug}`),
+          delCache(getProductCacheKey(variant.product.slug)),
+          delCache("products:all"),
+          delCache(`products:seller:${sellerId}`),
+        ]);
+
+        return true;
+      } catch (error: any) {
+        console.error("Error updating variant stock:", error);
+        throw new Error(error.message || "Failed to update stock");
       }
     },
 
