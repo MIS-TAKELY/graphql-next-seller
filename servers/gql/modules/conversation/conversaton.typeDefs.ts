@@ -40,6 +40,7 @@ export const conversationTypedefs = gql`
 
   extend type Mutation {
     createConversation(input: CreateConversationInput!): Conversation!
+    markAsRead(conversationId: ID!): Boolean!
   }
 
   scalar DateTime

@@ -3,6 +3,8 @@
 
 import { SEND_MESSAGE } from "@/client/message/message.mutation";
 import { GET_MESSAGES } from "@/client/message/message.query";
+import { MARK_AS_READ } from "@/client/conversatation/conversation.mutation";
+import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
 import { NewMessagePayload } from "@/lib/realtime";
 import { uploadFilesToStorage } from "@/utils/uploadFilesToStorage";
 import {
@@ -37,8 +39,10 @@ export interface LocalMessage {
   clientId?: string;
   text: string;
   sender: LocalMessageSender;
+  senderId?: string;
   timestamp: Date;
   status?: LocalMessageStatus;
+  isRead?: boolean;
   attachments?: MessageAttachment[];
 }
 
@@ -95,8 +99,9 @@ type MessageInput = ServerMessage | RealtimeMessageInput;
 const FETCH_POLICY_NO_CACHE: FetchPolicy = "no-cache";
 
 export const useSellerChat = (conversationId?: string | null) => {
-  const { data: session } = useSession();
+  const { data: session, isPending } = useSession();
   const userId = session?.user?.id;
+  const isLoaded = !isPending;
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -145,12 +150,10 @@ export const useSellerChat = (conversationId?: string | null) => {
           : undefined;
 
       // Robust sender check using Database ID
-      // If we don't have currentDbId yet (loading), we might fallback or default to false
-      // but usually 'me' query is fast.
-      const isMe =
-        (currentDbId && (msg.sender?.id === currentDbId || (msg as any).senderId === currentDbId)) ||
-        (msg.sender?.id && msg.sender.id === userId) ||
-        (msg as any).senderId === userId;
+      const msgSenderId = (msg as any).senderId || (msg.sender && (msg.sender.id || (msg.sender as any)._id));
+      const myId = currentDbId || userId;
+
+      const isMe = !!(myId && msgSenderId && msgSenderId.toString() === myId.toString());
 
       // Logic to resolve timestamp from various possible keys
       const rawDate =
@@ -165,9 +168,11 @@ export const useSellerChat = (conversationId?: string | null) => {
         id: msg.id || crypto.randomUUID(),
         clientId: msg.clientId ?? undefined,
         text: msg.content || "",
-        sender: isMe ? "seller" : "buyer",
+        sender: isMe ? "seller" : "buyer", // Changed from "user" to "buyer"
+        senderId: msgSenderId, // Added senderId
         timestamp,
         status: "sent" as const,
+        isRead: !!msg.isRead,
         attachments,
       };
     },
@@ -298,6 +303,18 @@ export const useSellerChat = (conversationId?: string | null) => {
     },
   });
 
+  const [markAsReadMutation] = useMutation(MARK_AS_READ, {
+    refetchQueries: [{ query: GET_CONVERSATIONS, variables: { recieverId: userId } }],
+  });
+
+  // Mark as read when conversation is active
+  useEffect(() => {
+    if (conversationId && userId) {
+      markAsReadMutation({ variables: { conversationId } })
+        .catch(err => console.error("[Seller Chat] Failed to mark as read:", err));
+    }
+  }, [conversationId, userId, markAsReadMutation]);
+
   const handleSend = useCallback(
     async (text: string, files?: File[]) => {
       if (!conversationId || (!text.trim() && !files?.length)) return;
@@ -402,7 +419,7 @@ export const useSellerChat = (conversationId?: string | null) => {
     ]
   );
 
-  // Unified Realtime Subscription
+  // Subscribe to user channel for chat signals
   useRealtime({
     channels: [
       conversationId ? `conversation:${conversationId}` : undefined,
@@ -427,6 +444,12 @@ export const useSellerChat = (conversationId?: string | null) => {
         const normalized = normalizeServerMessage(payload as unknown as RealtimeMessageInput);
         console.log("[Seller Chat] Normalized message:", normalized);
         upsertServerMessage(normalized);
+
+        // If we are currently viewing this conversation, mark it as read immediately
+        if (conversationId && (payload.conversationId === conversationId)) {
+          markAsReadMutation({ variables: { conversationId } })
+            .catch(err => console.warn("[Seller Chat] Failed to mark realtime message as read:", err));
+        }
       } catch (err) {
         console.error("[Seller Chat] Error processing message:", err);
       }

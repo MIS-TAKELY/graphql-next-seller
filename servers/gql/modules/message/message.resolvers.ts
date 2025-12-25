@@ -98,6 +98,8 @@ export const messageResolvers = {
         type,
         attachments = [],
       } = input;
+      const startTime = Date.now();
+      console.log(`[SELLER-BACKEND] 🚀 sendMessage started at ${new Date().toISOString()}`);
 
       const prismaType = (type?.toUpperCase() as MessageType) ?? "TEXT";
 
@@ -222,14 +224,15 @@ export const messageResolvers = {
 
       const channel = `conversation:${conversationId}`;
 
-      console.log("chennals-->", channel)
+      console.log(`[SELLER-BACKEND] 📤 Publishing to conversation channel: ${channel}`);
 
-      realtime
-        .channel(channel)
-        .emit("message.newMessage", realtimePayload)
-        .catch((error) => {
-          console.error("Failed to publish to Upstash Realtime:", error);
-        });
+      try {
+        await realtime
+          .channel(channel)
+          .emit("message.newMessage", realtimePayload);
+      } catch (error) {
+        console.error("[SELLER-BACKEND] Failed to publish message to conversation channel:", error);
+      }
 
       const participantIds = new Set<string>();
       if (conversation.sender?.id) {
@@ -243,18 +246,25 @@ export const messageResolvers = {
         if (userId) participantIds.add(userId);
       });
 
+      const userEmits: Promise<void>[] = [];
       for (const userId of participantIds) {
         if (!userId || userId === user.id) continue;
-        realtime
-          .channel(`user:${userId}`)
-          .emit("message.newMessage", realtimePayload)
-          .catch((error) => {
-            console.error(
-              "Failed to publish user-level message notification:",
-              error
-            );
-          });
+        console.log(`[SELLER-BACKEND] 📤 Publishing message to user channel: user:${userId}`);
+        userEmits.push(
+          realtime
+            .channel(`user:${userId}`)
+            .emit("message.newMessage", realtimePayload)
+            .catch((error) => {
+              console.error(
+                `[SELLER-BACKEND] Failed to publish user-level message notification for ${userId}:`,
+                error
+              );
+            })
+        );
       }
+      // Start user notifications in parallel but wait for them before returning
+      // (or at least start them and don't let them be killed)
+      await Promise.all(userEmits);
 
       // Send push notification to receiver
       const receiverId =
@@ -284,6 +294,9 @@ export const messageResolvers = {
         },
         data: { lastReadAt: null },
       });
+
+      const endTime = Date.now();
+      console.log(`[SELLER-BACKEND] ✨ sendMessage completed in ${endTime - startTime}ms`);
 
       return { ...graphqlResult, clientId };
     },

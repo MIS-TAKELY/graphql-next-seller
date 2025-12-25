@@ -1,7 +1,7 @@
 import { LocalMessage } from "@/hooks/chat/useChat";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { CheckCheck } from "lucide-react";
+import { Check, CheckCheck } from "lucide-react";
 import { useState } from "react";
 import { MediaGrid } from "./MediaGrid";
 import { MediaViewer } from "./MediaViewer";
@@ -58,12 +58,14 @@ export default function MessageBubble({ message, isOwn }: MessageBubbleProps) {
         >
           <span className="text-[10px]">{time}</span>
           {isOwn && (
-            <CheckCheck
-              className={cn(
-                "w-3 h-3",
-                message.status === "sending" ? "opacity-50" : "opacity-100"
-              )}
-            />
+            message.isRead ? (
+              <CheckCheck className="w-3 h-3 text-blue-400 transition-colors" />
+            ) : (
+              <Check className={cn(
+                "w-3 h-3 transition-colors",
+                message.status === "sending" ? "opacity-50" : "text-primary-foreground/70"
+              )} />
+            )
           )}
         </div>
       </div>

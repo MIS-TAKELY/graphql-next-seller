@@ -38,7 +38,7 @@ export async function replyToQuestion(questionId: string, content: string) {
     }
 
     // @ts-ignore
-    const answer = await prisma.productAnswer.create({
+    const answerResult = await prisma.productAnswer.create({
         data: {
             questionId,
             sellerId: user.id,
@@ -54,18 +54,24 @@ export async function replyToQuestion(questionId: string, content: string) {
         }
     });
 
+    // Fix Decimal serialization
+    if (answerResult.seller?.sellerProfile) {
+        (answerResult.seller.sellerProfile as any).averageRating =
+            (answerResult.seller.sellerProfile as any).averageRating?.toNumber() || 0;
+    }
+
     // @ts-ignore
-    await realtime.channel(`product:${answer.question.productId}:faq`).emit("faq.newAnswer", {
-        id: answer.id,
-        questionId: answer.questionId,
-        content: answer.content,
-        createdAt: answer.createdAt,
+    await realtime.channel(`product:${answerResult.question.productId}:faq`).emit("faq.newAnswer", {
+        id: answerResult.id,
+        questionId: answerResult.questionId,
+        content: answerResult.content,
+        createdAt: answerResult.createdAt,
         seller: {
             shopName: user.sellerProfile.shopName,
         },
     });
 
-    return answer;
+    return answerResult;
 }
 
 export async function getQuestionsForProduct(productId: string) {
@@ -96,7 +102,7 @@ export async function getSellerQuestions() {
     if (!user || !user.sellerProfile) throw new Error("Not a seller");
 
     // @ts-ignore
-    return await prisma.productQuestion.findMany({
+    const items = await prisma.productQuestion.findMany({
         where: {
             product: {
                 sellerId: user.id
@@ -117,4 +123,19 @@ export async function getSellerQuestions() {
         },
         orderBy: { createdAt: "desc" }
     });
+
+    // Fix Decimal serialization
+    return items.map((q: any) => ({
+        ...q,
+        answers: q.answers.map((a: any) => ({
+            ...a,
+            seller: {
+                ...a.seller,
+                sellerProfile: a.seller?.sellerProfile ? {
+                    ...a.seller.sellerProfile,
+                    averageRating: a.seller.sellerProfile.averageRating?.toNumber() || 0
+                } : null
+            }
+        }))
+    }));
 }

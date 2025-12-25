@@ -18,7 +18,11 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useNotificationStore } from "@/store/notificationStore";
+import { useQuery } from "@apollo/client";
+import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
+import { useSession } from "@/lib/auth-client";
 const sidebarNavItems = [
   {
     title: "Dashboard",
@@ -91,7 +95,31 @@ const sidebarNavItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [expandedItems, setExpandedItems] = useState<string[]>([]);
+  const { hasNewOrderUpdate } = useNotificationStore();
+  const { data: session } = useSession();
+  const user = session?.user;
+
+  const { data: conversationsData } = useQuery(GET_CONVERSATIONS, {
+    variables: { recieverId: user?.id || "" },
+    skip: !user,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const totalUnreadMessages = useMemo(() => {
+    return conversationsData?.conversations?.reduce(
+      (acc: number, conv: any) => acc + (conv.unreadCount || 0),
+      0
+    ) || 0;
+  }, [conversationsData]);
+
+  const expandedItemsInitial = useMemo(() => {
+    // Expand if active sub-item
+    return sidebarNavItems
+      .filter(item => item.children?.some(child => pathname === child.href))
+      .map(item => item.title);
+  }, [pathname]);
+
+  const [expandedItems, setExpandedItems] = useState<string[]>(expandedItemsInitial);
 
   const toggleExpanded = (title: string) => {
     setExpandedItems((prev) =>
@@ -129,6 +157,9 @@ export function Sidebar() {
                       >
                         <item.icon className="mr-2 h-4 w-4 shrink-0" />
                         <span className="truncate">{item.title}</span>
+                        {(item.title === "Orders" && hasNewOrderUpdate) || (item.title === "Customers" && totalUnreadMessages > 0) ? (
+                          <span className="ml-2 w-2 h-2 bg-red-600 rounded-full shrink-0" />
+                        ) : null}
                         {isExpanded(item.title) ? (
                           <ChevronDown className="ml-auto h-4 w-4 shrink-0" />
                         ) : (
@@ -147,8 +178,14 @@ export function Sidebar() {
                               size="sm"
                               className="w-full justify-start text-xs p-2"
                             >
-                              <Link href={child.href}>
+                              <Link href={child.href} className="flex items-center justify-between w-full">
                                 <span className="truncate">{child.title}</span>
+                                {child.title === "All Orders" && hasNewOrderUpdate && (
+                                  <span className="w-2 h-2 bg-red-600 rounded-full shrink-0 ml-2" />
+                                )}
+                                {child.title === "Messages" && totalUnreadMessages > 0 && (
+                                  <span className="w-2 h-2 bg-red-600 rounded-full shrink-0 ml-2" />
+                                )}
                               </Link>
                             </Button>
                           ))}

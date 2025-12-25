@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
 import { useRealtime } from "@upstash/realtime/client";
+import { useNotificationStore } from "@/store/notificationStore";
+import { useApolloClient } from "@apollo/client";
+import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
 
 import type {
   NewMessagePayload,
@@ -18,10 +21,22 @@ export const RealtimeNotifications = () => {
   const { data: session, isPending } = useSession();
   const userId = session?.user?.id;
   const isLoaded = !isPending;
+  const { setHasNewOrderUpdate } = useNotificationStore();
+  const client = useApolloClient();
 
   const handleMessageNotification = useCallback(
     (payload: NewMessagePayload) => {
       if (!payload || !payload.sender) return;
+
+      const sentAt = new Date(payload.sentAt || (payload as any).createdAt || Date.now());
+      const now = Date.now();
+
+      // Only show toast for messages sent in the last 60 seconds to avoid spam on reload
+      const diff = now - sentAt.getTime();
+      if (isNaN(diff) || diff > 60000) {
+        console.log("[Seller RealtimeNotifications] Skipping toast for old/invalid message:", payload.id, "diff:", diff);
+        return;
+      }
 
       toast.info(`${payload.sender.firstName ?? "A customer"} sent a message`, {
         description:
@@ -137,12 +152,54 @@ export const RealtimeNotifications = () => {
     ]
   );
 
-  // Subscribe to user channel with safety wrapper - MOVED TO TOP LEVEL
-  // Note: useRealtime handles its own lifecycle.
+  // Subscribe to user channel for general notifications
+  useRealtime({
+    channels: (isLoaded && userId) ? [`user:${userId}`] : [],
+    event: "notification.newNotification",
+    onData: (payload: any) => {
+      if (payload.type === "message") {
+        client.refetchQueries({ include: [GET_CONVERSATIONS] });
+        handleMessageNotification(payload);
+      } else if (payload.type === "order") {
+        setHasNewOrderUpdate(true);
+        handleNewOrderNotification(payload);
+      } else {
+        handleGeneralNotification(payload);
+      }
+    },
+  });
 
-  (useRealtime as any)({
-    channel: (isLoaded && userId) ? `user:${userId}` : undefined,
-    events,
+  // Specific listeners to match buyer side for reliability
+  useRealtime({
+    channels: (isLoaded && userId) ? [`user:${userId}`] : [],
+    event: "message.newMessage",
+    onData: (payload: any) => {
+      console.log("[Seller RealtimeNotifications] 📨 New message event:", payload);
+      client.refetchQueries({ include: [GET_CONVERSATIONS] });
+      handleMessageNotification(payload);
+    },
+  });
+
+  useRealtime({
+    channels: (isLoaded && userId) ? [`user:${userId}`] : [],
+    event: "order.orderUpdated",
+    onData: (payload: any) => {
+      console.log("[Seller RealtimeNotifications] 📦 Order update event:", payload);
+      setHasNewOrderUpdate(true);
+      // We don't have a specific rich toast for just "updated", 
+      // but orderStatusNotification handles some states.
+      if (payload.status) {
+        handleOrderStatusNotification(payload);
+      } else {
+        toast.info("Order Updated", {
+          description: `An update was received for order #${payload.orderNumber || payload.id || ""}`,
+          action: {
+            label: "View Orders",
+            onClick: () => router.push("/orders"),
+          },
+        });
+      }
+    },
   });
 
   return null;

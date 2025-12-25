@@ -220,6 +220,18 @@ export function OrderDetailsDialog({
                           <p className="text-xs text-muted-foreground font-mono">
                             SKU: {item.variant.sku}
                           </p>
+                          {item.variant.attributes && (
+                            <div className="flex flex-wrap gap-x-2 gap-y-0.5">
+                              {Object.entries(item.variant.attributes).map(([key, value]) => {
+                                if (key === 'comparePrice') return null;
+                                return (
+                                  <p key={key} className="text-xs text-muted-foreground capitalize">
+                                    {key}: {value}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          )}
                           {item.variant.product.brand && (
                             <p className="text-xs text-muted-foreground">Brand: {item.variant.product.brand}</p>
                           )}

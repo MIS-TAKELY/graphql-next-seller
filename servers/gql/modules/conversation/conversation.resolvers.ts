@@ -66,21 +66,13 @@ export const conversationResolvers = {
       const participant = participantRaw ? (participantRaw as any[]).find(
         (p: any) => p.userId === user.id
       ) : null;
-      let unreadCount = 0;
-      if (participant && participant.lastReadAt) {
-        unreadCount = await prisma.message.count({
-          where: {
-            conversationId: conversation.id,
-            sentAt: { gt: participant.lastReadAt },
-            senderId: { not: user.id },
-          },
-        });
-      } else {
-        // Count all messages from buyer if no lastRead
-        unreadCount = (conversation as any).messages.filter(
-          (msg: any) => msg.senderId !== user.id
-        ).length;
-      }
+      const unreadCount = await prisma.message.count({
+        where: {
+          conversationId: conversation.id,
+          senderId: { not: user.id },
+          isRead: false,
+        },
+      });
 
       return {
         ...conversation,
@@ -153,25 +145,13 @@ export const conversationResolvers = {
           const participant = participantRaw ? (participantRaw as any[]).find(
             (p: any) => p.userId === user.id
           ) : null;
-          let unreadCount = 0;
-          if (participant && participant.lastReadAt) {
-            unreadCount = await prisma.message.count({
-              where: {
-                conversationId: conv.id,
-                sentAt: { gt: participant.lastReadAt },
-                senderId: { not: user.id },
-              },
-            });
-          } else {
-            // Count all messages from buyer if no lastRead
-            const buyerMsgCount = await prisma.message.count({
-              where: {
-                conversationId: conv.id,
-                senderId: conv.senderId,
-              },
-            });
-            unreadCount = buyerMsgCount;
-          }
+          const unreadCount = await prisma.message.count({
+            where: {
+              conversationId: conv.id,
+              senderId: { not: user.id },
+              isRead: false,
+            },
+          });
 
           return {
             ...conv,
@@ -187,6 +167,44 @@ export const conversationResolvers = {
     },
   },
   Mutation: {
+    markAsRead: async (
+      _parent: any,
+      { conversationId }: { conversationId: string },
+      { prisma, user }: GraphQLContext
+    ) => {
+      if (!user) throw new Error("Unauthorized");
+
+      await prisma.conversationParticipant.upsert({
+        where: {
+          conversationId_userId: {
+            conversationId,
+            userId: user.id,
+          },
+        },
+        update: {
+          lastReadAt: new Date(),
+        },
+        create: {
+          conversationId,
+          userId: user.id,
+          lastReadAt: new Date(),
+        },
+      });
+
+      // Mark individual messages as read too
+      await prisma.message.updateMany({
+        where: {
+          conversationId,
+          senderId: { not: user.id },
+          isRead: false,
+        },
+        data: {
+          isRead: true,
+        },
+      });
+
+      return true;
+    },
     createConversation: async (
       _parent: any,
       { input }: { input: { productId: string } },

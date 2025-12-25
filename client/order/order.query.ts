@@ -56,6 +56,7 @@ export const GET_SELLER_ORDER = gql`
             sku
             price
             mrp
+            attributes
             product {
               id
               name

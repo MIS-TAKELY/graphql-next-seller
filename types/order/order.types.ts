@@ -102,6 +102,7 @@ export interface ProductVariant {
   price: Money;
   mrp?: Money;
   product: Product;
+  attributes?: Record<string, any>;
 }
 
 // Order item types

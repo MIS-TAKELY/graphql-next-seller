@@ -19,7 +19,11 @@ import { useRealtime } from "@upstash/realtime/client";
 import { Bell, Menu, Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useCallback, useState } from "react";
+import { useQuery, useApolloClient } from "@apollo/client";
+import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
+import { GET_SELLER_ORDER } from "@/client/order/order.query";
+import { useNotificationStore } from "@/store/notificationStore";
+import { useCallback, useState, useMemo, useEffect } from "react";
 
 type HeaderNotification = {
   id: string;
@@ -36,8 +40,43 @@ export function Header() {
   const { data: session, isPending } = useSession();
   const user = session?.user;
   const router = useRouter();
+  const client = useApolloClient();
 
   const [notifications, setNotifications] = useState<HeaderNotification[]>([]);
+
+  const { data: conversationsData } = useQuery(GET_CONVERSATIONS, {
+    variables: { recieverId: user?.id || "" },
+    skip: !user,
+    fetchPolicy: "network-only",
+  });
+
+  const totalUnreadMessages = useMemo(() => {
+    return conversationsData?.conversations?.reduce(
+      (acc: number, conv: any) => acc + (conv.unreadCount || 0),
+      0
+    ) || 0;
+  }, [conversationsData]);
+
+  const { hasNewOrderUpdate, lastSeenOrderUpdate, setHasNewOrderUpdate } = useNotificationStore();
+
+  const { data: ordersData } = useQuery(GET_SELLER_ORDER, {
+    skip: !user,
+    fetchPolicy: "network-only",
+  });
+
+  useEffect(() => {
+    if (ordersData?.getSellerOrders?.sellerOrders) {
+      const latestOrderUpdate = ordersData.getSellerOrders.sellerOrders.reduce((latest: string, order: any) => {
+        return !latest || new Date(order.updatedAt) > new Date(latest) ? order.updatedAt : latest;
+      }, "");
+
+      if (latestOrderUpdate && (!lastSeenOrderUpdate || new Date(latestOrderUpdate) > new Date(lastSeenOrderUpdate))) {
+        setHasNewOrderUpdate(true);
+      }
+    }
+  }, [ordersData, lastSeenOrderUpdate, setHasNewOrderUpdate]);
+
+  const hasAnyNotification = totalUnreadMessages > 0 || hasNewOrderUpdate;
 
   const pushNotification = useCallback(
     (notification: Omit<HeaderNotification, "isRead">) => {
@@ -65,6 +104,14 @@ export function Header() {
         } else if (payload.type === "order" && payload.sellerOrderId) {
           href = `/orders?sellerOrder=${payload.sellerOrderId}`;
         }
+      }
+
+      if (payload.type === "message") {
+        client.refetchQueries({ include: [GET_CONVERSATIONS] });
+      }
+
+      if (payload.type === "order") {
+        setHasNewOrderUpdate(true);
       }
 
       pushNotification({
@@ -220,7 +267,7 @@ export function Header() {
           <Button
             variant="secondary"
             size="icon"
-            className="rounded-full h-8 w-8 shrink-0"
+            className="rounded-full h-8 w-8 shrink-0 relative"
           >
             <Avatar className="h-8 w-8">
               <AvatarImage src={user.image || "/placeholder-user.jpg"} alt={user.name || "User"} />
@@ -232,9 +279,7 @@ export function Header() {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Profile</DropdownMenuItem>
+          <DropdownMenuItem onClick={() => router.push("/account/profile")}>Profile</DropdownMenuItem>
           <DropdownMenuItem>Store Settings</DropdownMenuItem>
           <DropdownMenuItem>Billing</DropdownMenuItem>
           <DropdownMenuSeparator />

@@ -11,6 +11,7 @@ import { OrderSearchFilter } from "./OrderSearchFilter";
 import { OrderStatusTab } from "./OrderStatusTab";
 import { OrderTabs } from "./OrderTabs";
 import { useOrder } from "@/hooks/order/useOrder";
+import { useNotificationStore } from "@/store/notificationStore";
 
 interface OrdersAllPageProps {
   orders: SellerOrder[];
@@ -36,10 +37,18 @@ export function OrdersAllPage({ orders: initialOrders }: OrdersAllPageProps) {
     | "returns"
   >("all");
 
-  // Update orders when prop changes - This useEffect is no longer needed if useOrder hook manages state
-  // useEffect(() => {
-  //   setCurrentOrders(orders);
-  // }, [orders]);
+  const { setLastSeenOrderUpdate } = useNotificationStore();
+
+  useEffect(() => {
+    if (currentOrders.length > 0) {
+      const latestOrderUpdate = currentOrders.reduce((latest: string, order: any) => {
+        return !latest || new Date(order.updatedAt) > new Date(latest) ? order.updatedAt : latest;
+      }, "");
+      if (latestOrderUpdate) {
+        setLastSeenOrderUpdate(latestOrderUpdate);
+      }
+    }
+  }, [currentOrders, setLastSeenOrderUpdate]);
 
   const handleFiltersChange = useCallback(
     (partialFilters: Partial<OrderFilters>) => {
