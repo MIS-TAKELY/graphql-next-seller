@@ -6,8 +6,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { useQuery } from "@apollo/client";
-import { useMemo } from "react";
 import { Bar, BarChart, XAxis, YAxis } from "recharts";
+import { useEffect, useMemo, useState } from "react";
 
 const chartConfig = {
   total: {
@@ -17,7 +17,11 @@ const chartConfig = {
 };
 
 export function SalesChart() {
-  let data = [];
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const {
     data: monthlySalesResponse,
     loading,
@@ -26,16 +30,18 @@ export function SalesChart() {
     variables: {
       year: 2025,
     },
+    skip: !mounted, // Only fetch once mounted to be safe or keep it if it works with apollo-ssr
   });
+
   if (error) console.log("error-->", error);
-  if (!loading) {
-    data = monthlySalesResponse?.getMonthlySales || [];
-  }
+
+  const data = monthlySalesResponse?.getMonthlySales || [];
+
   // Calculate dynamic Y-axis domain
   const yAxisDomain = useMemo(() => {
     if (!data.length) return [0, 100];
 
-    const values = data.map((item:any) => item.total);
+    const values = data.map((item: any) => item.total);
     const maxValue = Math.max(...values);
     const minValue = Math.min(...values);
 
@@ -45,7 +51,6 @@ export function SalesChart() {
     return [Math.max(0, paddedMin), paddedMax];
   }, [data]);
 
-  // Generate nice tick values for Y-axis
   // Generate nice tick values for Y-axis
   const yAxisTicks = useMemo(() => {
     const [min, max] = yAxisDomain;
@@ -70,6 +75,10 @@ export function SalesChart() {
 
     return ticks;
   }, [yAxisDomain]);
+
+  if (!mounted) {
+    return <div className="h-[350px] w-full animate-pulse bg-muted/50 rounded-lg" />;
+  }
 
   return (
     <div className="w-full h-[350px]">

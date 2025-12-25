@@ -2,21 +2,23 @@
 
 import { useRealtime } from "@upstash/realtime/client";
 import { useSession } from "@/lib/auth-client";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 
 export function useConversationRealtime(onNewMessage: () => void) {
     const { data: session } = useSession();
     const userId = session?.user?.id;
 
+    const stableCallback = useCallback(() => {
+        onNewMessage();
+    }, [onNewMessage]);
+
     const events = useMemo(
         () => ({
             message: {
-                newMessage: () => {
-                    onNewMessage();
-                },
+                newMessage: stableCallback,
             },
         }),
-        [onNewMessage]
+        [stableCallback]
     );
 
     (useRealtime as any)({

@@ -131,32 +131,15 @@ export const RealtimeNotifications = () => {
     [router]
   );
 
-  const events = useMemo(
-    () => ({
-      message: {
-        newMessage: handleMessageNotification,
-      },
-      order: {
-        newOrder: handleNewOrderNotification,
-        statusChanged: handleOrderStatusNotification,
-      },
-      notification: {
-        newNotification: handleGeneralNotification,
-      },
-    }),
-    [
-      handleGeneralNotification,
-      handleMessageNotification,
-      handleNewOrderNotification,
-      handleOrderStatusNotification,
-    ]
+  // Memoize channels to prevent re-subscriptions
+  const realtimeChannels = useMemo(
+    () => ((isLoaded && userId) ? [`user:${userId}`] : []),
+    [isLoaded, userId]
   );
 
-  // Subscribe to user channel for general notifications
-  useRealtime({
-    channels: (isLoaded && userId) ? [`user:${userId}`] : [],
-    event: "notification.newNotification",
-    onData: (payload: any) => {
+  // Memoize callbacks to prevent re-subscriptions
+  const handleRealtimeNewNotification = useCallback(
+    (payload: any) => {
       if (payload.type === "message") {
         client.refetchQueries({ include: [GET_CONVERSATIONS] });
         handleMessageNotification(payload);
@@ -167,27 +150,22 @@ export const RealtimeNotifications = () => {
         handleGeneralNotification(payload);
       }
     },
-  });
+    [client, handleGeneralNotification, handleMessageNotification, handleNewOrderNotification, setHasNewOrderUpdate]
+  );
 
-  // Specific listeners to match buyer side for reliability
-  useRealtime({
-    channels: (isLoaded && userId) ? [`user:${userId}`] : [],
-    event: "message.newMessage",
-    onData: (payload: any) => {
+  const handleRealtimeNewMessage = useCallback(
+    (payload: any) => {
       console.log("[Seller RealtimeNotifications] 📨 New message event:", payload);
       client.refetchQueries({ include: [GET_CONVERSATIONS] });
       handleMessageNotification(payload);
     },
-  });
+    [client, handleMessageNotification]
+  );
 
-  useRealtime({
-    channels: (isLoaded && userId) ? [`user:${userId}`] : [],
-    event: "order.orderUpdated",
-    onData: (payload: any) => {
+  const handleRealtimeOrderUpdated = useCallback(
+    (payload: any) => {
       console.log("[Seller RealtimeNotifications] 📦 Order update event:", payload);
       setHasNewOrderUpdate(true);
-      // We don't have a specific rich toast for just "updated", 
-      // but orderStatusNotification handles some states.
       if (payload.status) {
         handleOrderStatusNotification(payload);
       } else {
@@ -200,6 +178,28 @@ export const RealtimeNotifications = () => {
         });
       }
     },
+    [handleOrderStatusNotification, router, setHasNewOrderUpdate]
+  );
+
+  // Subscribe to notification events
+  useRealtime({
+    channels: realtimeChannels,
+    event: "notification.newNotification",
+    onData: handleRealtimeNewNotification,
+  });
+
+  // Subscribe to message events
+  useRealtime({
+    channels: realtimeChannels,
+    event: "message.newMessage",
+    onData: handleRealtimeNewMessage,
+  });
+
+  // Subscribe to order events
+  useRealtime({
+    channels: realtimeChannels,
+    event: "order.orderUpdated",
+    onData: handleRealtimeOrderUpdated,
   });
 
   return null;

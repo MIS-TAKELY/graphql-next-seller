@@ -120,8 +120,8 @@ export const GET_PRODUCT = gql`
 `;
 
 export const GET_MY_PRODUCTS = gql`
-  query getMyProducts {
-    getMyProducts {
+  query getMyProducts($skip: Int, $take: Int, $searchTerm: String, $status: String, $categoryId: String) {
+    getMyProducts(skip: $skip, take: $take, searchTerm: $searchTerm, status: $status, categoryId: $categoryId) {
       products {
         id
         name
@@ -148,6 +148,19 @@ export const GET_MY_PRODUCTS = gql`
           }
         }
       }
+      totalCount
+      percentChange
+    }
+  }
+`;
+
+export const GET_MY_PRODUCT_STATS = gql`
+  query GetMyProductStats {
+    getMyProductStats {
+      total
+      active
+      outOfStock
+      lowStock
     }
   }
 `;

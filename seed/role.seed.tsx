@@ -1,6 +1,6 @@
 // // prisma/seed-roles.ts
 
-// import { Role } from "@/app/generated/prisma";
+// import { Role } from "@prisma/client";
 // import { prisma } from "@/lib/db/prisma";
 
 // async function main() {

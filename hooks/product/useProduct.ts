@@ -4,10 +4,12 @@ import {
   DELETE_PRODUCT,
   UPDATE_PRODUCT,
 } from "@/client/product/product.mutations";
-import { GET_MY_PRODUCTS } from "@/client/product/product.queries";
+import { GET_MY_PRODUCTS, GET_MY_PRODUCT_STATS, GET_PRODUCT_CATEGORIES } from "@/client/product/product.queries";
 import { ProductStatus } from "@/types/common/enums";
 import {
   GetMyProductsResponse,
+  GetMyProductStatsResponse,
+  GetProductCategoriesResponse,
   ICreateProductInput,
   Product,
 } from "@/types/pages/product";
@@ -131,17 +133,26 @@ const buildOptimisticProduct = (
   };
 };
 
-export const useProduct = () => {
+
+export const useProduct = (variables?: {
+  skip?: number;
+  take?: number;
+  searchTerm?: string;
+  status?: string;
+  categoryId?: string;
+}) => {
   const router = useRouter();
 
   const {
     data: productsData,
     loading: productsDataLoading,
     error: productsDataError,
+    refetch: refetchProducts,
   } = useQuery<GetMyProductsResponse>(GET_MY_PRODUCTS, {
+    variables,
     errorPolicy: "all",
-    notifyOnNetworkStatusChange: false,
-    fetchPolicy: "cache-first",
+    notifyOnNetworkStatusChange: true,
+    fetchPolicy: "cache-and-network",
   });
 
   // --- DELETE MUTATION ---
@@ -374,7 +385,21 @@ export const useProduct = () => {
     productsDataLoading,
     productsDataError,
     handleUpdateHandler,
+    refetchProducts,
 
     isAdding
+  };
+};
+
+export const useProductStats = () => {
+  const { data, loading, error, refetch } = useQuery<GetMyProductStatsResponse>(GET_MY_PRODUCT_STATS, {
+    fetchPolicy: "cache-and-network",
+  });
+
+  return {
+    stats: data?.getMyProductStats,
+    isLoading: loading,
+    error,
+    refetch,
   };
 };

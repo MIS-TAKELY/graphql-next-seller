@@ -1,10 +1,12 @@
 // hooks/chat/useSellerChat.ts
 "use client";
 
+import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
+import { MARK_AS_READ } from "@/client/conversatation/conversation.mutation";
 import { SEND_MESSAGE } from "@/client/message/message.mutation";
 import { GET_MESSAGES } from "@/client/message/message.query";
-import { MARK_AS_READ } from "@/client/conversatation/conversation.mutation";
-import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
+import { GET_ME } from "@/client/user/user.query";
+import { useSession } from "@/lib/auth-client";
 import { NewMessagePayload } from "@/lib/realtime";
 import { uploadFilesToStorage } from "@/utils/uploadFilesToStorage";
 import {
@@ -14,14 +16,12 @@ import {
   useMutation,
   useQuery,
 } from "@apollo/client";
-import { GET_ME } from "@/client/user/user.query";
 import { useRealtime } from "@upstash/realtime/client";
-import { useSession } from "@/lib/auth-client";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 // Generated types
-import { Message, Role, User } from "@/app/generated/prisma";
+import { Message, Role, User } from "@prisma/client";
 // Enum for mutation inputs
 import { MessageType as MessageTypeEnum } from "@/types/common/enums";
 // Frontend specific types
@@ -50,7 +50,8 @@ export interface LocalMessage {
  * Represents the structure coming from the GraphQL Query (GET_MESSAGES).
  * Based on your logic, it includes a sender with roles and an attachments array.
  */
-interface ServerMessage extends Omit<Message, "senderId" | "createdAt" | "updatedAt"> {
+interface ServerMessage
+  extends Omit<Message, "senderId" | "createdAt" | "updatedAt"> {
   sender: Pick<
     User,
     "id" | "email" | "firstName" | "lastName" | "avatarImageUrl"
@@ -127,7 +128,8 @@ export const useSellerChat = (conversationId?: string | null) => {
 
   const normalizeServerMessage = useCallback(
     (msg: MessageInput): LocalMessage => {
-      const attachments: MessageAttachment[] | undefined = msg.attachments?.length
+      const attachments: MessageAttachment[] | undefined = msg.attachments
+        ?.length
         ? msg.attachments.map((a) => ({
           id: a.id || crypto.randomUUID(),
           messageId: msg.id || "",
@@ -150,10 +152,16 @@ export const useSellerChat = (conversationId?: string | null) => {
           : undefined;
 
       // Robust sender check using Database ID
-      const msgSenderId = (msg as any).senderId || (msg.sender && (msg.sender.id || (msg.sender as any)._id));
+      const msgSenderId =
+        (msg as any).senderId ||
+        (msg.sender && (msg.sender.id || (msg.sender as any)._id));
       const myId = currentDbId || userId;
 
-      const isMe = !!(myId && msgSenderId && msgSenderId.toString() === myId.toString());
+      const isMe = !!(
+        myId &&
+        msgSenderId &&
+        msgSenderId.toString() === myId.toString()
+      );
 
       // Logic to resolve timestamp from various possible keys
       const rawDate =
@@ -288,12 +296,13 @@ export const useSellerChat = (conversationId?: string | null) => {
         }
       }
     },
-    [conversationId, fetchMessages, normalizeServerMessage, hasShownError]
+    [conversationId, fetchMessages, normalizeServerMessage]
   );
 
   useEffect(() => {
     loadMessages(false);
-  }, [loadMessages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]);
 
   /* Polling removed in favor of Realtime */
 
@@ -304,14 +313,17 @@ export const useSellerChat = (conversationId?: string | null) => {
   });
 
   const [markAsReadMutation] = useMutation(MARK_AS_READ, {
-    refetchQueries: [{ query: GET_CONVERSATIONS, variables: { recieverId: userId } }],
+    refetchQueries: [
+      { query: GET_CONVERSATIONS, variables: { recieverId: userId } },
+    ],
   });
 
   // Mark as read when conversation is active
   useEffect(() => {
     if (conversationId && userId) {
-      markAsReadMutation({ variables: { conversationId } })
-        .catch(err => console.error("[Seller Chat] Failed to mark as read:", err));
+      markAsReadMutation({ variables: { conversationId } }).catch((err) =>
+        console.error("[Seller Chat] Failed to mark as read:", err)
+      );
     }
   }, [conversationId, userId, markAsReadMutation]);
 
@@ -365,6 +377,8 @@ export const useSellerChat = (conversationId?: string | null) => {
             msgType = MessageTypeEnum.IMAGE;
           }
         }
+
+        console.log("sending messages");
 
         const { data } = await sendMessageMutation({
           variables: {
@@ -423,7 +437,7 @@ export const useSellerChat = (conversationId?: string | null) => {
   useRealtime({
     channels: [
       conversationId ? `conversation:${conversationId}` : undefined,
-      userId ? `user:${userId}` : undefined
+      userId ? `user:${userId}` : undefined,
     ].filter(Boolean) as string[],
     event: "message.newMessage",
     onData: (payload: any) => {
@@ -434,21 +448,41 @@ export const useSellerChat = (conversationId?: string | null) => {
       if (!payload) return;
 
       // Prevent cross-talk: Only accept messages for the current conversation if viewing one
-      if (conversationId && payload.conversationId && payload.conversationId !== conversationId) {
-        console.log("[Seller Chat] ⚠️ Message belongs to another conversation. Ignored.", payload.conversationId);
+      if (
+        conversationId &&
+        payload.conversationId &&
+        payload.conversationId !== conversationId
+      ) {
+        console.log(
+          "[Seller Chat] ⚠️ Message belongs to another conversation. Ignored.",
+          payload.conversationId
+        );
         return;
       }
 
       try {
-        // Force cast payload to RealtimeMessageInput to satisfy the generic MessageInput union
-        const normalized = normalizeServerMessage(payload as unknown as RealtimeMessageInput);
+        const normalized = normalizeServerMessage(
+          payload as unknown as RealtimeMessageInput
+        );
         console.log("[Seller Chat] Normalized message:", normalized);
         upsertServerMessage(normalized);
 
+        // Mark as read only if it's NOT from the current user
+        const isFromMe =
+          (payload.sender?.id || payload.senderId) === (currentDbId || userId);
+
         // If we are currently viewing this conversation, mark it as read immediately
-        if (conversationId && (payload.conversationId === conversationId)) {
-          markAsReadMutation({ variables: { conversationId } })
-            .catch(err => console.warn("[Seller Chat] Failed to mark realtime message as read:", err));
+        if (
+          !isFromMe &&
+          conversationId &&
+          payload.conversationId === conversationId
+        ) {
+          markAsReadMutation({ variables: { conversationId } }).catch((err) =>
+            console.warn(
+              "[Seller Chat] Failed to mark realtime message as read:",
+              err
+            )
+          );
         }
       } catch (err) {
         console.error("[Seller Chat] Error processing message:", err);

@@ -87,11 +87,15 @@ export function Header() {
     []
   );
 
-  // Upstash Realtime
-  useRealtime({
-    channels: user ? [`user:${user.id}`] : [],
-    event: "notification.newNotification",
-    onData: (payload: any) => {
+  // Memoize channels array to prevent re-subscriptions
+  const realtimeChannels = useMemo(
+    () => (user ? [`user:${user.id}`] : []),
+    [user?.id]
+  );
+
+  // Stable callback for realtime data
+  const handleRealtimeData = useCallback(
+    (payload: any) => {
       console.log("New realtime notification:", payload);
 
       if (!payload?.id) return;
@@ -123,7 +127,11 @@ export function Header() {
         href,
       });
     },
-  });
+    [client, setHasNewOrderUpdate, pushNotification]
+  );
+
+  // NOTE: Realtime notifications are now handled by RealtimeNotifications component
+  // This was removed to prevent duplicate subscriptions and connection storms
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 

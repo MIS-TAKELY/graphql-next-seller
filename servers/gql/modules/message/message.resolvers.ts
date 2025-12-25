@@ -1,5 +1,5 @@
 // servers/gql/messageResolvers.ts
-import type { FileType as PrismaFileType } from "@/app/generated/prisma";
+import type { FileType as PrismaFileType } from "@prisma/client";
 import { createAndPushNotification } from "@/lib/notification";
 import { NewMessagePayload, realtime } from "@/lib/realtime";
 import type {
@@ -90,7 +90,7 @@ export const messageResolvers = {
       if (!user) {
         throw new Error("Unauthorized: User must be logged in.");
       }
-
+      console.log("recieved in backend")
       const {
         conversationId,
         content,
@@ -213,7 +213,7 @@ export const messageResolvers = {
         clientId,
         fileUrl: result.fileUrl || null,
         isRead: result.isRead,
-        sentAt: result.sentAt, // <-- keep as Date
+        sentAt: result.sentAt,
         sender: result.sender,
         attachments: (result.MessageAttachment || []).map((att) => ({
           id: att.id,
@@ -224,79 +224,68 @@ export const messageResolvers = {
 
       const channel = `conversation:${conversationId}`;
 
-      console.log(`[SELLER-BACKEND] 📤 Publishing to conversation channel: ${channel}`);
+      // Side-effects function
+      const runSideEffects = async () => {
+        console.log(`[SELLER-BACKEND] 📤 Starting background side-effects for message: ${result.id}`);
+        const tasks: Promise<any>[] = [];
 
-      try {
-        await realtime
-          .channel(channel)
-          .emit("message.newMessage", realtimePayload);
-      } catch (error) {
-        console.error("[SELLER-BACKEND] Failed to publish message to conversation channel:", error);
-      }
-
-      const participantIds = new Set<string>();
-      if (conversation.sender?.id) {
-        participantIds.add(conversation.sender.id);
-      }
-      if (conversation.reciever?.id) {
-        participantIds.add(conversation.reciever.id);
-      }
-      conversation.ConversationParticipant?.forEach((participant) => {
-        const userId = participant.user?.id;
-        if (userId) participantIds.add(userId);
-      });
-
-      const userEmits: Promise<void>[] = [];
-      for (const userId of participantIds) {
-        if (!userId || userId === user.id) continue;
-        console.log(`[SELLER-BACKEND] 📤 Publishing message to user channel: user:${userId}`);
-        userEmits.push(
+        // 1. Emit to conversation channel (Most critical for real-time)
+        tasks.push(
           realtime
-            .channel(`user:${userId}`)
+            .channel(channel)
             .emit("message.newMessage", realtimePayload)
-            .catch((error) => {
-              console.error(
-                `[SELLER-BACKEND] Failed to publish user-level message notification for ${userId}:`,
-                error
-              );
-            })
+            .catch((err) => console.error("[SELLER-BACKEND] Realtime emit error:", err))
         );
-      }
-      // Start user notifications in parallel but wait for them before returning
-      // (or at least start them and don't let them be killed)
-      await Promise.all(userEmits);
 
-      // Send push notification to receiver
-      const receiverId =
-        conversation.senderId === user.id
-          ? conversation.recieverId
-          : conversation.senderId;
-
-      if (receiverId) {
-        const senderName =
-          `${result.sender?.firstName || ""} ${result.sender?.lastName || ""
-            }`.trim() || "A seller";
-
-        createAndPushNotification({
-          userId: receiverId,
-          title: "New Message",
-          body: `${senderName} sent you a message`,
-          type: "NEW_MESSAGE",
-        }).catch((error) => {
-          console.error("Failed to send push notification:", error);
+        // 2. Emit to individual user channels
+        const participantIds = new Set<string>();
+        if (conversation.sender?.id) participantIds.add(conversation.sender.id);
+        if (conversation.reciever?.id) participantIds.add(conversation.reciever.id);
+        conversation.ConversationParticipant?.forEach((p) => {
+          if (p.user?.id) participantIds.add(p.user.id);
         });
-      }
 
-      await prisma.conversationParticipant.updateMany({
-        where: {
-          conversationId,
-          userId: { not: user.id },
-        },
-        data: { lastReadAt: null },
-      });
+        for (const pid of participantIds) {
+          if (!pid || pid === user.id) continue;
+          tasks.push(
+            realtime
+              .channel(`user:${pid}`)
+              .emit("message.newMessage", realtimePayload)
+              .catch((err) => console.error(`[SELLER-BACKEND] User emit error (${pid}):`, err))
+          );
+        }
+
+        // 3. Push Notification to receiver
+        const receiverId = conversation.senderId === user.id ? conversation.recieverId : conversation.senderId;
+        if (receiverId) {
+          const senderName = `${result.sender?.firstName || ""} ${result.sender?.lastName || ""}`.trim() || "A user";
+          tasks.push(
+            createAndPushNotification({
+              userId: receiverId,
+              title: "New Message",
+              body: `${senderName} sent you a message`,
+              type: "NEW_MESSAGE",
+            }).catch((err) => console.error("[SELLER-BACKEND] Notification error:", err))
+          );
+        }
+
+        // 4. Update other participants' lastReadAt
+        tasks.push(
+          prisma.conversationParticipant.updateMany({
+            where: { conversationId, userId: { not: user.id } },
+            data: { lastReadAt: null },
+          }).catch((err) => console.error("[SELLER-BACKEND] Participant update error:", err))
+        );
+
+        await Promise.allSettled(tasks);
+        console.log(`[SELLER-BACKEND] ✨ Background side-effects completed for message: ${result.id}`);
+      };
+
+      // FIRE AND FORGET: Don't await the side-effects to resolve the GraphQL request immediately
+      runSideEffects().catch(err => console.error("[SELLER-BACKEND] Fatal error in background side-effects:", err));
 
       const endTime = Date.now();
-      console.log(`[SELLER-BACKEND] ✨ sendMessage completed in ${endTime - startTime}ms`);
+      console.log(`[SELLER-BACKEND] ⚡ sendMessage response sent in ${endTime - startTime}ms (Background tasks started)`);
 
       return { ...graphqlResult, clientId };
     },

@@ -197,18 +197,27 @@ export const productTypeDefs = gql`
     productOffers: [CreateProductOfferInput!]
   }
 
+  type ProductStats {
+    total: Int!
+    active: Int!
+    outOfStock: Int!
+    lowStock: Int!
+  }
+
   type getMyProductsResponse {
     products: [Product]
+    totalCount: Int
     currentMonthCount: Float
     previousMonthCount: Float
     percentChange: Float
   }
 
   type Query {
-    getProducts: [Product!]!
+    getProducts(skip: Int, take: Int): [Product!]!
     getProduct(productId: ID!): Product!
     getProductBySlug(slug: String!): Product
-    getMyProducts: getMyProductsResponse
+    getMyProducts(skip: Int, take: Int, searchTerm: String, status: String, categoryId: String): getMyProductsResponse
+    getMyProductStats: ProductStats!
   }
 
   type Mutation {

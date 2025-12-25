@@ -28,6 +28,7 @@ export type {
   ICreateProductVariantInput,
   ICreateProductInput,
   GetMyProductsResponse,
+  GetMyProductStatsResponse,
   InventoryProduct,
   GetInventoryResponse,
   GetProductCategoriesResponse,

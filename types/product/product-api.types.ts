@@ -75,7 +75,17 @@ export interface ICreateProductInput {
 export interface GetMyProductsResponse {
   getMyProducts: {
     products: Product[];
+    totalCount: number;
     percentChange?: number;
+  };
+}
+
+export interface GetMyProductStatsResponse {
+  getMyProductStats: {
+    total: number;
+    active: number;
+    outOfStock: number;
+    lowStock: number;
   };
 }
 

@@ -1,4 +1,4 @@
-import { ProductStatus } from "@/app/generated/prisma";
+import { ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { generateEmbedding } from "@/lib/embemdind";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
@@ -194,78 +194,81 @@ export const productResolvers = {
       }
     },
 
-    getMyProducts: async (_: any, __: any, ctx: GraphQLContext) => {
+    getMyProducts: async (_: any, { skip, take, searchTerm, status, categoryId }: any, ctx: GraphQLContext) => {
       try {
         const user = requireSeller(ctx);
         const userId = user.id;
 
-        if (!userId) throw new Error("Invalid user");
-
-        console.log("💾 caching product (miss)");
-
         const prisma = ctx.prisma;
+        const where: any = { sellerId: userId };
 
-        // Fetch all products for this seller
-        const products = await prisma.product.findMany({
-          where: { sellerId: userId },
-          include: {
-            variants: { include: { specifications: true } },
-            images: true,
-            category: {
-              include: {
-                children: true,
-                parent: { include: { parent: true } },
+        if (searchTerm) {
+          where.OR = [
+            { name: { contains: searchTerm, mode: 'insensitive' } },
+            { variants: { some: { sku: { contains: searchTerm, mode: 'insensitive' } } } }
+          ];
+        }
+
+        if (status && status !== 'all') {
+          if (status === 'active') where.status = 'ACTIVE';
+          else if (status === 'draft') where.status = 'DRAFT';
+          else if (status === 'out_of_stock') where.variants = { some: { stock: 0 } };
+          else if (status === 'low_stock') where.variants = { some: { stock: { gt: 0, lte: 10 } } };
+        }
+
+        if (categoryId && categoryId !== 'all') {
+          where.categoryId = categoryId;
+        }
+
+        const [products, totalCount] = await Promise.all([
+          prisma.product.findMany({
+            where,
+            include: {
+              variants: true, // Need variants for stock info in table
+              images: { take: 1 },
+              category: {
+                include: {
+                  parent: true,
+                },
               },
             },
-            productOffers: { include: { offer: true } },
-            deliveryOptions: true,
-            warranty: true,
-            returnPolicy: true,
-          },
-        });
+            skip: skip ?? undefined,
+            take: take ?? undefined,
+            orderBy: { createdAt: "desc" },
+          }),
+          prisma.product.count({ where }),
+        ]);
 
-        // Get percentage change in products added compared to last month
         const now = new Date();
-        const currentMonthStart = new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          1
-        );
-        const prevMonthStart = new Date(
-          now.getFullYear(),
-          now.getMonth() - 1,
-          1
-        );
+        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
         const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
-        const currentMonthCount = await prisma.product.count({
-          where: {
-            sellerId: userId,
-            createdAt: { gte: currentMonthStart, lt: now },
-          },
-        });
-
-        const prevMonthCount = await prisma.product.count({
-          where: {
-            sellerId: userId,
-            createdAt: { gte: prevMonthStart, lt: prevMonthEnd },
-          },
-        });
+        const [currentMonthCount, prevMonthCount] = await Promise.all([
+          prisma.product.count({
+            where: {
+              sellerId: userId,
+              createdAt: { gte: currentMonthStart, lt: now },
+            },
+          }),
+          prisma.product.count({
+            where: {
+              sellerId: userId,
+              createdAt: { gte: prevMonthStart, lt: prevMonthEnd },
+            },
+          }),
+        ]);
 
         let percentChange = 0;
         if (prevMonthCount > 0) {
-          percentChange =
-            ((currentMonthCount - prevMonthCount) / prevMonthCount) * 100;
+          percentChange = ((currentMonthCount - prevMonthCount) / prevMonthCount) * 100;
         } else if (currentMonthCount > 0) {
           percentChange = 100;
         }
 
-        // Cache the products
-        // await setCache(cacheKey, products);
-
-        // Return products + percentage change
         return {
           products,
+          totalCount,
           currentMonthCount,
           previousMonthCount: prevMonthCount,
           percentChange: Number(percentChange.toFixed(2)),
@@ -273,6 +276,36 @@ export const productResolvers = {
       } catch (error: any) {
         console.error("Error while getting my products:", error);
         throw new Error(`Failed to fetch products: ${error.message}`);
+      }
+    },
+
+    getMyProductStats: async (_: any, __: any, ctx: GraphQLContext) => {
+      try {
+        const user = requireSeller(ctx);
+        const userId = user.id;
+        const prisma = ctx.prisma;
+
+        const [total, active, outOfStock, lowStock] = await Promise.all([
+          prisma.product.count({ where: { sellerId: userId } }),
+          prisma.product.count({ where: { sellerId: userId, status: "ACTIVE" } }),
+          prisma.product.count({
+            where: {
+              sellerId: userId,
+              variants: { some: { stock: 0 } },
+            },
+          }),
+          prisma.product.count({
+            where: {
+              sellerId: userId,
+              variants: { some: { stock: { gt: 0, lte: 10 } } },
+            },
+          }),
+        ]);
+
+        return { total, active, outOfStock, lowStock };
+      } catch (error: any) {
+        console.error("Error fetching product stats:", error);
+        throw new Error("Failed to fetch product stats");
       }
     },
   },

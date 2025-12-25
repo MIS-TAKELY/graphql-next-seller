@@ -1,10 +1,10 @@
 import { DashboardOverview } from "@/components/dashboard/DashboardOverview";
 import { QuickActions } from "@/components/dashboard/QuickActions";
 import { RecentOrders } from "@/components/dashboard/RecentOrders";
-import { SalesChart } from "@/components/dashboard/SalesChart";
 import { TopProducts } from "@/components/dashboard/TopProducts";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { Suspense } from "react";
+import nextDynamic from "next/dynamic";
 import {
   Card,
   CardContent,
@@ -13,6 +13,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+const SalesChart = nextDynamic(() => import("@/components/dashboard/SalesChart").then(mod => mod.SalesChart), {
+  loading: () => <div className="h-[350px] w-full animate-pulse bg-muted/50 rounded-lg" />
+});
 
 import Container from "@/components/ui/container";
 

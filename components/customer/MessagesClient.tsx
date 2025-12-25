@@ -6,6 +6,7 @@ import { useSession } from "@/lib/auth-client";
 import { useSearchParams } from "next/navigation";
 import MessagesSection from "./MessagesSection";
 import { useConversationRealtime } from "@/hooks/chat/useConversationRealtime";
+import { useCallback } from "react";
 
 export default function MessagesClient() {
   const { data: session, isPending } = useSession();
@@ -21,9 +22,11 @@ export default function MessagesClient() {
   });
 
   // Listen for real-time updates to refresh the conversation list
-  useConversationRealtime(() => {
+  const memoizedRefetch = useCallback(() => {
     refetch();
-  });
+  }, [refetch]);
+
+  useConversationRealtime(memoizedRefetch);
 
   if (!isLoaded) {
     return (

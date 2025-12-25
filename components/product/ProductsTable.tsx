@@ -3,19 +3,22 @@
 import {
   Table,
   TableBody,
+  TableCell,
   TableHead,
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
 import { Product } from "@/types/pages/product";
 import { ProductTableRow } from "./ProductTableRow";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductsTableProps {
   products: Product[];
   onDelete: (id: string) => void;
+  isLoading?: boolean;
 }
 
-export function ProductsTable({ products, onDelete }: ProductsTableProps) {
+export function ProductsTable({ products, onDelete, isLoading }: ProductsTableProps) {
   return (
     <div className="rounded-md border overflow-hidden">
       <div className="overflow-x-auto">
@@ -32,13 +35,27 @@ export function ProductsTable({ products, onDelete }: ProductsTableProps) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products?.map((product) => (
-              <ProductTableRow
-                key={product.id}
-                product={product}
-                onDelete={onDelete}
-              />
-            ))}
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i}>
+                  <TableCell><Skeleton className="h-12 w-full" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell className="hidden lg:table-cell"><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-full" /></TableCell>
+                  <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+              ))
+            ) : (
+              products?.map((product) => (
+                <ProductTableRow
+                  key={product.id}
+                  product={product}
+                  onDelete={onDelete}
+                />
+              ))
+            )}
           </TableBody>
         </Table>
       </div>

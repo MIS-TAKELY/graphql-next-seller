@@ -22,13 +22,24 @@ import {
     Product,
     StatusFilter,
 } from "@/types/pages/product";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export function ProductsPageContent() {
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
     const [categoryFilter, setCategoryFilter] = useState<string>("all");
+    const [page, setPage] = useState(1);
+    const pageSize = 50;
 
-    const { productsData, productsDataLoading, handleDelete } = useProduct();
+    // Server-side filtering and pagination
+    const { productsData, productsDataLoading, handleDelete } = useProduct({
+        searchTerm,
+        status: statusFilter,
+        categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+    });
 
     const { data: getCategoryData, loading: getCategoryLoading } =
         useQuery<GetProductCategoriesResponse>(GET_PRODUCT_CATEGORIES, {
@@ -36,95 +47,81 @@ export function ProductsPageContent() {
             notifyOnNetworkStatusChange: false,
         });
 
-    const filteredProducts = React.useMemo(() => {
-        if (!productsData?.getMyProducts?.products || productsDataLoading) {
-            return [];
-        }
-
-        return productsData.getMyProducts.products.filter((product: Product) => {
-            // Search filter
-            const matchesSearch =
-                product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (product.variants[0]?.sku || "")
-                    .toLowerCase()
-                    .includes(searchTerm.toLowerCase());
-
-            // Status filter
-            let matchesStatus = true;
-            if (statusFilter !== "all") {
-                if (statusFilter === "active") {
-                    matchesStatus = product.status === "ACTIVE";
-                } else if (statusFilter === "draft") {
-                    matchesStatus = product.status === "DRAFT";
-                } else if (statusFilter === "out_of_stock") {
-                    matchesStatus = (product.variants[0]?.stock ?? 0) === 0;
-                } else if (statusFilter === "low_stock") {
-                    matchesStatus =
-                        (product.variants[0]?.stock ?? 0) > 0 &&
-                        (product.variants[0]?.stock ?? 0) <= 10;
-                }
-            }
-
-            // Category filter
-            const matchesCategory =
-                categoryFilter === "all" ||
-                product.category?.name === categoryFilter ||
-                product.category?.children?.some((child: Category) =>
-                    child.name === categoryFilter
-                );
-
-            return matchesSearch && matchesStatus && matchesCategory;
-        });
-    }, [
-        productsData,
-        productsDataLoading,
-        searchTerm,
-        statusFilter,
-        categoryFilter,
-    ]);
-
     const handleDeleteProduct = async (id: string) => {
         try {
             await handleDelete(id);
-            console.log("Product deleted successfully");
         } catch (error) {
             console.error("Error deleting product:", error);
         }
     };
 
+    const products = productsData?.getMyProducts?.products || [];
+    const totalCount = productsData?.getMyProducts?.totalCount || 0;
+    const totalPages = Math.ceil(totalCount / pageSize);
+
     return (
         <div className="space-y-6">
-            <ProductsPageHeader>
-            </ProductsPageHeader>
+            <ProductsPageHeader />
 
-            <ProductStatsCards
-                products={(productsData?.getMyProducts?.products as Product[]) || []}
-                isLoading={productsDataLoading}
-            />
+            <ProductStatsCards />
 
             <Card>
                 <CardHeader>
                     <CardTitle>Product Inventory</CardTitle>
-                    <CardDescription>View and manage all your products</CardDescription>
+                    <CardDescription>
+                        View and manage all your products ({totalCount})
+                    </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
                     <ProductFilters
                         searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
+                        onSearchChange={(val) => { setSearchTerm(val); setPage(1); }}
                         statusFilter={statusFilter}
-                        onStatusChange={setStatusFilter}
+                        onStatusChange={(val) => { setStatusFilter(val); setPage(1); }}
                         categoryFilter={categoryFilter}
-                        onCategoryChange={setCategoryFilter}
+                        onCategoryChange={(val) => { setCategoryFilter(val); setPage(1); }}
                         categories={(getCategoryData?.categories as Category[]) || []}
                         isCategoryLoading={getCategoryLoading}
                     />
 
                     <ProductsTable
-                        products={filteredProducts}
+                        products={products as Product[]}
                         onDelete={handleDeleteProduct}
+                        isLoading={productsDataLoading}
                     />
 
-                    {filteredProducts.length === 0 && <EmptyProductsState />}
+                    {!productsDataLoading && products.length === 0 && <EmptyProductsState />}
+
+                    {totalPages > 1 && (
+                        <div className="flex items-center justify-between py-4">
+                            <div className="text-sm text-muted-foreground">
+                                Showing {(page - 1) * pageSize + 1} to {Math.min(page * pageSize, totalCount)} of {totalCount} products
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                                    disabled={page === 1 || productsDataLoading}
+                                >
+                                    <ChevronLeft className="h-4 w-4 mr-1" />
+                                    Previous
+                                </Button>
+                                <div className="text-sm font-medium">
+                                    Page {page} of {totalPages}
+                                </div>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={page === totalPages || productsDataLoading}
+                                >
+                                    Next
+                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
