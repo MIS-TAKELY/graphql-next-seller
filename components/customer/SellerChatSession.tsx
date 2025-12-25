@@ -21,6 +21,9 @@ export function SellerChatSession({
         messages,
         handleSend,
         isLoading,
+        isLoadingMore,
+        hasMore,
+        loadMoreMessages,
         error,
         refetchMessages,
     } = useSellerChat(conversation.id);
@@ -38,6 +41,9 @@ export function SellerChatSession({
             messages={messages}
             onSend={handleSend}
             isLoading={isLoading}
+            isLoadingMore={isLoadingMore}
+            hasMore={hasMore}
+            onLoadMore={loadMoreMessages}
             error={error}
             onBack={onBack}
             currentUserId={recieverId}

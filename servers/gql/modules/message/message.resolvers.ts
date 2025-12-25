@@ -69,13 +69,14 @@ export const messageResolvers = {
           },
           MessageAttachment: true,
         },
-        orderBy: { sentAt: "asc" },
+        orderBy: { sentAt: "desc" }, // Get latest messages first
         skip: offset,
         take: limit,
       });
 
+      // Reverse to maintain chronological order (oldest to newest) for display
       // Map to match GraphQL schema field names
-      return messages.map((msg) => ({
+      return messages.reverse().map((msg) => ({
         ...msg,
         attachments: msg.MessageAttachment || [],
       }));

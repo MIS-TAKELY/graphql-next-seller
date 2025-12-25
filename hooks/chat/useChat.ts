@@ -105,6 +105,8 @@ export const useSellerChat = (conversationId?: string | null) => {
   const isLoaded = !isPending;
   const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasShownError, setHasShownError] = useState(false);
 
@@ -116,6 +118,8 @@ export const useSellerChat = (conversationId?: string | null) => {
       setMessages([]);
       setError(null);
       setIsLoading(false);
+      setIsLoadingMore(false);
+      setHasMore(true);
       setHasShownError(false);
     }
   }, [conversationId]);
@@ -267,7 +271,7 @@ export const useSellerChat = (conversationId?: string | null) => {
 
       try {
         const { data } = await fetchMessages({
-          variables: { conversationId, limit: 50, offset: 0 },
+          variables: { conversationId, limit: 20, offset: 0 },
         });
 
         if (data?.messages) {
@@ -279,6 +283,8 @@ export const useSellerChat = (conversationId?: string | null) => {
             );
           setMessages(serverMsgs);
           setHasShownError(false);
+          // If we got fewer than 20 messages, there's no more to load
+          setHasMore(data.messages.length >= 20);
         }
       } catch (e) {
         const msg =
@@ -305,6 +311,45 @@ export const useSellerChat = (conversationId?: string | null) => {
   }, [conversationId]);
 
   /* Polling removed in favor of Realtime */
+
+  const loadMoreMessages = useCallback(
+    async (silent: boolean = false) => {
+      if (!conversationId || isLoadingMore || !hasMore) return;
+
+      try {
+        setIsLoadingMore(true);
+        const currentOffset = messages.length;
+
+        const { data } = await fetchMessages({
+          variables: { conversationId, limit: 20, offset: currentOffset },
+        });
+
+        if (data?.messages && data.messages.length > 0) {
+          const serverMsgs: LocalMessage[] = data.messages
+            .map((m: any) => normalizeServerMessage(m))
+            .sort(
+              (a: LocalMessage, b: LocalMessage) =>
+                a.timestamp.getTime() - b.timestamp.getTime()
+            );
+          setMessages((prev) => {
+            const combined = [...serverMsgs, ...prev];
+            return combined.sort(
+              (a, b) => a.timestamp.getTime() - b.timestamp.getTime()
+            );
+          });
+          // If we got fewer than 20 messages, there's no more to load
+          setHasMore(data.messages.length >= 20);
+        } else {
+          setHasMore(false);
+        }
+      } catch (e) {
+        console.error("Failed to load more messages:", e);
+      } finally {
+        setIsLoadingMore(false);
+      }
+    },
+    [conversationId, isLoadingMore, hasMore, messages.length, fetchMessages, normalizeServerMessage]
+  );
 
   const [sendMessageMutation] = useMutation(SEND_MESSAGE, {
     onError: (error) => {
@@ -494,6 +539,9 @@ export const useSellerChat = (conversationId?: string | null) => {
     messages,
     handleSend,
     isLoading,
+    isLoadingMore,
+    hasMore,
+    loadMoreMessages,
     error,
     refetchMessages: loadMessages,
   };

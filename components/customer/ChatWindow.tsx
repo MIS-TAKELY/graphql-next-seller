@@ -22,7 +22,7 @@ import {
   Send,
   X,
 } from "lucide-react";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import MessageBubble from "./MessageBubble";
 
 interface ChatWindowProps {
@@ -30,6 +30,9 @@ interface ChatWindowProps {
   messages: LocalMessage[];
   onSend: (text: string, files?: File[]) => void;
   isLoading: boolean;
+  isLoadingMore?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
   error: string | null;
   onBack: () => void;
   currentUserId: string;
@@ -46,6 +49,9 @@ export default function ChatWindow({
   messages,
   onSend,
   isLoading,
+  isLoadingMore = false,
+  hasMore = false,
+  onLoadMore,
   error,
   onBack,
   currentUserId,
@@ -53,12 +59,49 @@ export default function ChatWindow({
   const [inputValue, setInputValue] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<SelectedFile[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const previousScrollHeightRef = useRef<number>(0);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, conversation?.id]);
+
+  // Handle scroll to load more messages
+  useEffect(() => {
+    if (!scrollAreaRef.current || !onLoadMore) return;
+
+    const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
+
+    const handleScroll = () => {
+      const scrollTop = viewport.scrollTop;
+
+      // If user scrolled to top (within 50px) and there are more messages to load
+      if (scrollTop < 50 && hasMore && !isLoadingMore) {
+        // Store current scroll height before loading
+        previousScrollHeightRef.current = viewport.scrollHeight;
+        onLoadMore();
+      }
+    };
+
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [hasMore, isLoadingMore, onLoadMore]);
+
+  // Preserve scroll position after loading more messages
+  useEffect(() => {
+    if (!isLoadingMore && previousScrollHeightRef.current > 0 && scrollAreaRef.current) {
+      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        const newScrollHeight = scrollContainer.scrollHeight;
+        const scrollDiff = newScrollHeight - previousScrollHeightRef.current;
+        scrollContainer.scrollTop = scrollDiff;
+        previousScrollHeightRef.current = 0;
+      }
+    }
+  }, [isLoadingMore]);
 
   const handleAttachClick = () => fileInputRef.current?.click();
 
@@ -149,8 +192,16 @@ export default function ChatWindow({
 
       {/* Chat Area */}
       <div className="flex-1 overflow-hidden relative bg-muted/5">
-        <ScrollArea className="h-full px-4">
+        <ScrollArea ref={scrollAreaRef} className="h-full px-4">
           <div className="py-6 space-y-6">
+            {/* Loading more indicator */}
+            {isLoadingMore && (
+              <div className="flex justify-center items-center py-2">
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-xs text-muted-foreground">Loading older messages...</span>
+              </div>
+            )}
+
             {isLoading && messages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 opacity-50">
                 <Loader2 className="h-8 w-8 animate-spin mb-2" />
