@@ -215,8 +215,8 @@ export function ProductForm({
       console.log("input before change-->", input.status);
       // input.status=ProductStatus.INACTIVE
 
-      status === ProductStatus.INACTIVE
-        ? (input.status = ProductStatus.INACTIVE)
+      status === ProductStatus.ACTIVE
+        ? (input.status = ProductStatus.ACTIVE)
         : (input.status = ProductStatus.DRAFT);
 
       console.log("input after change-->", input)
@@ -333,7 +333,7 @@ export function ProductForm({
           }
           onPublish={
             currentStep === steps.length
-              ? () => handleSubmit(ProductStatus.INACTIVE)
+              ? () => handleSubmit(ProductStatus.ACTIVE)
               : undefined
           }
           isLoading={loadingState}

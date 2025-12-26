@@ -328,8 +328,8 @@ export const productResolvers = {
           throw new Error("At least one product image is required");
         }
 
-        input.status === ProductStatus.INACTIVE
-          ? (input.status = ProductStatus.INACTIVE)
+        input.status === ProductStatus.ACTIVE
+          ? (input.status = ProductStatus.ACTIVE)
           : (input.status = ProductStatus.DRAFT);
 
         // 2. Validate Variants Data
