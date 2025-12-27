@@ -5,12 +5,15 @@ export const GET_PRODUCT_CATEGORIES = gql`
     categories {
       id
       name
+      parentId
       children {
         id
         name
+        parentId
         children {
           id
           name
+          parentId
         }
       }
     }

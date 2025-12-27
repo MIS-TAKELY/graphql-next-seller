@@ -195,7 +195,7 @@ export const BasicDetailsStep = React.memo(
                 error={errors.categoryId}
               >
                 {categoriesData
-                  ?.filter((cat) => !cat.parent)
+                  ?.filter((cat) => !cat.parentId)
                   .map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>
                       {cat.name}

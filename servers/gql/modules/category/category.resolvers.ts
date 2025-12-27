@@ -7,9 +7,7 @@ export const categoryResolvers = {
     categories: async () => {
       return prisma.category.findMany({
         where: {
-          children: {
-            some: {},
-          },
+          parentId: null,
         },
         include: {
           children: {
