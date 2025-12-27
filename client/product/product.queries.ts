@@ -138,13 +138,9 @@ export const GET_MY_PRODUCTS = gql`
         category {
           id
           name
-          children {
+          parent {
             id
             name
-            children {
-              id
-              name
-            }
           }
         }
       }

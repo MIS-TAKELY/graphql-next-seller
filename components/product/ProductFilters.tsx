@@ -66,7 +66,7 @@ export function ProductFilters({
         <SelectContent>
           <SelectItem value="all">All Categories</SelectItem>
           {categories?.map((category, index) => (
-            <SelectItem value={category.name} key={index}>
+            <SelectItem value={category.id} key={category.id || index}>
               {category.name}
             </SelectItem>
           ))}
