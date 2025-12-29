@@ -812,7 +812,7 @@ export const productResolvers = {
                   const productUrl = `${
                     process.env.NEXT_PUBLIC_APP_URL || "https://vanijay.com"
                   }/product/${variant.product.slug}`;
-                  const message = `WhatsApp notification to ${phoneToUse}: ${variant.product.name} is back in stock! ${productUrl}`;
+                  const message = `${variant.product.name} is back in stock! ${productUrl}`;
                   if (phoneToUse) {
                     await sendWhatsAppMessage(phoneToUse, message);
                   }
