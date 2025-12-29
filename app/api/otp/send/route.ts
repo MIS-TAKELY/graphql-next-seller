@@ -62,9 +62,9 @@ export async function POST(req: Request) {
         otpExpiresAt: expiresAt,
       },
     });
-
+    const message = `Your verification code is: ${otp}`;
     // Send OTP via WhatsApp
-    await sendWhatsAppMessage(phone, otp);
+    await sendWhatsAppMessage(phone, message);
 
     return NextResponse.json({
       success: true,

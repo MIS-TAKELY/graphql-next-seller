@@ -1,13 +1,9 @@
-export async function sendWhatsAppMessage(phone: string, otp: string) {
+export async function sendWhatsAppMessage(phone: string, message: string) {
   const wppConnectUrl = process.env.WPP_CONNECT;
   if (!wppConnectUrl) {
     console.error("❌ WPP_CONNECT URL is missing");
     throw new Error("WhatsApp provider URL is not configured");
   }
-
-  const message = `Your verification code is: ${otp}`;
-
-  console.log(`📱 Sending OTP to ${phone} via ${wppConnectUrl}...`);
 
   try {
     const response = await fetch(wppConnectUrl, {
