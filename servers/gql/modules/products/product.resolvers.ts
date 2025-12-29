@@ -1,14 +1,16 @@
-import { ProductStatus } from "@prisma/client";
 import { prisma } from "@/lib/db/prisma";
 import { generateEmbedding } from "@/lib/embemdind";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
 import { delCache, getCache, setCache } from "@/services/redis.services";
+import { ProductStatus } from "@prisma/client";
 import { requireAuth, requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
 // Product cache version - increment when product data structure changes
-const PRODUCT_CACHE_VERSION = 'v2';
-const getProductCacheKey = (slug: string) => `product:details:${PRODUCT_CACHE_VERSION}:${slug}`;
+const PRODUCT_CACHE_VERSION = "v2";
+const getProductCacheKey = (slug: string) =>
+  `product:details:${PRODUCT_CACHE_VERSION}:${slug}`;
 
 export const productResolvers = {
   Query: {
@@ -194,7 +196,11 @@ export const productResolvers = {
       }
     },
 
-    getMyProducts: async (_: any, { skip, take, searchTerm, status, categoryId }: any, ctx: GraphQLContext) => {
+    getMyProducts: async (
+      _: any,
+      { skip, take, searchTerm, status, categoryId }: any,
+      ctx: GraphQLContext
+    ) => {
       try {
         const user = requireSeller(ctx);
         const userId = user.id;
@@ -204,19 +210,25 @@ export const productResolvers = {
 
         if (searchTerm) {
           where.OR = [
-            { name: { contains: searchTerm, mode: 'insensitive' } },
-            { variants: { some: { sku: { contains: searchTerm, mode: 'insensitive' } } } }
+            { name: { contains: searchTerm, mode: "insensitive" } },
+            {
+              variants: {
+                some: { sku: { contains: searchTerm, mode: "insensitive" } },
+              },
+            },
           ];
         }
 
-        if (status && status !== 'all') {
-          if (status === 'active') where.status = 'ACTIVE';
-          else if (status === 'draft') where.status = 'DRAFT';
-          else if (status === 'out_of_stock') where.variants = { some: { stock: 0 } };
-          else if (status === 'low_stock') where.variants = { some: { stock: { gt: 0, lte: 10 } } };
+        if (status && status !== "all") {
+          if (status === "active") where.status = "ACTIVE";
+          else if (status === "draft") where.status = "DRAFT";
+          else if (status === "out_of_stock")
+            where.variants = { some: { stock: 0 } };
+          else if (status === "low_stock")
+            where.variants = { some: { stock: { gt: 0, lte: 10 } } };
         }
 
-        if (categoryId && categoryId !== 'all') {
+        if (categoryId && categoryId !== "all") {
           where.categoryId = categoryId;
         }
 
@@ -240,8 +252,16 @@ export const productResolvers = {
         ]);
 
         const now = new Date();
-        const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const currentMonthStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1
+        );
+        const prevMonthStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1
+        );
         const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
         const [currentMonthCount, prevMonthCount] = await Promise.all([
@@ -261,7 +281,8 @@ export const productResolvers = {
 
         let percentChange = 0;
         if (prevMonthCount > 0) {
-          percentChange = ((currentMonthCount - prevMonthCount) / prevMonthCount) * 100;
+          percentChange =
+            ((currentMonthCount - prevMonthCount) / prevMonthCount) * 100;
         } else if (currentMonthCount > 0) {
           percentChange = 100;
         }
@@ -287,7 +308,9 @@ export const productResolvers = {
 
         const [total, active, outOfStock, lowStock] = await Promise.all([
           prisma.product.count({ where: { sellerId: userId } }),
-          prisma.product.count({ where: { sellerId: userId, status: "ACTIVE" } }),
+          prisma.product.count({
+            where: { sellerId: userId, status: "ACTIVE" },
+          }),
           prisma.product.count({
             where: {
               sellerId: userId,
@@ -346,8 +369,9 @@ export const productResolvers = {
         const slug = await generateUniqueSlug(input.name);
 
         // 3. Generate Embedding (Optional)
-        const textToEmbed = `${input.name} ${input.description || ""} ${input.brand || ""
-          }`.trim();
+        const textToEmbed = `${input.name} ${input.description || ""} ${
+          input.brand || ""
+        }`.trim();
         let embedding: number[] | undefined;
         try {
           if (textToEmbed) embedding = await generateEmbedding(textToEmbed);
@@ -385,11 +409,11 @@ export const productResolvers = {
                     specifications:
                       variant.specifications?.length > 0
                         ? {
-                          create: variant.specifications.map((spec: any) => ({
-                            key: spec.key,
-                            value: spec.value,
-                          })),
-                        }
+                            create: variant.specifications.map((spec: any) => ({
+                              key: spec.key,
+                              value: spec.value,
+                            })),
+                          }
                         : undefined,
                   })),
                 },
@@ -409,38 +433,38 @@ export const productResolvers = {
                 deliveryOptions:
                   input.deliveryOptions?.length > 0
                     ? {
-                      create: input.deliveryOptions.map((opt: any) => ({
-                        title: opt.title,
-                        description: opt.description,
-                        isDefault: opt.isDefault || false,
-                      })),
-                    }
+                        create: input.deliveryOptions.map((opt: any) => ({
+                          title: opt.title,
+                          description: opt.description,
+                          isDefault: opt.isDefault || false,
+                        })),
+                      }
                     : undefined,
 
                 // D. Warranty
                 warranty:
                   input.warranty?.length > 0
                     ? {
-                      create: input.warranty.map((w: any) => ({
-                        type: w.type,
-                        duration: w.duration,
-                        unit: w.unit,
-                        description: w.description,
-                      })),
-                    }
+                        create: input.warranty.map((w: any) => ({
+                          type: w.type,
+                          duration: w.duration,
+                          unit: w.unit,
+                          description: w.description,
+                        })),
+                      }
                     : undefined,
 
                 // E. Return Policy
                 returnPolicy:
                   input.returnPolicy?.length > 0
                     ? {
-                      create: input.returnPolicy.map((p: any) => ({
-                        type: p.type,
-                        duration: p.duration,
-                        unit: p.unit,
-                        conditions: p.conditions,
-                      })),
-                    }
+                        create: input.returnPolicy.map((p: any) => ({
+                          type: p.type,
+                          duration: p.duration,
+                          unit: p.unit,
+                          conditions: p.conditions,
+                        })),
+                      }
                     : undefined,
               },
             });
@@ -537,10 +561,14 @@ export const productResolvers = {
                 let existingMatch = null;
 
                 if (incoming.id) {
-                  existingMatch = currentVariants.find((cv: any) => cv.id === incoming.id);
+                  existingMatch = currentVariants.find(
+                    (cv: any) => cv.id === incoming.id
+                  );
                 } else if (incoming.sku) {
                   // Fallback: match by SKU if no ID provided (common in some frontend flows)
-                  existingMatch = currentVariants.find((cv: any) => cv.sku === incoming.sku);
+                  existingMatch = currentVariants.find(
+                    (cv: any) => cv.sku === incoming.sku
+                  );
                 }
 
                 if (existingMatch) {
@@ -723,13 +751,109 @@ export const productResolvers = {
           throw new Error("Variant not found or unauthorized");
         }
 
+        // Store old stock value to check if we're restocking
+        const oldStock = variant.stock;
+        const wasOutOfStock = oldStock === 0;
+        const isNowInStock = stock > 0;
+
         // 2. Update Stock
         await prisma.productVariant.update({
           where: { id: variantId },
           data: { stock },
         });
 
-        // 3. Cache Invalidation
+        // 3. Trigger notifications if restocking (0 → > 0)
+        if (wasOutOfStock && isNowInStock) {
+          console.log(
+            `🔔 Product restocked! Triggering notifications for product ${variant.product.id}, variant ${variantId}`
+          );
+
+          try {
+            // Import notification functions from seller's service
+            const { sendEmailNotification } = await import(
+              "@/services/notificationService"
+            );
+
+            // Get all pending notifications for this product/variant
+            // Note: We need to use raw SQL since ProductNotification model might not be in seller's Prisma schema
+            const notifications: any[] = await prisma.$queryRaw`
+              SELECT pn.*, u.email as user_email, u.phone as user_phone
+              FROM product_notifications pn
+              LEFT JOIN "user" u ON pn."userId" = u.id
+              WHERE pn."productId" = ${variant.product.id}
+              AND pn."variantId" = ${variantId}
+              AND pn."isNotified" = false
+            `;
+
+            if (notifications.length > 0) {
+              console.log(
+                `📧 Sending ${notifications.length} restock notifications...`
+              );
+
+              let notifiedCount = 0;
+              const notificationIds: string[] = [];
+
+              for (const notification of notifications) {
+                try {
+                  // Send email notification
+                  const emailToUse =
+                    notification.email || notification.user_email;
+                  if (emailToUse) {
+                    await sendEmailNotification(
+                      emailToUse,
+                      variant.product.name,
+                      variant.product.slug
+                    );
+                  }
+
+                  // Send WhatsApp notification
+                  const phoneToUse =
+                    notification.phone || notification.user_phone;
+                  const productUrl = `${
+                    process.env.NEXT_PUBLIC_APP_URL || "https://vanijay.com"
+                  }/product/${variant.product.slug}`;
+                  const message = `WhatsApp notification to ${phoneToUse}: ${variant.product.name} is back in stock! ${productUrl}`;
+                  if (phoneToUse) {
+                    await sendWhatsAppMessage(phoneToUse, message);
+                  }
+
+                  notificationIds.push(notification.id);
+                  notifiedCount++;
+                } catch (notifError) {
+                  console.error(
+                    "Error sending individual notification:",
+                    notifError
+                  );
+                }
+              }
+
+              // Mark notifications as sent using raw SQL
+              if (notificationIds.length > 0) {
+                await prisma.$executeRaw`
+                  UPDATE product_notifications
+                  SET "isNotified" = true, "updatedAt" = NOW()
+                  WHERE id = ANY(${notificationIds}::text[])
+                `;
+
+                console.log(
+                  `✅ Successfully notified ${notifiedCount} users about restock`
+                );
+              }
+            } else {
+              console.log(
+                "No pending notifications found for this product/variant"
+              );
+            }
+          } catch (notificationError) {
+            // Don't fail the stock update if notifications fail
+            console.error(
+              "Error triggering notifications (non-critical):",
+              notificationError
+            );
+          }
+        }
+
+        // 4. Cache Invalidation
         await Promise.all([
           delCache(`product:${variant.product.slug}`),
           delCache(getProductCacheKey(variant.product.slug)),
