@@ -809,9 +809,7 @@ export const productResolvers = {
                   // Send WhatsApp notification
                   const phoneToUse =
                     notification.phone || notification.user_phone;
-                  const productUrl = `${
-                    process.env.NEXT_PUBLIC_APP_URL || "https://vanijay.com"
-                  }/product/${variant.product.slug}`;
+                  const productUrl = `${"https://vanijay.com"}/product/${variant.product.slug}`;
                   const message = `${variant.product.name} is back in stock! ${productUrl}`;
                   if (phoneToUse) {
                     await sendWhatsAppMessage(phoneToUse, message);
