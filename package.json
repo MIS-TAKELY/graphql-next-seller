@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev  --turbopack",
     "dev:server": "tsx watch index.ts",
-    "build": "prisma generate --no-engine && next build",
-    "postinstall": "prisma generate --no-engine",
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "eslint"
   },
