@@ -21,7 +21,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 // Generated types
-import { Message, Role, User } from "@prisma/client";
+import { Message, Role, User } from "@/app/generated/prisma";
 // Enum for mutation inputs
 import { MessageType as MessageTypeEnum } from "@/types/common/enums";
 // Frontend specific types

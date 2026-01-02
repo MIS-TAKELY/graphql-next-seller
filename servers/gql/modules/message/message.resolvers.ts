@@ -1,5 +1,5 @@
 // servers/gql/messageResolvers.ts
-import type { FileType as PrismaFileType } from "@prisma/client";
+import type { FileType as PrismaFileType } from "@/app/generated/prisma";
 import { createAndPushNotification } from "@/lib/notification";
 import { NewMessagePayload, realtime } from "@/lib/realtime";
 import type {

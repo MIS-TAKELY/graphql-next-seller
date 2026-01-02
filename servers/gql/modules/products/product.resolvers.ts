@@ -3,7 +3,7 @@ import { generateEmbedding } from "@/lib/embemdind";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
 import { delCache, getCache, setCache } from "@/services/redis.services";
-import { ProductStatus } from "@prisma/client";
+import { ProductStatus } from "@/app/generated/prisma";
 import { requireAuth, requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
@@ -369,9 +369,8 @@ export const productResolvers = {
         const slug = await generateUniqueSlug(input.name);
 
         // 3. Generate Embedding (Optional)
-        const textToEmbed = `${input.name} ${input.description || ""} ${
-          input.brand || ""
-        }`.trim();
+        const textToEmbed = `${input.name} ${input.description || ""} ${input.brand || ""
+          }`.trim();
         let embedding: number[] | undefined;
         try {
           if (textToEmbed) embedding = await generateEmbedding(textToEmbed);
@@ -409,11 +408,11 @@ export const productResolvers = {
                     specifications:
                       variant.specifications?.length > 0
                         ? {
-                            create: variant.specifications.map((spec: any) => ({
-                              key: spec.key,
-                              value: spec.value,
-                            })),
-                          }
+                          create: variant.specifications.map((spec: any) => ({
+                            key: spec.key,
+                            value: spec.value,
+                          })),
+                        }
                         : undefined,
                   })),
                 },
@@ -433,38 +432,38 @@ export const productResolvers = {
                 deliveryOptions:
                   input.deliveryOptions?.length > 0
                     ? {
-                        create: input.deliveryOptions.map((opt: any) => ({
-                          title: opt.title,
-                          description: opt.description,
-                          isDefault: opt.isDefault || false,
-                        })),
-                      }
+                      create: input.deliveryOptions.map((opt: any) => ({
+                        title: opt.title,
+                        description: opt.description,
+                        isDefault: opt.isDefault || false,
+                      })),
+                    }
                     : undefined,
 
                 // D. Warranty
                 warranty:
                   input.warranty?.length > 0
                     ? {
-                        create: input.warranty.map((w: any) => ({
-                          type: w.type,
-                          duration: w.duration,
-                          unit: w.unit,
-                          description: w.description,
-                        })),
-                      }
+                      create: input.warranty.map((w: any) => ({
+                        type: w.type,
+                        duration: w.duration,
+                        unit: w.unit,
+                        description: w.description,
+                      })),
+                    }
                     : undefined,
 
                 // E. Return Policy
                 returnPolicy:
                   input.returnPolicy?.length > 0
                     ? {
-                        create: input.returnPolicy.map((p: any) => ({
-                          type: p.type,
-                          duration: p.duration,
-                          unit: p.unit,
-                          conditions: p.conditions,
-                        })),
-                      }
+                      create: input.returnPolicy.map((p: any) => ({
+                        type: p.type,
+                        duration: p.duration,
+                        unit: p.unit,
+                        conditions: p.conditions,
+                      })),
+                    }
                     : undefined,
               },
             });

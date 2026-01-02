@@ -1,7 +1,7 @@
 // types/graphql/graphql.types.ts
 // GraphQL context and resolver types
 
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from "@/app/generated/prisma";
 import type { Role } from "../common/enums";
 
 // GraphQL Context type
