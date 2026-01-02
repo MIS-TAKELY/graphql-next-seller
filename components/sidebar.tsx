@@ -139,7 +139,7 @@ export function Sidebar() {
             {/* <Store className="h-5 w-5 sm:h-6 sm:w-6 mr-2" /> */}
             <Image src={siteLogo} alt="site logo" width={32} height={32} className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
             <h2 className="text-base sm:text-lg font-semibold">
-              Vanijoy Seller
+              Vanijay Seller
             </h2>
           </div>
         </div>

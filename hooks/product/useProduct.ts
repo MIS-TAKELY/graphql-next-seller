@@ -140,6 +140,7 @@ export const useProduct = (variables?: {
   searchTerm?: string;
   status?: string;
   categoryId?: string;
+  skipQuery?: boolean;
 }) => {
   const router = useRouter();
 
@@ -153,6 +154,7 @@ export const useProduct = (variables?: {
     errorPolicy: "all",
     notifyOnNetworkStatusChange: true,
     fetchPolicy: "cache-and-network",
+    skip: variables?.skipQuery,
   });
 
   // --- DELETE MUTATION ---

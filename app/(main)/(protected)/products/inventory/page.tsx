@@ -22,12 +22,13 @@ import type { ProductVariant } from "@/types/product/product.types";
 import { AlertTriangle, Package, TrendingDown } from "lucide-react";
 
 // export const dynamic = "force-dynamic";
+export const revalidate = 60; // Revalidate every 60 seconds
 
 export default async function InventoryPage() {
   const client = await getServerApolloClient();
   const { data } = await client.query<GetMyProductsResponse>({
     query: GET_INVENTORY,
-    fetchPolicy: "no-cache",
+    fetchPolicy: "cache-first",
   });
 
   // Map Product[] to InventoryProduct[] format

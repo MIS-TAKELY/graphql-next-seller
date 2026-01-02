@@ -355,7 +355,7 @@ export default function SellerOnboarding() {
                   </label>
                   <div className="flex border border-input rounded-lg overflow-hidden bg-muted/30">
                     <span className="inline-flex items-center px-4 py-3 bg-muted text-muted-foreground border-r border-input">
-                      vanijoy.com/shop/
+                      vanijay.com/shop/
                     </span>
                     <input
                       value={slug || "(enter shop name)"}
