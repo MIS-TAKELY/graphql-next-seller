@@ -39,9 +39,9 @@ export default async function ProductsPage({ searchParams }: PageProps) {
     })
   ]);
 
-  const products = productsRes.data?.getMyProducts?.products || [];
+  const products = JSON.parse(JSON.stringify(productsRes.data?.getMyProducts?.products || []));
   const totalCount = productsRes.data?.getMyProducts?.totalCount || 0;
-  const categories = categoriesRes.data?.categories || [];
+  const categories = JSON.parse(JSON.stringify(categoriesRes.data?.categories || []));
 
   return (
     <ProductsPageContent
