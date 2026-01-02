@@ -4,11 +4,38 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuery } from "@apollo/client";
+import { useRealtime } from "@upstash/realtime/client";
+import { useSession } from "@/lib/auth-client";
+import { useCallback, useMemo } from "react";
+import { toast } from "sonner";
 
 export function RecentOrders() {
-  const { data, loading, error } = useQuery(GET_DASHBOARD_RECENT_ORDERS);
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
 
-  console.log("recent orders-->", data);
+  const { data, loading, error, refetch } = useQuery(GET_DASHBOARD_RECENT_ORDERS);
+
+  // Real-time listener for new orders
+  const handleNewOrder = useCallback(() => {
+    refetch();
+    toast.info("You have a new order!", {
+      description: "Refreshing the latest orders list.",
+    });
+  }, [refetch]);
+
+  const events = useMemo(
+    () => ({
+      order: {
+        newOrder: handleNewOrder,
+      },
+    }),
+    [handleNewOrder]
+  );
+
+  (useRealtime as any)({
+    channel: userId ? `user:${userId}` : undefined,
+    events,
+  });
 
   if (loading) {
     return (
@@ -89,3 +116,4 @@ export function RecentOrders() {
     </div>
   );
 }
+

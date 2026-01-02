@@ -1,10 +1,20 @@
 // components/analytics/TabsContainer.tsx
 "use client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import CustomersTab from "./CustomersTab";
-import OverviewTab from "./OverviewTab";
-import ProductsTab from "./ProductsTab";
-import SalesTab from "./SalesTab";
+import dynamic from "next/dynamic";
+
+const OverviewTab = dynamic(() => import("./OverviewTab"), {
+  loading: () => <div className="h-64 flex items-center justify-center">Loading Overview...</div>,
+});
+const SalesTab = dynamic(() => import("./SalesTab"), {
+  loading: () => <div className="h-64 flex items-center justify-center">Loading Sales Analytics...</div>,
+});
+const ProductsTab = dynamic(() => import("./ProductsTab"), {
+  loading: () => <div className="h-64 flex items-center justify-center">Loading Product Analytics...</div>,
+});
+const CustomersTab = dynamic(() => import("./CustomersTab"), {
+  loading: () => <div className="h-64 flex items-center justify-center">Loading Customer Analytics...</div>,
+});
 
 type TimePeriod = "DAYS_7" | "DAYS_30" | "DAYS_90" | "YEAR_1";
 
@@ -75,3 +85,4 @@ export default function TabsContainer({
     </Tabs>
   );
 }
+

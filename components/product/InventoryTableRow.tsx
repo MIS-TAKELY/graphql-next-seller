@@ -29,6 +29,42 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
   const [error, setError] = useState<string | null>(null);
 
   const [updateStock, { loading: updating }] = useMutation(UPDATE_VARIANT_STOCK, {
+    // Optimistic UI update
+    optimisticResponse: {
+      updateVariantStock: true,
+    },
+    update: (cache, { data }) => {
+      // Only update if mutation was successful (optimistic or real)
+      if (data?.updateVariantStock) {
+        try {
+          const existingInventory = cache.readQuery<any>({
+            query: GET_INVENTORY,
+          });
+
+          if (existingInventory?.getMyProducts?.products) {
+            const updatedProducts = existingInventory.getMyProducts.products.map((p: any) => ({
+              ...p,
+              variants: p.variants.map((v: any) =>
+                v.id === variant.id ? { ...v, stock: finalStock } : v
+              ),
+            }));
+
+            cache.writeQuery({
+              query: GET_INVENTORY,
+              data: {
+                getMyProducts: {
+                  ...existingInventory.getMyProducts,
+                  products: updatedProducts,
+                },
+              },
+            });
+          }
+        } catch (err) {
+          console.error("Cache update error:", err);
+        }
+      }
+    },
+    // We can keep refetchQueries as a fallback to ensure consistency with DB
     refetchQueries: [{ query: GET_INVENTORY }],
   });
 
@@ -59,6 +95,10 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
       toast.error("No variant found for this product");
       return;
     }
+
+    // Close dialog immediately for better "feel"
+    setIsOpen(false);
+
     try {
       await updateStock({
         variables: {
@@ -67,15 +107,16 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
         },
       });
       toast.success("Stock updated successfully!");
-      setIsOpen(false);
       setAdjustment(0);
     } catch (error) {
       console.error("Error updating stock:", error);
       toast.error(
         error instanceof Error ? error.message : "Failed to update stock"
       );
+      // If it fails, the cache will be corrected by refetchQueries
     }
   };
+
 
   return (
     <TableRow>
