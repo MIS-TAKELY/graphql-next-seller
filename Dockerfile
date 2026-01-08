@@ -33,6 +33,16 @@ COPY . .
 # Optional: disable Next.js telemetry
 # ENV NEXT_TELEMETRY_DISABLED=1
 
+# Add build arguments for Next.js public environment variables
+ARG NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+ARG NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+ARG NEXT_PUBLIC_APP_URL
+
+# Set them as environment variables so they are available during next build
+ENV NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=$NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+ENV NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=$NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+
 # Add dummy DATABASE_URL for build (Prisma validation requires it)
 ENV DATABASE_URL="postgresql://dummy:dummy@localhost:5432/dummy"
 

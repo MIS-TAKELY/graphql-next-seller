@@ -141,9 +141,14 @@ export function ProductForm({
 
   const updateFormData = <K extends keyof FormData>(
     field: K,
-    value: FormData[K]
+    value: FormData[K] | ((prev: FormData[K]) => FormData[K])
   ) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({
+      ...prev,
+      [field]: typeof value === "function"
+        ? (value as (prev: FormData[K]) => FormData[K])(prev[field])
+        : value,
+    }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 

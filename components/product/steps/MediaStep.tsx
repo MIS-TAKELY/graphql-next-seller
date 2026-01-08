@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Errors, FormData, Media } from "@/types/pages/product";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
 import React, { useCallback } from "react";
+import { toast } from "sonner";
 
 interface MediaStepProps {
   formData: FormData;
@@ -41,9 +42,9 @@ export const MediaStep = React.memo(
           isLocal: true,
           pending: true,
         }));
-        console.log("pending media", pendingMedia);
-        updateFormData(mediaSection, [
-          ...formData[mediaSection],
+
+        updateFormData(mediaSection, (prev: any[]) => [
+          ...prev,
           ...pendingMedia,
         ]);
 
@@ -55,39 +56,46 @@ export const MediaStep = React.memo(
               ? "video"
               : "image";
 
-            const result = await uploadToCloudinary(
-              fileWithPreview.file,
-              resourceType
-            );
-            console.log("result.resourceType", result.resourceType);
+            try {
+              const result = await uploadToCloudinary(
+                fileWithPreview.file,
+                resourceType
+              );
 
-            const fileType =
-              result.resourceType.toUpperCase() === "IMAGE" ? "IMAGE" : "VIDEO";
+              const fileType =
+                result.resourceType.toUpperCase() === "IMAGE" ? "IMAGE" : "VIDEO";
 
-            return {
-              url: result.url,
-              mediaType: mediaRole,
-              publicId: result.publicId,
-              altText: result.altText || "",
-              fileType,
-            } as Media;
+              return {
+                url: result.url,
+                mediaType: mediaRole,
+                publicId: result.publicId,
+                altText: result.altText || "",
+                fileType,
+              } as Media;
+            } catch (err) {
+              console.error(`Failed to upload ${fileWithPreview.file.name}:`, err);
+              toast.error(`Failed to upload ${fileWithPreview.file.name}`);
+              return null;
+            }
           });
 
-          const uploaded = (await Promise.all(uploadPromises)).filter(
+          const uploadedResults = await Promise.all(uploadPromises);
+          const uploaded = uploadedResults.filter(
             (m): m is Media => m !== null
           );
 
           // Replace pending media with uploaded ones
-          updateFormData(mediaSection, [
-            ...formData[mediaSection].filter((m) => !m.pending),
+          updateFormData(mediaSection, (prev: any[]) => [
+            ...prev.filter((m) => !m.pending),
             ...uploaded,
           ]);
         } catch (err) {
-          console.error("Upload failed:", err);
+          console.error("Upload process failed:", err);
+          toast.error("An error occurred during upload");
           // Remove pending if upload failed
           updateFormData(
             mediaSection,
-            formData[mediaSection].filter((m) => !m.pending)
+            (prev: any[]) => prev.filter((m) => !m.pending)
           );
         }
       },
