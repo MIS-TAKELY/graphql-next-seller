@@ -3,8 +3,9 @@ import { ApolloClient, createHttpLink } from "@apollo/client";
 import { APOLLO_CONFIG, APOLLO_DEFAULT_OPTIONS } from "./config";
 
 export async function getPublicServerApolloClient() {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
   const httpLink = createHttpLink({
-    uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/graphql` || "http://localhost:3000/api/graphql",
+    uri: `${baseUrl.replace(/\/$/, "")}/api/graphql`,
   });
 
   return new ApolloClient({

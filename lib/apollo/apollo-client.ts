@@ -3,8 +3,9 @@ import { ApolloClient, createHttpLink } from "@apollo/client";
 import { useMemo } from "react";
 import { APOLLO_CONFIG, APOLLO_DEFAULT_OPTIONS } from "./config";
 
+const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "";
 const httpLink = createHttpLink({
-    uri: `${process.env.NEXT_PUBLIC_APP_URL}/api/graphql` || "http://localhost:3000/api/graphql",
+    uri: baseUrl ? `${baseUrl.replace(/\/$/, "")}/api/graphql` : "/api/graphql",
 });
 
 export function useApolloClientWrapper() {

@@ -20,12 +20,12 @@ export function SSRApolloProvider({
   initialData,
 }: SSRApolloProviderProps) {
   const client = useMemo(() => {
-    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000")).replace(/\/$/, "");
+    const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "")).replace(/\/$/, "");
 
     const httpLink = createHttpLink({
       uri: typeof window !== "undefined"
         ? "/api/graphql"
-        : `${baseUrl}/api/graphql`,
+        : baseUrl ? `${baseUrl}/api/graphql` : "http://localhost:3000/api/graphql",
     });
 
     const client = new ApolloClient({
