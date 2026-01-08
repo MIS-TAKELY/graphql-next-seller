@@ -3,7 +3,7 @@ export const uploadToCloudinary = async (file: File, resourceType: "image" | "vi
   const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
 
   if (!cloudName || !uploadPreset) {
-    throw new Error("Cloudinary env variables are not-set");
+    throw new Error("Cloudinary env variables are not set");
   }
 
   const formData = new FormData();
