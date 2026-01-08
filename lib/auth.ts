@@ -36,7 +36,7 @@ export const auth = betterAuth({
         "https://www.vanijay.com",
         "https://vanijay.com",
     ],
-    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+    baseURL: process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : "http://localhost:3000"),
     advanced: {
         useSecureCookies: true,
     },
