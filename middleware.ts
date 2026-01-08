@@ -1,4 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db/prisma";
 
 const publicRoutes = [
     "/sign-in",
@@ -33,19 +35,21 @@ export default async function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // 1. Check session via fetch (edge-compatible)
+    // 1. Check session via Better Auth (Server-side check)
     try {
-        const sessionResponse = await fetch(`${nextUrl.origin}/api/auth/get-session`, {
-            headers: {
-                cookie: request.headers.get("cookie") || "",
-            },
+        const sessionResponse = await auth.api.getSession({
+            headers: request.headers,
         });
 
-        if (!sessionResponse.ok) {
-            return NextResponse.redirect(new URL("/sign-in", request.url));
-        }
+        const session = sessionResponse;
 
-        const session = await sessionResponse.json();
+        // Add hasProfile check if logged in
+        if (session && session.user) {
+            const sellerProfile = await prisma.sellerProfile.findUnique({
+                where: { userId: session.user.id }
+            });
+            session.user.hasProfile = !!sellerProfile;
+        }
 
         // 2. If not logged in
         if (!session || !session.user) {
