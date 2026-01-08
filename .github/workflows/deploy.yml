@@ -29,7 +29,7 @@ jobs:
               with:
                   registry: ${{ env.REGISTRY }}
                   username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
+                  password: ${{ secrets.VPS_GITHUB_TOKEN }}
 
             - name: Extract Docker metadata
               id: meta
@@ -72,7 +72,7 @@ jobs:
                       # Ensure clean pull
                       git reset --hard
                       git clean -fd
-                      git pull https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/SachinSharma-LordHeydes/graphql-next-seller.git main
+                      git pull https://x-access-token:${{ secrets.VPS_GITHUB_TOKEN }}@github.com/SachinSharma-LordHeydes/graphql-next-seller.git main
 
                       echo "Pulling latest Docker images..."
                       docker compose pull
