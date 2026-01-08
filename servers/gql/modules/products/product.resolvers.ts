@@ -472,7 +472,7 @@ export const productResolvers = {
 
             // Save Embedding via raw SQL (Prisma doesn't fully type pgvector yet)
             if (embedding) {
-              await tx.$executeRaw`UPDATE "products" SET embedding = ${embedding}::vector WHERE id = ${newProduct.id}`;
+              await tx.$executeRaw`UPDATE "products" SET embedding = ${JSON.stringify(embedding)}::vector WHERE id = ${newProduct.id}`;
             }
 
             return newProduct;
