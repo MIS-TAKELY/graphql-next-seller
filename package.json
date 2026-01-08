@@ -80,7 +80,8 @@
     "zod": "^4.2.1",
     "zustand": "^5.0.8",
     "@prisma/adapter-pg": "^7.2.0",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "@prisma/config": "^7.2.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -1,4 +1,4 @@
-import { defineConfig } from "@prisma/config";
+// prisma.config.ts
 
 export default {
   schema: 'prisma/schema.prisma',

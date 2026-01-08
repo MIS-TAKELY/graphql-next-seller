@@ -1,6 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { auth } from "@/lib/auth";
-import { prisma } from "@/lib/db/prisma";
 
 const publicRoutes = [
     "/sign-in",
@@ -36,62 +34,26 @@ export default async function middleware(request: NextRequest) {
     }
 
     // 1. Check session via Better Auth (Server-side check)
-    try {
-        const sessionResponse = await auth.api.getSession({
-            headers: request.headers,
-        });
+    // We check for both standard and secure cookies to support dev and prod
+    const sessionToken = request.cookies.get("better-auth.session_token") ||
+        request.cookies.get("__Secure-better-auth.session_token");
 
-        const session = sessionResponse;
+    const isLoggedIn = !!sessionToken;
 
-        // Add hasProfile check if logged in
-        if (session && session.user) {
-            const sellerProfile = await prisma.sellerProfile.findUnique({
-                where: { userId: session.user.id }
-            });
-            session.user.hasProfile = !!sellerProfile;
-        }
-
-        // 2. If not logged in
-        if (!session || !session.user) {
-            return NextResponse.redirect(new URL("/sign-in", request.url));
-        }
-
-        // 2.5 If logged in, don't allow access to sign-in/sign-up
-        if (nextUrl.pathname.startsWith("/sign-in") || nextUrl.pathname.startsWith("/sign-up")) {
-            // Check verification status before redirecting to dashboard
-            if (!session.user.phoneVerified) {
-                return NextResponse.redirect(new URL("/verify-phone", request.url));
-            }
-            if (!session.user.hasProfile) {
-                return NextResponse.redirect(new URL("/profileSetup", request.url));
-            }
-            return NextResponse.redirect(new URL("/", request.url));
-        }
-
-        // 3. If logged in but phone is not verified
-        if (session.user && !session.user.phoneVerified) {
-            return NextResponse.redirect(new URL("/verify-phone", request.url));
-        }
-
-        // 4. If logged in, phone verified, but no profile
-        if (session.user && session.user.phoneVerified && !session.user.hasProfile) {
-            if (nextUrl.pathname !== "/profileSetup") {
-                return NextResponse.redirect(new URL("/profileSetup", request.url));
-            }
-        }
-
-        // 5. If logged in, verified, and has profile, prevent access to profileSetup (optional but good UX)
-        if (session.user && session.user.phoneVerified && session.user.hasProfile && nextUrl.pathname === "/profileSetup") {
-            return NextResponse.redirect(new URL("/", request.url));
-        }
-
-    } catch (error) {
-        console.error("Middleware session check failed:", error);
-        // Fallback to sign-in on error
-        if (!isPublicRoute) {
-            return NextResponse.redirect(new URL("/sign-in", request.url));
-        }
+    // 2. If not logged in
+    if (!isLoggedIn) {
+        return NextResponse.redirect(new URL("/sign-in", request.url));
     }
+
+    // 2.5 If logged in, don't allow access to sign-in/sign-up
+    if (nextUrl.pathname.startsWith("/sign-in") || nextUrl.pathname.startsWith("/sign-up")) {
+        return NextResponse.redirect(new URL("/", request.url));
+    }
+
+    // Note: Detailed verification checks (phone, profile) are handled in the application UI
+    // to avoid expensive and fragile database/API calls in Edge Middleware, 
+    // mirroring the buyer implementation.
+
 
     return NextResponse.next();
 }
