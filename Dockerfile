@@ -64,6 +64,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy built artifacts from builder
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
 
 # Standalone output + static files (Next.js output tracing)
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
