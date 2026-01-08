@@ -65,12 +65,6 @@ jobs:
           script: |
             set -e
 
-            # Debug: List current directory and contents to help find the correct path
-            echo "Current working directory:"
-            pwd
-            echo "Listing contents of the current directory:"
-            ls -la
-
             cd ${{ secrets.VPS_PROJECT_PATH_SELLER }}
 
             # Ensure clean pull
