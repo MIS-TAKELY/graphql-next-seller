@@ -53,6 +53,7 @@ RUN \
     else echo "Lockfile not found." && exit 1; \
     fi
 
+    
 # ────────────────────────────────────────────────
 # Stage: runner – minimal production image
 # ────────────────────────────────────────────────
