@@ -21,6 +21,11 @@ export default async function ProtectedLayout({
     redirect("/sign-in");
   }
 
+  // Check if phone is verified first
+  if (!(session.user as any).phoneVerified) {
+    redirect("/verify-phone");
+  }
+
   const sellerProfile = await prisma.sellerProfile.findUnique({
     where: { userId: session.user.id },
     select: { id: true },
