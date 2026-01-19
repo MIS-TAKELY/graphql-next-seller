@@ -113,9 +113,15 @@ export const GET_PRODUCT = gql`
         sortOrder
       }
       category {
+        id
+        name
         parent {
-          name
           id
+          name
+          parent {
+            id
+            name
+          }
         }
       }
     }

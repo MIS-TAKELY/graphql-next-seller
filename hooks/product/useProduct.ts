@@ -224,79 +224,35 @@ export const useProduct = (variables?: {
     update: (cache, { data }, { variables }) => {
       try {
         const actualInput = variables?.input;
-        if (!actualInput?.id) return;
-        const existing = cache.readQuery<GetMyProductsResponse>({
-          query: GET_MY_PRODUCTS,
-        });
-        if (!existing?.getMyProducts) return;
+        if (!actualInput?.id || !data?.updateProduct) return;
 
-        const existingCategory = existing.getMyProducts.products.find(
-          (p: Product) => p.category?.id === actualInput.categoryId
-        )?.category;
+        // Use cache.modify to update any cached versions of getMyProducts
+        cache.modify({
+          fields: {
+            getMyProducts(existingData, { readField }) {
+              if (!existingData || !existingData.products) return existingData;
 
-        const updatedProducts = existing.getMyProducts.products.map(
-          (p: Product) => {
-            if (p.id !== actualInput.id) return p;
+              const updatedProducts = existingData.products.map((productRef: any) => {
+                const id = readField("id", productRef);
+                if (id !== actualInput.id) return productRef;
 
-            // Construct updated variants safely
-            const updatedVariants: ProductVariant[] = actualInput.variants
-              ? actualInput.variants.map((v, idx) => ({
-                id: v.id || `${p.id}-variant-new-${idx}`,
-                productId: p.id,
-                sku: v.sku,
-                price: v.price,
-                mrp: v.mrp,
-                stock: v.stock,
-                soldCount: 0, // Maintain existing sold count if possible, or 0
-                attributes: v.attributes,
-                isDefault: v.isDefault ?? false,
-                specifications: v.specifications?.map((s, si) => ({
-                  id: `temp-spec-${si}`,
-                  variantId: v.id || `${p.id}-variant-new-${idx}`,
-                  key: s.key,
-                  value: s.value,
-                  createdAt: new Date(),
-                  updatedAt: new Date(),
-                })),
-                createdAt: new Date(),
-                updatedAt: new Date(),
-              }))
-              : p.variants;
+                // Create the updated product data for the cache
+                // Note: This is an optimistic update, so we use the input values
+                const updatedProduct = {
+                  ...productRef,
+                  name: actualInput.name || readField("name", productRef),
+                  description: actualInput.description || readField("description", productRef),
+                  brand: actualInput.brand || readField("brand", productRef),
+                  status: actualInput.status || readField("status", productRef),
+                };
 
-            return {
-              ...p,
-              name: actualInput.name ?? p.name,
-              description: actualInput.description ?? p.description,
-              brand: actualInput.brand ?? p.brand,
-              category: actualInput.categoryId
-                ? existingCategory || p.category
-                : p.category,
-              images:
-                actualInput.images?.map((img, index) => ({
-                  id: `temp-img-${index}`,
-                  productId: p.id,
-                  url: img.url,
-                  altText: img.altText,
-                  sortOrder: img.sortOrder ?? index,
-                  mediaType: img.mediaType || "PRIMARY",
-                  fileType: img.fileType,
-                })) || p.images,
-              variants: updatedVariants,
-              // Simple status check: if all variants have 0 stock
-              status: updatedVariants.every((v) => v.stock === 0)
-                ? ProductStatus.INACTIVE
-                : actualInput.status || p.status,
-            };
-          }
-        );
+                return updatedProduct;
+              });
 
-        cache.writeQuery({
-          query: GET_MY_PRODUCTS,
-          data: {
-            getMyProducts: {
-              __typename: "getMyProductsResponse",
-              products: updatedProducts,
-              percentChange: existing.getMyProducts.percentChange ?? 0,
+              return {
+                ...existingData,
+                products: updatedProducts,
+              };
             },
           },
         });

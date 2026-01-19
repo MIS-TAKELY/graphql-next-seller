@@ -44,8 +44,18 @@ export function ProductsPageContent({
     const pageSize = 50;
     const totalPages = Math.ceil(totalCount / pageSize);
 
-    // Use useProduct only for mutations, skipping query
-    const { handleDelete } = useProduct({ skipQuery: true });
+    // Use useProduct to fetch products and make it reactive to the cache
+    const { productsData, handleDelete, productsDataLoading } = useProduct({
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+        searchTerm: searchTerm || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        categoryId: categoryFilter === "all" ? undefined : categoryFilter,
+    });
+
+    // Use products from hook if available, otherwise fallback to initial products from server
+    const products = productsData?.getMyProducts?.products || initialProducts;
+    const currentTotalCount = productsData?.getMyProducts?.totalCount || totalCount;
 
     // URL Update Helper
     const createQueryString = (params: Record<string, string | number | null>) => {
@@ -88,7 +98,7 @@ export function ProductsPageContent({
                 <CardHeader>
                     <CardTitle>Product Inventory</CardTitle>
                     <CardDescription>
-                        View and manage all your products ({totalCount})
+                        View and manage all your products ({currentTotalCount})
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -103,11 +113,11 @@ export function ProductsPageContent({
                         isCategoryLoading={false}
                     />
 
-                    <div className={isPending ? "opacity-60 pointer-events-none transition-opacity" : ""}>
+                    <div className={isPending || productsDataLoading ? "opacity-60 pointer-events-none transition-opacity" : ""}>
                         <ProductsTable
-                            products={initialProducts}
+                            products={products}
                             onDelete={handleDeleteProduct}
-                            isLoading={isPending}
+                            isLoading={isPending || productsDataLoading}
                         />
                     </div>
 
