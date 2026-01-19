@@ -392,6 +392,7 @@ export const productResolvers = {
                 sellerId,
 
                 specificationTable: input.specificationTable || null,
+                specificationDisplayFormat: input.specificationDisplayFormat || "bullet",
 
                 // A. Create Variants (One-to-Many)
                 variants: {
@@ -534,6 +535,8 @@ export const productResolvers = {
         if (input.brand !== undefined) productData.brand = input.brand;
         if (input.specificationTable !== undefined)
           productData.specificationTable = input.specificationTable;
+        if (input.specificationDisplayFormat !== undefined)
+          productData.specificationDisplayFormat = input.specificationDisplayFormat;
 
         await prisma.$transaction(
           async (tx: any) => {
