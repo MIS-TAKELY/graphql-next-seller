@@ -9,6 +9,7 @@ export interface AuthUser {
     firstName?: string | null;
     lastName?: string | null;
     username?: string | null;
+    phone?: string | null;
     phoneVerified?: boolean;
     otp?: string | null;
     otpExpiresAt?: Date | null;
