@@ -116,7 +116,7 @@ export const transformProductToFormData = (product: Product): FormData => {
     // Specifications
     features: product.features || [],
     specifications,
-    specificationDisplayFormat: "bullet",
+    specificationDisplayFormat: product.specificationDisplayFormat || "bullet",
 
     // Pricing & Inventory
     price: firstVariant.price?.toString() || "",

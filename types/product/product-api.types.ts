@@ -34,6 +34,7 @@ export interface ICreateProductInput {
   status?: ProductStatus;
   variants: ICreateProductVariantInput[];
   specificationTable?: any;
+  specificationDisplayFormat?: string;
   images: Array<{
     url: string;
     altText?: string;

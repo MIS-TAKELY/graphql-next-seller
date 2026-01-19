@@ -65,6 +65,7 @@ export const GET_PRODUCT = gql`
         }
       }
       brand
+      specificationDisplayFormat
       variants {
         sku
         price

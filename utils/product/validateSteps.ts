@@ -142,6 +142,7 @@ export const buildProductInput = (
     brand: formData.brand || "Generic",
     status: formData.status,
     specificationTable: formData.specificationTable,
+    specificationDisplayFormat: formData.specificationDisplayFormat,
 
     variants: apiVariants,
 
