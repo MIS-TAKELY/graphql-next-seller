@@ -17,23 +17,27 @@ export const transformProductToFormData = (product: Product): FormData => {
   const productMedia =
     product.images
       ?.filter((img) => img.mediaType === "PRIMARY")
-      .map((img) => ({
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((img, index) => ({
         url: img.url,
         altText: img.altText || "",
         mediaType: img.mediaType,
         fileType: img.fileType,
         publicId: (img as { publicId?: string }).publicId || "",
+        sortOrder: img.sortOrder ?? index,
       })) || [];
 
   const promotionalMedia =
     product.images
       ?.filter((img) => img.mediaType === "PROMOTIONAL")
-      .map((img) => ({
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((img, index) => ({
         url: img.url,
         altText: img.altText || "",
         mediaType: img.mediaType,
         fileType: img.fileType,
         publicId: (img as { publicId?: string }).publicId || "",
+        sortOrder: img.sortOrder ?? index,
       })) || [];
 
   console.log("varient---->", firstVariant.attributes);

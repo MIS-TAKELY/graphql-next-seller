@@ -152,14 +152,14 @@ export const buildProductInput = (
         altText: media.altText || "",
         mediaType: media.mediaType,
         fileType: media.fileType ?? FileType.IMAGE,
-        sortOrder: index,
+        sortOrder: media.sortOrder ?? index,
       })),
       ...formData.promotionalMedia.map((media, index) => ({
         url: media.url,
         altText: media.altText || "",
         mediaType: media.mediaType,
         fileType: media.fileType ?? FileType.IMAGE,
-        sortOrder: formData.productMedia.length + index,
+        sortOrder: media.sortOrder ?? (formData.productMedia.length + index),
       })),
     ],
 

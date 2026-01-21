@@ -115,6 +115,28 @@ export const MediaStep = React.memo(
       [formData, updateFormData]
     );
 
+    const handleReorder = useCallback(
+      (
+        activeIndex: number,
+        overIndex: number,
+        mediaSection: "productMedia" | "promotionalMedia"
+      ) => {
+        const items = [...formData[mediaSection]];
+        const [movedItem] = items.splice(activeIndex, 1);
+        items.splice(overIndex, 0, movedItem);
+
+        // Update sortOrder for all items
+        const reordered = items.map((item, index) => ({
+          ...item,
+          sortOrder: index,
+        }));
+
+        updateFormData(mediaSection, reordered);
+      },
+      [formData, updateFormData]
+    );
+
+
     const getPreviewType = (media: any): "image" | "video" => {
       // Helper to map for FileUpload
       if ("previewType" in media) return media.previewType;
@@ -144,6 +166,9 @@ export const MediaStep = React.memo(
                 )
               }
               onRemove={(i) => handleRemoveMedia(i, "productMedia")}
+              onReorder={(activeIndex, overIndex) =>
+                handleReorder(activeIndex, overIndex, "productMedia")
+              }
               maxFiles={10}
               allowVideo
             />
@@ -167,6 +192,9 @@ export const MediaStep = React.memo(
                 )
               }
               onRemove={(i) => handleRemoveMedia(i, "promotionalMedia")}
+              onReorder={(activeIndex, overIndex) =>
+                handleReorder(activeIndex, overIndex, "promotionalMedia")
+              }
               maxFiles={5}
               allowVideo
             />
