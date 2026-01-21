@@ -14,7 +14,7 @@ export async function uploadFilesToStorage(files: File[]) {
         throw new Error("Unsupported file type. Only images and videos are allowed.");
       }
 
-      const res = await uploadToCloudinary(file, resourceType as "image" | "video");
+      const res = await uploadToCloudinary(file, resourceType as any);
       return {
         url: res.url,
         type: (isVideo ? "VIDEO" : "IMAGE") as "VIDEO" | "IMAGE",

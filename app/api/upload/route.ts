@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        let processedBuffer = buffer;
+        let processedBuffer: any = buffer;
 
         // Sharp Optimization Logic
         const image = sharp(buffer);
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         }
         // Add more types as needed
 
-        processedBuffer = await sharpInstance.toBuffer();
+        processedBuffer = await sharpInstance.toBuffer() as unknown as Buffer;
 
         // Upload to Cloudinary
         const result = await uploadBufferToCloudinary(
