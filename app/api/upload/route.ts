@@ -6,7 +6,8 @@ import sharp from "sharp";
 async function uploadBufferToCloudinary(
     buffer: Buffer,
     folder: string = "seller",
-    filename?: string
+    filename?: string,
+    mimeType: string = "image/webp"
 ): Promise<any> {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
@@ -17,8 +18,8 @@ async function uploadBufferToCloudinary(
 
     const formData = new FormData();
     // Blob from buffer
-    const blob = new Blob([buffer as any], { type: "image/webp" });
-    formData.append("file", blob, filename || "image.webp");
+    const blob = new Blob([buffer as any], { type: mimeType });
+    formData.append("file", blob, filename || "image");
     formData.append("upload_preset", uploadPreset);
     if (folder) formData.append("folder", folder);
 
@@ -53,37 +54,49 @@ export async function POST(req: NextRequest) {
         }
 
         const buffer = Buffer.from(await file.arrayBuffer());
-        let processedBuffer: any = buffer;
+        let processedBuffer: Buffer;
+        let contentType: string;
 
-        // Sharp Optimization Logic
-        const image = sharp(buffer);
-        const metadata = await image.metadata();
+        // Check file size (200KB = 200 * 1024 bytes = 204800 bytes)
+        const isSmallFile = buffer.length <= 200 * 1024;
 
-        // Default to converting to WebP for optimization
-        let sharpInstance = image.webp({ quality: 80 });
+        if (isSmallFile) {
+            // Skip compression for small files
+            processedBuffer = buffer;
+            contentType = file.type || "image/webp"; // Fallback if type is missing
+        } else {
+            // Sharp Optimization Logic for files > 200KB
+            const image = sharp(buffer);
+            // const metadata = await image.metadata(); // Metadata unused
 
-        if (type === "product") {
-            // Products: 1080x1080 Square
-            sharpInstance = sharpInstance.resize(1080, 1080, {
-                fit: "cover",
-                position: "center",
-            });
-        } else if (type === "banner") {
-            // This is seller app, but just in case we reuse logic or seller adds banners later
-            sharpInstance = sharpInstance.resize(1920, 600, {
-                fit: "cover",
-                position: "center",
-            })
+            // Default to converting to WebP for optimization
+            let sharpInstance = image.webp({ quality: 80 });
+
+            if (type === "product") {
+                // Products: 1080x1080 Square
+                sharpInstance = sharpInstance.resize(1080, 1080, {
+                    fit: "cover",
+                    position: "center",
+                });
+            } else if (type === "banner") {
+                // This is seller app, but just in case we reuse logic or seller adds banners later
+                sharpInstance = sharpInstance.resize(1920, 600, {
+                    fit: "cover",
+                    position: "center",
+                })
+            }
+            // Add more types as needed
+
+            processedBuffer = await sharpInstance.toBuffer();
+            contentType = "image/webp";
         }
-        // Add more types as needed
-
-        processedBuffer = await sharpInstance.toBuffer() as unknown as Buffer;
 
         // Upload to Cloudinary
         const result = await uploadBufferToCloudinary(
-            processedBuffer as any,
+            processedBuffer,
             "seller", // or dynamic folder based on type
-            file.name
+            file.name,
+            contentType
         );
 
         return NextResponse.json({
