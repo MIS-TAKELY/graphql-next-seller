@@ -1,33 +1,26 @@
-export const uploadToCloudinary = async (file: File, resourceType: "image" | "video" | "raw" | "auto" = "auto") => {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
-  if (!cloudName || !uploadPreset) {
-    throw new Error("Cloudinary env variables are not-set");
-  }
-
+export const uploadToCloudinary = async (file: File, type: "product" | "banner" | "category" | "auto" = "auto") => {
   const formData = new FormData();
   formData.append("file", file);
-  formData.append("upload_preset", uploadPreset);
+  formData.append("type", type);
 
-  console.log("cloudineray formdata-->",formData)
-
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/upload`, {
+  // Use local API for server-side processing (sharp)
+  const response = await fetch(`/api/upload`, {
     method: "POST",
     body: formData,
   });
 
   if (!response.ok) {
-    throw new Error("Failed to upload to Cloudinary");
+    const errorText = await response.text();
+    console.error("Upload failed:", response.status, errorText);
+    throw new Error(`Failed to upload: ${response.statusText}`);
   }
 
   const data = await response.json();
-  console.log("data-->",data)
   return {
-    url: data.secure_url,
-    publicId: data.public_id,
-    resourceType: data.resource_type,
-    size: data.bytes,
-    altText:data.display_name
+    url: data.url,
+    publicId: data.publicId,
+    resourceType: data.resourceType,
+    size: data.size,
+    altText: data.altText
   };
 };

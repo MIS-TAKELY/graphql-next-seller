@@ -31,7 +31,7 @@ export function ProductTableRow({ product, onDelete }: ProductTableRowProps) {
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0">
-            <div className="font-medium truncate">
+            <div className="font-medium truncate max-w-[200px] sm:max-w-[300px]">
               {product.name || "Unnamed Product"}
             </div>
             <div className="text-sm text-muted-foreground sm:hidden">

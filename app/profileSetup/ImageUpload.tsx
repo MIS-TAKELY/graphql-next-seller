@@ -36,7 +36,7 @@ export default function ImageUpload({
     setIsUploading(true);
 
     try {
-      const res = await uploadToCloudinary(file, "image");
+      const res = await uploadToCloudinary(file, "product");
       setPreview(res.url);
       onChange(res.url);
       toast.success("Image uploaded successfully");
@@ -99,7 +99,7 @@ export default function ImageUpload({
               />
             </label>
             <p className="text-xs text-muted-foreground mt-1">
-              JPG, PNG, WebP up to 5MB
+              JPG, PNG, WebP up to 5MB. Recommended: Square (1080x1080px).
             </p>
           </div>
 

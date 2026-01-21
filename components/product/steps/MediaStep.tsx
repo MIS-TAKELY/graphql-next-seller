@@ -59,7 +59,7 @@ export const MediaStep = React.memo(
             try {
               const result = await uploadToCloudinary(
                 fileWithPreview.file,
-                resourceType
+                resourceType === "image" ? "product" : "auto"
               );
 
               const fileType =
