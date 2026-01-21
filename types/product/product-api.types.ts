@@ -22,7 +22,7 @@ export interface ICreateProductVariantInput {
   attributes?: Record<string, any>;
   isDefault?: boolean;
   specifications?: Array<{ key: string; value: string }>;
-  specificationTable?: any;
+  specificationTable?: any; // { headers: string[], rows: string[][] } | Array<{ title: string, headers: string[], rows: string[][] }>
 }
 
 export interface ICreateProductInput {
@@ -33,7 +33,7 @@ export interface ICreateProductInput {
   brand?: string;
   status?: ProductStatus;
   variants: ICreateProductVariantInput[];
-  specificationTable?: any;
+  specificationTable?: any; // { headers: string[], rows: string[][] } | Array<{ title: string, headers: string[], rows: string[][] }>
   specificationDisplayFormat?: string;
   images: Array<{
     url: string;
