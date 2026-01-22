@@ -288,11 +288,11 @@ export default function SellerUnifiedAuth() {
 
     const renderSignIn = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center flex flex-col items-center">
-                <div className="mb-4">
-                    <Logo />
-                </div>
-                <h2 className="text-3xl font-bold tracking-tight text-foreground">Seller Login</h2>
+            <div className="text-center md:hidden flex flex-col items-center mb-6">
+                <Logo />
+            </div>
+            <div className="text-left">
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Seller Login</h2>
                 <p className="mt-2 text-sm text-muted-foreground">Sign in to manage your shop</p>
             </div>
             <form onSubmit={handleSignIn} className="space-y-4">
@@ -354,11 +354,11 @@ export default function SellerUnifiedAuth() {
 
     const renderSignUp = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center flex flex-col items-center">
-                <div className="mb-4">
-                    <Logo />
-                </div>
-                <h2 className="text-3xl font-bold tracking-tight text-foreground">Become a Seller</h2>
+            <div className="text-center md:hidden flex flex-col items-center mb-6">
+                <Logo />
+            </div>
+            <div className="text-left">
+                <h2 className="text-2xl font-bold tracking-tight text-foreground">Become a Seller</h2>
                 <p className="mt-2 text-sm text-muted-foreground">Start selling on Vanijay today</p>
             </div>
             <form onSubmit={handleSignUp} className="space-y-4">
@@ -523,13 +523,32 @@ export default function SellerUnifiedAuth() {
     );
 
     return (
-        <div className="w-full max-w-lg mx-auto overflow-hidden">
-            <div className="bg-white/80 dark:bg-slate-950/80 border border-blue-100/50 dark:border-blue-900/20 rounded-3xl shadow-2xl shadow-blue-500/10 backdrop-blur-2xl p-10 transition-all duration-300">
-                {step === "SIGN_IN" && renderSignIn()}
-                {step === "SIGN_UP" && renderSignUp()}
-                {step === "EMAIL_SENT" && renderEmailSent()}
-                {step === "PHONE_NUMBER" && renderPhoneNumber()}
-                {step === "PHONE_OTP" && renderPhoneOtp()}
+        <div className="w-full max-w-5xl mx-auto overflow-hidden">
+            <div className="grid grid-cols-1 md:grid-cols-2 bg-white/80 dark:bg-slate-950/80 border border-blue-100/50 dark:border-blue-900/20 rounded-3xl shadow-2xl shadow-blue-500/10 backdrop-blur-2xl transition-all duration-300 min-h-[600px]">
+                {/* Left Column: Brand/Image */}
+                <div className="hidden md:flex flex-col justify-center items-center bg-blue-50/50 dark:bg-slate-900/50 p-10 relative overflow-hidden">
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                        <div className="mb-6 transform hover:scale-105 transition-transform duration-300">
+                            <Logo />
+                        </div>
+                        <h1 className="text-2xl font-bold text-foreground mb-3">Seller Dashboard</h1>
+                        <p className="text-muted-foreground text-sm max-w-xs">
+                            Manage your shop, products, and orders efficiently.
+                        </p>
+                    </div>
+                    {/* Decorative abstract circles */}
+                    <div className="absolute -top-20 -left-20 w-64 h-64 bg-blue-400/10 rounded-full blur-3xl"></div>
+                    <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-400/10 rounded-full blur-3xl"></div>
+                </div>
+
+                {/* Right Column: Form */}
+                <div className="p-8 md:p-12 flex flex-col justify-center">
+                    {step === "SIGN_IN" && renderSignIn()}
+                    {step === "SIGN_UP" && renderSignUp()}
+                    {step === "EMAIL_SENT" && renderEmailSent()}
+                    {step === "PHONE_NUMBER" && renderPhoneNumber()}
+                    {step === "PHONE_OTP" && renderPhoneOtp()}
+                </div>
             </div>
         </div>
     );
