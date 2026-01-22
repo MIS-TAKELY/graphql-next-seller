@@ -523,8 +523,8 @@ export default function SellerUnifiedAuth() {
     );
 
     return (
-        <div className="w-full max-w-md mx-auto overflow-hidden">
-            <div className="bg-white/70 dark:bg-slate-950/70 border border-blue-100/50 dark:border-blue-900/20 rounded-2xl shadow-xl shadow-blue-500/5 backdrop-blur-xl p-8 transition-all duration-300">
+        <div className="w-full max-w-lg mx-auto overflow-hidden">
+            <div className="bg-white/80 dark:bg-slate-950/80 border border-blue-100/50 dark:border-blue-900/20 rounded-3xl shadow-2xl shadow-blue-500/10 backdrop-blur-2xl p-10 transition-all duration-300">
                 {step === "SIGN_IN" && renderSignIn()}
                 {step === "SIGN_UP" && renderSignUp()}
                 {step === "EMAIL_SENT" && renderEmailSent()}
