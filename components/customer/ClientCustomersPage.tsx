@@ -97,7 +97,7 @@ export default function ClientCustomersPage({
       )}
 
       <Tabs defaultValue="customers" className="space-y-3 sm:space-y-4 md:space-y-6 transition-all duration-300 ease-in-out">
-        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 text-xs sm:text-sm transition-all duration-300">
+        <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 h-auto text-xs sm:text-sm transition-all duration-300">
           <TabsTrigger
             value="customers"
             className="px-2 sm:px-3 transition-all duration-300"

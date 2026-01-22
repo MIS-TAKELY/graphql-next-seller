@@ -32,7 +32,7 @@ export default function TabsContainer({
       defaultValue="overview"
       className="space-y-3 sm:space-y-4 md:space-y-6 transition-all duration-300 ease-in-out"
     >
-      <TabsList className="grid grid-cols-4 w-full gap-1 sm:gap-2 transition-all duration-300">
+      <TabsList className="grid grid-cols-2 sm:grid-cols-4 w-full h-auto gap-1 sm:gap-2 transition-all duration-300">
         <TabsTrigger
           value="overview"
           className="text-xs sm:text-sm transition-all duration-300"
