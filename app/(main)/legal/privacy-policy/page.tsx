@@ -3,26 +3,51 @@ import React from "react";
 
 export default function PrivacyPolicyPage() {
     return (
-        <PolicyLayout title="Privacy Policy (गोपनीयता नीति)" lastUpdated="December 22, 2025">
-            <div className="space-y-6">
-                <section>
-                    <p>
-                        At Vanijay.com, we value your privacy and are committed to protecting your personal information. As Nepal&apos;s trusted online shopping platform, we handle your data responsibly and in full compliance with Nepal&apos;s Privacy Act, 2075 (2018).
-                    </p>
-                </section>
+        <PolicyLayout title="Privacy Policy" lastUpdated="December 22, 2025">
+            <div className="space-y-8">
+                <section className="prose prose-sm dark:prose-invert max-w-none">
+                    <div className="bg-muted/30 p-4 rounded-lg border">
+                        <h2 className="text-xl font-bold mb-3">English Version</h2>
+                        <div className="whitespace-pre-line text-muted-foreground text-sm">
+                            {`Privacy Policy - Vanijay.com Nepal Online Shopping
+Last Updated: December 22, 2025
 
-                <section>
-                    <h2 className="text-xl font-semibold mb-2">Nepali Translation (गोपनीयता नीति)</h2>
-                    <p>
-                        Vanijay.com मा, हामी तपाईँको गोपनीयताको कदर गर्छौँ र तपाईँको व्यक्तिगत जानकारी सुरक्षित राख्न प्रतिबद्ध छौँ। नेपालको भरपर्दो अनलाइन सपिङ प्लेटफर्मको रूपमा, हामी तपाईँको डाटालाई जिम्मेवारीपूर्वक र नेपालको वैयक्तिक गोपनीयता सम्बन्धी ऐन, २०७५ को पूर्ण पालना गर्दै व्यवस्थापन गर्छौँ।
-                    </p>
-                </section>
+At Vanijay.com, we value your privacy and are committed to protecting your personal information. As Nepal's trusted online shopping platform, we handle your data responsibly and in full compliance with Nepal's Privacy Act, 2075 (2018).
 
-                <section className="bg-muted p-4 rounded-lg">
-                    <h3 className="text-lg font-medium mb-2">सम्पर्क गर्नुहोस</h3>
-                    <p>Vanijay Enterprises, कोशी, सुनसरी, इटहरी</p>
-                    <p>ईमेल: vanijayenterprises@gmail.com</p>
-                    <p>फोन: 9761012813</p>
+1. What Information We Collect: Name, email, phone number, address, Account details, Order history, Usage data, Cookies.
+2. How We Use Your Information: Process orders, account management, support, improvements, security.
+3. How We Share Your Information: Shared only with trusted service providers and delivery partners.
+4. Cookies & Tracking: Used to improve experience. Manage in browser settings.
+5. Your Privacy Rights: Access & update info, opt out of marketing, request deletion.
+6. Data Security: Strong security measures including encryption.
+7. How Long We Keep Your Data: As long as needed for legal or business purposes.
+8. Children's Privacy: Not for children under 16.
+9. Third-Party Links: External links not covered by this policy.
+10. Changes to This Policy: Updated occasionally.
+11. Contact Us: vanijayenterprises@gmail.com`}
+                        </div>
+                    </div>
+
+                    <div className="mt-8 bg-primary/5 p-4 rounded-lg border border-primary/10">
+                        <h2 className="text-xl font-bold mb-3 text-primary">Nepali Translation (गोपनीयता नीति)</h2>
+                        <div className="whitespace-pre-line text-foreground/80 text-sm font-medium">
+                            {`गोपनीयता नीति (Privacy Policy) - Vanijay.com नेपाल अनलाइन सपिङ
+अन्तिम परिमार्जन: डिसेम्बर २२, २०२५
+
+Vanijay.com मा, हामी तपाईँको गोपनीयताको कदर गर्छौँ। हामी तपाईँको डाटालाई नेपालको वैयक्तिक गोपनीयता सम्बन्धी ऐन, २०७५ अनुसार व्यवस्थापन गर्छौँ।
+
+१. जानकारी संकलन: नाम, फोन, ठेगाना, अर्डर इतिहास।
+२. प्रयोग: अर्डर डेलिभरी, खाता व्यवस्थापन, सेवा सुधार।
+३. साझेदारी: सेवा प्रदायक र डेलिभरी साझेदारसँग मात्र।
+४. सुरक्षा: इन्क्रिप्सन र सुरक्षित सर्भर।
+५. अधिकार: पहुँच, सच्याउने र मेटाउने अनुरोध।
+
+सम्पर्क:
+वाणिजय इन्टरप्राइजेज
+ईमेल: vanijayenterprises@gmail.com
+फोन: 9761012813`}
+                        </div>
+                    </div>
                 </section>
             </div>
         </PolicyLayout>

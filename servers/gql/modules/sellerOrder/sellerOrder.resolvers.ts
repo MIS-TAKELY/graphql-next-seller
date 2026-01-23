@@ -89,7 +89,7 @@ export const sellerOrderResolver = {
                   include: {
                     product: {
                       include: {
-                        images: true,
+                        images: { orderBy: { sortOrder: 'asc' } },
                       },
                     },
                   },

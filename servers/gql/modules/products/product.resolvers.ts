@@ -35,7 +35,7 @@ export const productResolvers = {
                 specifications: true,
               },
             },
-            images: true,
+            images: { orderBy: { sortOrder: 'asc' } },
             reviews: true,
             category: {
               include: {
@@ -95,7 +95,7 @@ export const productResolvers = {
               specifications: true,
             },
           },
-          images: true,
+          images: { orderBy: { sortOrder: 'asc' } },
           reviews: true,
           category: {
             include: {
@@ -156,7 +156,7 @@ export const productResolvers = {
                 specifications: true,
               },
             },
-            images: true,
+            images: { orderBy: { sortOrder: 'asc' } },
             reviews: {
               include: {
                 user: true,
@@ -237,7 +237,7 @@ export const productResolvers = {
             where,
             include: {
               variants: true, // Need variants for stock info in table
-              images: { take: 1 },
+              images: { take: 1, orderBy: { sortOrder: 'asc' } },
               category: {
                 include: {
                   parent: true,
