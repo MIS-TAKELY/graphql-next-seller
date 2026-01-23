@@ -33,34 +33,57 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
         };
 
         const shippingAddress = parseAddress(order.order.shippingSnapshot);
-        const sellerAddress = sellerProfile?.pickupAddress;
+        const sellerAddress = sellerProfile?.address;
+
+        // Check payment status
+        const payment = order.order.payments?.[0];
+        const isCOD = payment?.provider === 'COD';
+        const isPaid = payment?.status === 'COMPLETED';
 
         return (
-            <div ref={ref} className="p-8 bg-white text-black min-h-[297mm] w-[210mm] mx-auto print:m-0 print:w-full print:shadow-none shadow-lg">
+            <div ref={ref} className="p-4 sm:p-6 bg-white text-black w-[210mm] mx-auto print:m-0 print:w-full print:shadow-none shadow-lg">
                 {/* Header with QR and Barcode */}
-                <div className="flex justify-between items-start mb-8 border-b pb-6">
-                    <div className="space-y-4">
-                        <h1 className="text-3xl font-bold uppercase tracking-tight">Invoice / Receipt</h1>
-                        <div className="space-y-1">
-                            <p className="text-sm font-semibold text-gray-500 uppercase">Order Details</p>
-                            <p className="text-lg font-mono">#{order.order.orderNumber}</p>
-                            <p className="text-sm text-gray-600">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+                <div className="flex justify-between items-start mb-4 border-b pb-4">
+                    <div className="space-y-2">
+                        <h1 className="text-2xl font-bold uppercase tracking-tight">Invoice / Receipt</h1>
+                        <div className="space-y-0.5">
+                            <p className="text-[10px] font-semibold text-gray-500 uppercase">Order Details</p>
+                            <p className="text-base font-mono">#{order.order.orderNumber}</p>
+                            <p className="text-xs text-gray-600">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+                        </div>
+
+                        {/* Payment Status Indicator */}
+                        <div className="mt-2">
+                            {isPaid ? (
+                                <div className="inline-block px-3 py-1 border-2 border-green-600 text-green-600 font-bold uppercase text-sm rounded shadow-sm">
+                                    PAID
+                                </div>
+                            ) : isCOD ? (
+                                <div className="inline-block px-3 py-1 border-2 border-blue-600 text-blue-600 font-bold uppercase text-xs rounded shadow-sm">
+                                    CASH ON DELIVERY<br />
+                                    <span className="text-sm">TO COLLECT: {formatPrice(order.total)}</span>
+                                </div>
+                            ) : (
+                                <div className="inline-block px-3 py-1 border-2 border-orange-600 text-orange-600 font-bold uppercase text-sm rounded shadow-sm">
+                                    {payment?.status || 'PENDING'}
+                                </div>
+                            )}
                         </div>
                     </div>
-                    <div className="flex flex-col items-end gap-4">
-                        <QRCodeSVG value={order.order.orderNumber} size={100} level="H" />
-                        <div className="transform scale-75 origin-right">
-                            <Barcode value={order.order.orderNumber} height={40} fontSize={14} />
+                    <div className="flex flex-col items-end gap-2">
+                        <QRCodeSVG value={order.order.orderNumber} size={80} level="H" />
+                        <div className="transform scale-75 origin-right -mr-4">
+                            <Barcode value={order.order.orderNumber} height={30} fontSize={10} width={1.5} />
                         </div>
                     </div>
                 </div>
 
                 {/* Addresses Grid */}
-                <div className="grid grid-cols-2 gap-12 mb-10">
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-bold text-gray-500 uppercase border-b pb-1">Sold By</h3>
-                        <div className="text-sm space-y-1">
-                            <p className="font-bold text-base">{sellerProfile?.shopName || 'Our Store'}</p>
+                <div className="grid grid-cols-2 gap-8 mb-6">
+                    <div className="space-y-1">
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase border-b pb-0.5">Sold By</h3>
+                        <div className="text-xs space-y-0.5">
+                            <p className="font-bold text-sm">{sellerProfile?.shopName || 'Vanijay Store'}</p>
                             {sellerAddress ? (
                                 <>
                                     <p>{sellerAddress.line1}</p>
@@ -69,17 +92,17 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                                     <p>{sellerAddress.country} - {sellerAddress.postalCode}</p>
                                 </>
                             ) : (
-                                <p className="italic">Seller address not available</p>
+                                <p className="italic text-gray-400">Store address not available</p>
                             )}
-                            <p className="pt-1">Phone: {sellerProfile?.phone || 'N/A'}</p>
+                            <p className="pt-0.5">Phone: {sellerProfile?.phone || 'N/A'}</p>
                             <p>Email: {sellerProfile?.email || 'N/A'}</p>
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <h3 className="text-sm font-bold text-gray-500 uppercase border-b pb-1">Ship To</h3>
-                        <div className="text-sm space-y-1">
-                            <p className="font-bold text-base">
+                    <div className="space-y-1">
+                        <h3 className="text-[10px] font-bold text-gray-500 uppercase border-b pb-0.5">Ship To</h3>
+                        <div className="text-xs space-y-0.5">
+                            <p className="font-bold text-sm">
                                 {order.order.buyer
                                     ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}`
                                     : 'Customer'}
@@ -90,65 +113,65 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                                     {shippingAddress.line2 && <p>{shippingAddress.line2}</p>}
                                     <p>{shippingAddress.city}, {shippingAddress.state}</p>
                                     <p>{shippingAddress.country} - {shippingAddress.postalCode}</p>
-                                    <p className="pt-1">Phone: {shippingAddress.phone}</p>
+                                    <p className="pt-0.5">Phone: {shippingAddress.phone}</p>
                                 </>
                             ) : (
-                                <p className="italic">Shipping address not available</p>
+                                <p className="italic text-gray-400">Shipping address not available</p>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Items Table */}
-                <div className="mb-10">
+                <div className="mb-6">
                     <table className="w-full border-collapse">
                         <thead>
-                            <tr className="border-b-2 border-gray-800 text-left text-sm font-bold uppercase">
-                                <th className="py-3">Product Description</th>
-                                <th className="py-3 text-center">Qty</th>
-                                <th className="py-3 text-right">Unit Price</th>
-                                <th className="py-3 text-right">Amount</th>
+                            <tr className="border-b-2 border-gray-800 text-left text-[10px] font-bold uppercase">
+                                <th className="py-2">Product Description</th>
+                                <th className="py-2 text-center">Qty</th>
+                                <th className="py-2 text-right">Unit Price</th>
+                                <th className="py-2 text-right">Amount</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {order.items.map((item) => (
-                                <tr key={item.id} className="text-sm">
-                                    <td className="py-4">
+                                <tr key={item.id} className="text-xs">
+                                    <td className="py-2">
                                         <p className="font-bold">{item.variant.product.name}</p>
-                                        <p className="text-xs text-gray-600">SKU: {item.variant.sku}</p>
+                                        <p className="text-[10px] text-gray-600">SKU: {item.variant.sku}</p>
                                         {item.variant.attributes && Object.entries(item.variant.attributes).length > 0 && (
-                                            <p className="text-xs text-gray-500 mt-0.5">
+                                            <p className="text-[10px] text-gray-500">
                                                 {Object.entries(item.variant.attributes)
                                                     .map(([key, value]) => `${key}: ${value}`)
                                                     .join(' | ')}
                                             </p>
                                         )}
                                     </td>
-                                    <td className="py-4 text-center">{item.quantity}</td>
-                                    <td className="py-4 text-right">{formatPrice(item.unitPrice)}</td>
-                                    <td className="py-4 text-right font-semibold">{formatPrice(item.totalPrice)}</td>
+                                    <td className="py-2 text-center">{item.quantity}</td>
+                                    <td className="py-2 text-right">{formatPrice(item.unitPrice)}</td>
+                                    <td className="py-2 text-right font-semibold">{formatPrice(item.totalPrice)}</td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
                 </div>
 
-                {/* Totals */}
-                <div className="flex justify-end mb-12">
-                    <div className="w-64 space-y-2 border-t pt-2">
-                        <div className="flex justify-between text-sm">
+                {/* Totals Section */}
+                <div className="flex justify-end mb-8">
+                    <div className="w-64 space-y-1.5 border-t pt-1.5">
+                        <div className="flex justify-between text-xs">
                             <span className="text-gray-600">Subtotal</span>
                             <span>{formatPrice(order.subtotal)}</span>
                         </div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between text-xs">
                             <span className="text-gray-600">Shipping</span>
                             <span>{formatPrice(order.shippingFee)}</span>
                         </div>
-                        <div className="flex justify-between text-sm border-b pb-2">
+                        <div className="flex justify-between text-xs border-b pb-1">
                             <span className="text-gray-600">Tax</span>
                             <span>{formatPrice(order.tax)}</span>
                         </div>
-                        <div className="flex justify-between text-xl font-bold pt-2">
+                        <div className="flex justify-between text-lg font-bold pt-1">
                             <span>Total</span>
                             <span>{formatPrice(order.total)}</span>
                         </div>
@@ -156,25 +179,29 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 </div>
 
                 {/* Footer */}
-                <div className="mt-auto pt-10 border-t text-center space-y-4">
-                    <p className="text-xs text-gray-500 uppercase tracking-widest font-semibold">
+                <div className="mt-8 border-t pt-4 text-center space-y-2">
+                    <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
                         Thank you for shopping with us!
                     </p>
                     <div className="flex justify-center items-center gap-2">
-                        <div className="px-3 py-1 bg-black text-white text-[10px] font-bold uppercase tracking-tighter">
-                            {sellerProfile?.shopName || 'Store Receipt'}
+                        <div className="px-2 py-0.5 bg-black text-white text-[8px] font-bold uppercase tracking-tighter">
+                            {sellerProfile?.shopName || 'Vanijay Store Receipt'}
                         </div>
                     </div>
-                    <p className="text-[10px] text-gray-400">
+                    <p className="text-[8px] text-gray-400">
                         This is a computer-generated document and does not require a signature.
                     </p>
                 </div>
 
                 <style jsx global>{`
           @media print {
-            body { margin: 0; padding: 0; }
-            @page { size: auto; margin: 10mm; }
+            body { margin: 0; padding: 0; background: white; }
+            @page { 
+              size: A4; 
+              margin: 15mm; 
+            }
             .print-hide { display: none !important; }
+            * { -webkit-print-color-adjust: exact; }
           }
         `}</style>
             </div>
