@@ -69,6 +69,7 @@ export default function ImageUpload({
                 alt="Preview"
                 fill
                 className="object-cover"
+                unoptimized
               />
             </div>
           ) : (

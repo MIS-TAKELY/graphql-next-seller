@@ -11,6 +11,7 @@ const Logo = () => (
                 height={90}
                 className="filter hover:cursor-pointer w-[50px] h-[50px] xs:w-[60px] xs:h-[60px] sm:w-[70px] sm:h-[70px] md:w-[80px] md:h-[80px] lg:w-[90px] lg:h-[90px] dark:invert dark:brightness-0 dark:contrast-100 "
                 priority
+                unoptimized
             />
         </Link>
         <Link href="/" passHref className="block md:hidden">
@@ -21,6 +22,7 @@ const Logo = () => (
                 height={32}
                 className="filter hover:cursor-pointer dark:invert dark:brightness-0 dark:contrast-100"
                 priority
+                unoptimized
             />
         </Link>
     </div>

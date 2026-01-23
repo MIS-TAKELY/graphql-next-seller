@@ -137,7 +137,7 @@ export function Sidebar() {
         <div className="px-3 py-2">
           <div className="flex items-center mb-2">
             {/* <Store className="h-5 w-5 sm:h-6 sm:w-6 mr-2" /> */}
-            <Image src={siteLogo} alt="site logo" width={32} height={32} className="h-5 w-5 sm:h-6 sm:w-6 mr-2" />
+            <Image src={siteLogo} alt="site logo" width={32} height={32} className="h-5 w-5 sm:h-6 sm:w-6 mr-2" unoptimized />
             <h2 className="text-base sm:text-lg font-semibold">
               Vanijay Seller
             </h2>

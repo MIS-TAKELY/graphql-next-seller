@@ -6,7 +6,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: sachinsharma-lordheydes/vanijay-seller
+  IMAGE_NAME: mis-takely/vanijay-seller
 
 jobs:
   build:
@@ -74,7 +74,7 @@ jobs:
             # Ensure clean pull
             git reset --hard
             git clean -fd
-            git pull https://x-access-token:${{ secrets.VPS_GITHUB_TOKEN }}@github.com/SachinSharma-LordHeydes/graphql-next-seller.git main
+            git pull https://x-access-token:${{ secrets.VPS_GITHUB_TOKEN }}@github.com/MIS-TAKELY/graphql-next-seller.git main
 
             echo "Pulling latest Docker images..."
             docker compose pull
@@ -84,7 +84,7 @@ jobs:
             docker run --rm \
               --network vanijay-network \
               --env DATABASE_URL=postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-VanijayvpsPass123buyerseller}@vanijay_buyer_seller_database:5432/${POSTGRES_DB:-vanijay_buyer_seller}?schema=public \
-              ghcr.io/sachinsharma-lordheydes/vanijay-seller:latest \
+              ghcr.io/mis-takely/vanijay-seller:latest \
               npx prisma migrate deploy
 
             echo "Starting application containers..."

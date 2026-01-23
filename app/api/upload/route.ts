@@ -57,13 +57,13 @@ export async function POST(req: NextRequest) {
         let processedBuffer: Buffer;
         let contentType: string;
 
-        // Check file size (200KB = 200 * 1024 bytes = 204800 bytes)
-        const isSmallFile = buffer.length <= 200 * 1024;
+        const isVideo = file.type.startsWith("video/");
+        const isSmallFile = buffer.length <= 300 * 1024;
 
-        if (isSmallFile) {
-            // Skip compression for small files
+        if (isVideo || isSmallFile) {
+            // Skip compression for small files and videos
             processedBuffer = buffer;
-            contentType = file.type || "image/webp"; // Fallback if type is missing
+            contentType = file.type || (isVideo ? "video/mp4" : "image/webp");
         } else {
             // Sharp Optimization Logic for files > 200KB
             const image = sharp(buffer);

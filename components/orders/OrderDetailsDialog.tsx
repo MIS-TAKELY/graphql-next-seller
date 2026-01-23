@@ -18,6 +18,11 @@ import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { getStatusVariant } from '@/lib/orders/utils';
 import { Separator } from '@/components/ui/separator';
+import { useQuery } from '@apollo/client';
+import { GET_MY_SELLER_PROFILE } from '@/client/sellerProfile/sellerProfile.queries';
+import { OrderReceipt } from './OrderReceipt';
+import { useReactToPrint } from 'react-to-print';
+import { useRef } from 'react';
 
 interface OrderDetailsDialogProps {
   order: SellerOrder;
@@ -31,6 +36,12 @@ export function OrderDetailsDialog({
   onConfirmationSuccess,
 }: OrderDetailsDialogProps) {
   const { confirmSingleOrder, updateOrderStatus } = useOrder();
+  const componentRef = useRef<HTMLDivElement>(null);
+  const { data: profileData } = useQuery(GET_MY_SELLER_PROFILE);
+
+  const handlePrint = useReactToPrint({
+    contentRef: componentRef,
+  });
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
     try {
@@ -86,6 +97,15 @@ export function OrderDetailsDialog({
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        {/* Hidden Print Wrapper */}
+        <div className="hidden">
+          <OrderReceipt
+            ref={componentRef}
+            order={order}
+            sellerProfile={profileData?.meSellerProfile}
+          />
+        </div>
+
         <div className="sticky top-0 bg-background z-10 p-6 border-b">
           <DialogHeader>
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -208,6 +228,7 @@ export function OrderDetailsDialog({
                               alt={item.variant.product.images[0].altText || item.variant.product.name}
                               fill
                               className="object-cover"
+                              unoptimized
                             />
                           ) : (
                             <Package className="h-6 w-6 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -339,11 +360,11 @@ export function OrderDetailsDialog({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => toast.success('Printing invoice...')}
+                onClick={() => handlePrint()}
                 className="h-8 shadow-sm"
               >
                 <Printer className="mr-2 h-3.5 w-3.5" />
-                Invoice
+                Receipt
               </Button>
               <Button
                 variant="outline"

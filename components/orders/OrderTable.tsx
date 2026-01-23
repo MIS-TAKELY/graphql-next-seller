@@ -178,6 +178,7 @@ export function OrderTable({
                         alt={order.items[0].variant.product.name}
                         fill
                         className="object-cover"
+                        unoptimized
                       />
                     ) : (
                       <Package className="h-5 w-5 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />
