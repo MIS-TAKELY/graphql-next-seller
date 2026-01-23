@@ -7,7 +7,6 @@ import type React from "react";
 export const metadata: Metadata = {
   title: "Seller Dashboard - E-commerce Platform",
   description: "Comprehensive seller dashboard for managing your online store",
-  generator: "v0.dev",
 };
 
 import { MobileNav } from "@/components/layout/MobileNav";

@@ -10,6 +10,7 @@ import {
   Home,
   Package,
   Settings,
+  Shield,
   ShoppingCart,
   Store,
   TrendingUp,
@@ -90,6 +91,18 @@ const sidebarNavItems = [
     title: "Settings",
     href: "/settings",
     icon: Settings,
+  },
+  {
+    title: "Legal & Policies",
+    href: "/legal",
+    icon: Shield,
+    children: [
+      { title: "Terms & Conditions", href: "/legal/terms-conditions" },
+      { title: "Privacy Policy", href: "/legal/privacy-policy" },
+      { title: "Cookie Policy", href: "/legal/cookie-policy" },
+      { title: "Shipping Policy", href: "/legal/shipping-policy" },
+      { title: "Returns Policy", href: "/legal/returns-policy" },
+    ],
   },
 ];
 
