@@ -41,9 +41,9 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
         const isPaid = payment?.status === 'COMPLETED';
 
         return (
-            <div ref={ref} className="p-4 sm:p-6 bg-white text-black w-[210mm] mx-auto print:m-0 print:w-full print:shadow-none shadow-lg">
+            <div ref={ref} className="p-4 sm:p-6 bg-white text-black w-[210mm] mx-auto print:m-0 print:w-full print:shadow-none shadow-lg font-sans">
                 {/* Header with QR and Barcode */}
-                <div className="flex justify-between items-start mb-4 border-b pb-4">
+                <div className="flex justify-between items-start mb-4 border-b-2 border-black pb-4">
                     <div className="space-y-2">
                         <h1 className="text-2xl font-bold uppercase tracking-tight">Invoice / Receipt</h1>
                         <div className="space-y-0.5">
@@ -52,19 +52,19 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             <p className="text-xs text-gray-600">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
                         </div>
 
-                        {/* Payment Status Indicator */}
+                        {/* Payment Status Indicator - Black & White */}
                         <div className="mt-2">
                             {isPaid ? (
-                                <div className="inline-block px-3 py-1 border-2 border-green-600 text-green-600 font-bold uppercase text-sm rounded shadow-sm">
+                                <div className="inline-block px-3 py-1 border-2 border-black text-black font-bold uppercase text-sm rounded">
                                     PAID
                                 </div>
                             ) : isCOD ? (
-                                <div className="inline-block px-3 py-1 border-2 border-blue-600 text-blue-600 font-bold uppercase text-xs rounded shadow-sm">
+                                <div className="inline-block px-3 py-1 border-2 border-black text-black font-bold uppercase text-xs rounded">
                                     CASH ON DELIVERY<br />
                                     <span className="text-sm">TO COLLECT: {formatPrice(order.total)}</span>
                                 </div>
                             ) : (
-                                <div className="inline-block px-3 py-1 border-2 border-orange-600 text-orange-600 font-bold uppercase text-sm rounded shadow-sm">
+                                <div className="inline-block px-3 py-1 border-2 border-gray-400 text-gray-600 font-bold uppercase text-sm rounded">
                                     {payment?.status || 'PENDING'}
                                 </div>
                             )}
@@ -81,7 +81,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 {/* Addresses Grid */}
                 <div className="grid grid-cols-2 gap-8 mb-6">
                     <div className="space-y-1">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase border-b pb-0.5">Sold By</h3>
+                        <h3 className="text-[10px] font-bold text-gray-800 uppercase border-b border-black pb-0.5">Sold By</h3>
                         <div className="text-xs space-y-0.5">
                             <p className="font-bold text-sm">{sellerProfile?.shopName || 'Vanijay Store'}</p>
                             {sellerAddress ? (
@@ -100,7 +100,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                     </div>
 
                     <div className="space-y-1">
-                        <h3 className="text-[10px] font-bold text-gray-500 uppercase border-b pb-0.5">Ship To</h3>
+                        <h3 className="text-[10px] font-bold text-gray-800 uppercase border-b border-black pb-0.5">Ship To</h3>
                         <div className="text-xs space-y-0.5">
                             <p className="font-bold text-sm">
                                 {order.order.buyer
@@ -126,21 +126,21 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 <div className="mb-6">
                     <table className="w-full border-collapse">
                         <thead>
-                            <tr className="border-b-2 border-gray-800 text-left text-[10px] font-bold uppercase">
+                            <tr className="border-b-2 border-black text-left text-[10px] font-bold uppercase">
                                 <th className="py-2">Product Description</th>
                                 <th className="py-2 text-center">Qty</th>
                                 <th className="py-2 text-right">Unit Price</th>
                                 <th className="py-2 text-right">Amount</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody className="divide-y divide-gray-300">
                             {order.items.map((item) => (
                                 <tr key={item.id} className="text-xs">
                                     <td className="py-2">
                                         <p className="font-bold">{item.variant.product.name}</p>
-                                        <p className="text-[10px] text-gray-600">SKU: {item.variant.sku}</p>
+                                        <p className="text-[10px] text-gray-600 font-mono">SKU: {item.variant.sku}</p>
                                         {item.variant.attributes && Object.entries(item.variant.attributes).length > 0 && (
-                                            <p className="text-[10px] text-gray-500">
+                                            <p className="text-[10px] text-gray-500 uppercase">
                                                 {Object.entries(item.variant.attributes)
                                                     .map(([key, value]) => `${key}: ${value}`)
                                                     .join(' | ')}
@@ -158,7 +158,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
 
                 {/* Totals Section */}
                 <div className="flex justify-end mb-8">
-                    <div className="w-64 space-y-1.5 border-t pt-1.5">
+                    <div className="w-64 space-y-1.5 border-t-2 border-black pt-1.5">
                         <div className="flex justify-between text-xs">
                             <span className="text-gray-600">Subtotal</span>
                             <span>{formatPrice(order.subtotal)}</span>
@@ -167,7 +167,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             <span className="text-gray-600">Shipping</span>
                             <span>{formatPrice(order.shippingFee)}</span>
                         </div>
-                        <div className="flex justify-between text-xs border-b pb-1">
+                        <div className="flex justify-between text-xs border-b border-gray-300 pb-1">
                             <span className="text-gray-600">Tax</span>
                             <span>{formatPrice(order.tax)}</span>
                         </div>
@@ -179,13 +179,13 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                 </div>
 
                 {/* Footer */}
-                <div className="mt-8 border-t pt-4 text-center space-y-2">
+                <div className="mt-8 border-t border-black pt-4 text-center space-y-2">
                     <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold">
-                        Thank you for shopping with us!
+                        Thank you for shopping with Vanijay!
                     </p>
                     <div className="flex justify-center items-center gap-2">
                         <div className="px-2 py-0.5 bg-black text-white text-[8px] font-bold uppercase tracking-tighter">
-                            {sellerProfile?.shopName || 'Vanijay Store Receipt'}
+                            Vanijay Receipt
                         </div>
                     </div>
                     <p className="text-[8px] text-gray-400">
@@ -201,7 +201,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
               margin: 15mm; 
             }
             .print-hide { display: none !important; }
-            * { -webkit-print-color-adjust: exact; }
+            * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           }
         `}</style>
             </div>

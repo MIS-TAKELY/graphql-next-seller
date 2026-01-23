@@ -41,6 +41,7 @@ export function OrderDetailsDialog({
 
   const handlePrint = useReactToPrint({
     contentRef: componentRef,
+    documentTitle: `Vanijay Receipt - ${order.order.orderNumber}`,
   });
 
   const handleStatusUpdate = async (newStatus: OrderStatus) => {
