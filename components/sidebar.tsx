@@ -47,7 +47,8 @@ const sidebarNavItems = [
     icon: ShoppingCart,
     children: [
       { title: "All Orders", href: "/orders" },
-      { title: "Returns & Disputes", href: "/orders/disputes" },
+      { title: "Manage Returns", href: "/orders/returns" },
+      { title: "Disputes", href: "/orders/disputes" },
     ],
   },
   {
