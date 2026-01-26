@@ -738,9 +738,27 @@ export const sellerOrderResolver = {
         },
         include: {
           seller: true,
+          items: {
+            include: {
+              variant: {
+                include: {
+                  product: {
+                    select: { name: true }
+                  }
+                }
+              }
+            }
+          },
           order: {
             include: {
-              buyer: { select: { id: true } },
+              buyer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true
+                }
+              },
               sellerOrders: true,
             },
           },
@@ -819,9 +837,27 @@ export const sellerOrderResolver = {
           where: { id: { in: sellerOrderIds } },
           include: {
             seller: { select: { id: true } },
+            items: {
+              include: {
+                variant: {
+                  include: {
+                    product: {
+                      select: { name: true }
+                    }
+                  }
+                }
+              }
+            },
             order: {
               include: {
-                buyer: { select: { id: true } },
+                buyer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true
+                  }
+                },
                 sellerOrders: true,
               },
             },
@@ -852,6 +888,13 @@ export const sellerOrderResolver = {
           try {
             const buyer = typedSO.order?.buyer;
             if (buyer) {
+              console.log(`📧 Sending notification for order ${typedSO.id} to buyer:`, {
+                email: buyer.email,
+                name: buyer.name,
+                phone: buyer.phone,
+                hasItems: !!typedSO.items?.length
+              });
+
               await sendOrderStatusNotifications({
                 orderNumber: typedSO.order.orderNumber || typedSO.buyerOrderId,
                 buyerName: buyer.name || "Customer",
@@ -865,6 +908,8 @@ export const sellerOrderResolver = {
                 total: typedSO.total.toNumber(),
                 status: status,
               });
+            } else {
+              console.warn(`⚠️ No buyer data found for order ${typedSO.id}`);
             }
           } catch (notificationError) {
             console.error(`Failed to send notifications for order ${typedSO.id}:`, notificationError);
