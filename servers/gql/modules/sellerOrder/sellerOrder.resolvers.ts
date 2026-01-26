@@ -38,6 +38,53 @@ const emitOrderStatusChanged = async (
   );
 };
 
+const syncParentOrderStatus = async (orderId: string, prisma: any) => {
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { sellerOrders: true }
+  });
+
+  if (!order) return;
+
+  const sellerOrders = order.sellerOrders;
+  const statuses = sellerOrders.map((so: any) => so.status);
+
+  let newStatus = order.status;
+
+  // 1. If ALL are DELIVERED -> DELIVERED
+  if (statuses.every((s: string) => s === "DELIVERED")) {
+    newStatus = "DELIVERED";
+  }
+  // 2. If ALL are CANCELLED -> CANCELLED
+  else if (statuses.every((s: string) => s === "CANCELLED")) {
+    newStatus = "CANCELLED";
+  }
+  // 3. If ALL are RETURNED -> RETURNED
+  else if (statuses.every((s: string) => s === "RETURNED")) {
+    newStatus = "RETURNED";
+  }
+  // 4. If ALL are (SHIPPED or DELIVERED) -> SHIPPED (if not all delivered)
+  else if (statuses.every((s: string) => ["SHIPPED", "DELIVERED", "RETURNED"].includes(s))) {
+    newStatus = "SHIPPED";
+  }
+  // 5. If ALL are (PROCESSING or SHIPPED or DELIVERED) -> PROCESSING
+  else if (statuses.every((s: string) => ["PROCESSING", "SHIPPED", "DELIVERED", "RETURNED", "CONFIRMED"].includes(s))) {
+    // If any is processing/shipped/delivered, the whole order is effectively processing
+    newStatus = "PROCESSING";
+  }
+  // 6. If ALL are CONFIRMED (already handled but good to have)
+  else if (statuses.every((s: string) => s === "CONFIRMED")) {
+    newStatus = "CONFIRMED";
+  }
+
+  if (newStatus !== order.status) {
+    await prisma.order.update({
+      where: { id: orderId },
+      data: { status: newStatus, updatedAt: new Date() }
+    });
+  }
+};
+
 export const sellerOrderResolver = {
   Query: {
     getSellerOrders: async (
@@ -595,6 +642,9 @@ export const sellerOrderResolver = {
           // Don't fail the mutation if notifications fail
         }
 
+        // Sync parent order status
+        await syncParentOrderStatus(updatedSellerOrder.buyerOrderId, prisma);
+
         return {
           ...updatedSellerOrder,
           subtotal: updatedSellerOrder.subtotal.toNumber(),
@@ -803,30 +853,10 @@ export const sellerOrderResolver = {
             },
           });
 
-          // Handle parent Order updates if status is CONFIRMED
-          if (status === "CONFIRMED") {
-            const uniqueBuyerOrderIds = [...new Set(sellerOrders.map((so: any) => so.buyerOrderId))];
-
-            // Optimization: Fetch all seller orders for these buyer orders in one go
-            const relevantSellerOrders = await tx.sellerOrder.findMany({
-              where: { buyerOrderId: { in: (uniqueBuyerOrderIds as string[]) } }
-            });
-
-            // Group by buyerOrderId and check if all are confirmed
-            const ordersToConfirm = (uniqueBuyerOrderIds as string[]).filter((buyerOrderId: string) => {
-              const ordersForThisBuyer = relevantSellerOrders.filter((so: any) => so.buyerOrderId === buyerOrderId);
-              return ordersForThisBuyer.every((so: any) => so.status === "CONFIRMED");
-            });
-
-            if (ordersToConfirm.length > 0) {
-              await tx.order.updateMany({
-                where: { id: { in: ordersToConfirm } },
-                data: {
-                  status: "CONFIRMED",
-                  updatedAt: new Date(),
-                },
-              });
-            }
+          // Sync status for all affected parent orders
+          const uniqueBuyerOrderIds = [...new Set(sellerOrders.map((so: any) => so.buyerOrderId))];
+          for (const buyerOrderId of (uniqueBuyerOrderIds as string[])) {
+            await syncParentOrderStatus(buyerOrderId, tx);
           }
         }, {
           timeout: 15000 // Increase timeout to 15 seconds
