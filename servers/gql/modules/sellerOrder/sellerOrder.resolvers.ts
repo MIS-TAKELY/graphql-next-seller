@@ -6,6 +6,7 @@ import type {
   ConfirmOrderInput,
   UpdateSellerOrderStatusInput,
 } from "../../types";
+import { sendOrderStatusNotifications } from "@/services/orderNotificationService";
 
 type SellerOrderStatus =
   | "PENDING"
@@ -262,9 +263,27 @@ export const sellerOrderResolver = {
         where: { id: sellerOrderId },
         include: {
           seller: { select: { id: true } },
+          items: {
+            include: {
+              variant: {
+                include: {
+                  product: {
+                    select: { name: true }
+                  }
+                }
+              }
+            }
+          },
           order: {
             include: {
-              buyer: { select: { id: true } },
+              buyer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true
+                }
+              },
               sellerOrders: true, // Fetch all SellerOrders for the parent Order
             },
           },
@@ -298,9 +317,27 @@ export const sellerOrderResolver = {
             },
             include: {
               seller: { select: { id: true } },
+              items: {
+                include: {
+                  variant: {
+                    include: {
+                      product: {
+                        select: { name: true }
+                      }
+                    }
+                  }
+                }
+              },
               order: {
                 include: {
-                  buyer: { select: { id: true } },
+                  buyer: {
+                    select: {
+                      id: true,
+                      name: true,
+                      email: true,
+                      phone: true
+                    }
+                  },
                   sellerOrders: true,
                 },
               },
@@ -326,7 +363,14 @@ export const sellerOrderResolver = {
             },
             include: {
               sellerOrders: true,
-              buyer: { select: { id: true } },
+              buyer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true
+                }
+              },
             },
           });
         }
@@ -346,6 +390,29 @@ export const sellerOrderResolver = {
             previousStatus: sellerOrder.status as SellerOrderStatus,
           }
         );
+
+        // Send email and WhatsApp notifications to buyer
+        try {
+          const buyer = updatedSellerOrder.order.buyer;
+          if (buyer) {
+            await sendOrderStatusNotifications({
+              orderNumber: updatedSellerOrder.order.orderNumber || updatedSellerOrder.buyerOrderId,
+              buyerName: buyer.name || "Customer",
+              buyerEmail: buyer.email,
+              buyerPhone: buyer.phone,
+              items: updatedSellerOrder.items.map((item: any) => ({
+                productName: item.variant?.product?.name || "Product",
+                quantity: item.quantity,
+                price: item.totalPrice.toNumber(),
+              })),
+              total: updatedSellerOrder.total.toNumber(),
+              status: "CONFIRMED",
+            });
+          }
+        } catch (notificationError) {
+          console.error("Failed to send order confirmation notifications:", notificationError);
+          // Don't fail the mutation if notifications fail
+        }
 
         return true;
       } catch (error) {
@@ -388,10 +455,28 @@ export const sellerOrderResolver = {
         where: { id: sellerOrderId },
         include: {
           seller: true,
-          items: true,
+          items: {
+            include: {
+              variant: {
+                include: {
+                  product: {
+                    select: { name: true }
+                  }
+                }
+              }
+            }
+          },
           order: {
             include: {
-              buyer: { select: { id: true } },
+              buyer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                  phone: true
+                }
+              },
+              shipments: true,
             },
           },
         },
@@ -442,10 +527,28 @@ export const sellerOrderResolver = {
           },
           include: {
             seller: true,
-            items: true,
+            items: {
+              include: {
+                variant: {
+                  include: {
+                    product: {
+                      select: { name: true }
+                    }
+                  }
+                }
+              }
+            },
             order: {
               include: {
-                buyer: { select: { id: true } },
+                buyer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true
+                  }
+                },
+                shipments: true,
               },
             },
           },
@@ -466,6 +569,31 @@ export const sellerOrderResolver = {
             previousStatus: sellerOrder.status as SellerOrderStatus,
           }
         );
+
+        // Send email and WhatsApp notifications to buyer
+        try {
+          const buyer = updatedSellerOrder.order.buyer;
+          if (buyer) {
+            await sendOrderStatusNotifications({
+              orderNumber: updatedSellerOrder.order.orderNumber || updatedSellerOrder.buyerOrderId,
+              buyerName: buyer.name || "Customer",
+              buyerEmail: buyer.email,
+              buyerPhone: buyer.phone,
+              items: updatedSellerOrder.items.map((item: any) => ({
+                productName: item.variant?.product?.name || "Product",
+                quantity: item.quantity,
+                price: item.totalPrice.toNumber(),
+              })),
+              total: updatedSellerOrder.total.toNumber(),
+              status: status,
+              trackingNumber: status === "SHIPPED" ? (updatedSellerOrder.order.shipments?.[0]?.trackingNumber ?? undefined) : undefined,
+              carrier: status === "SHIPPED" ? (updatedSellerOrder.order.shipments?.[0]?.carrier ?? undefined) : undefined,
+            });
+          }
+        } catch (notificationError) {
+          console.error("Failed to send order status notifications:", notificationError);
+          // Don't fail the mutation if notifications fail
+        }
 
         return {
           ...updatedSellerOrder,
@@ -719,6 +847,29 @@ export const sellerOrderResolver = {
               previousStatus: previousOrder?.status as SellerOrderStatus,
             }
           );
+
+          // Send email and WhatsApp notifications to buyer
+          try {
+            const buyer = typedSO.order?.buyer;
+            if (buyer) {
+              await sendOrderStatusNotifications({
+                orderNumber: typedSO.order.orderNumber || typedSO.buyerOrderId,
+                buyerName: buyer.name || "Customer",
+                buyerEmail: buyer.email,
+                buyerPhone: buyer.phone,
+                items: typedSO.items?.map((item: any) => ({
+                  productName: item.variant?.product?.name || "Product",
+                  quantity: item.quantity,
+                  price: item.totalPrice.toNumber(),
+                })) || [],
+                total: typedSO.total.toNumber(),
+                status: status,
+              });
+            }
+          } catch (notificationError) {
+            console.error(`Failed to send notifications for order ${typedSO.id}:`, notificationError);
+            // Don't fail the bulk operation if notifications fail
+          }
         }
 
         return results.map((o: any) => ({
