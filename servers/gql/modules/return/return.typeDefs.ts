@@ -126,13 +126,11 @@ export const returnTypedefs = gql`
   }
 
   type Query {
-    myReturns(limit: Int, offset: Int): [Return!]!
     getReturn(id: ID!): Return
     sellerReturns(limit: Int, offset: Int, status: ReturnStatus): [Return!]!
   }
 
   type Mutation {
-    createReturnRequest(input: CreateReturnInput!): Return!
     updateReturnStatus(input: UpdateReturnStatusInput!): Return!
   }
 `;
