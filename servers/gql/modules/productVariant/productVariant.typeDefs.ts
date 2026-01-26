@@ -9,7 +9,7 @@ export const productVariantTypeDefs = gql`
     productId: String!
     sku: String!
     price: Float!
-    mrp: Float!
+    mrp: Float
     stock: Int!
     soldCount: Int
     attributes: Json
