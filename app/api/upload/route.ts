@@ -2,6 +2,31 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 
+// Configure route to accept larger files (10MB)
+export const runtime = 'nodejs';
+export const maxDuration = 60; // 60 seconds timeout for large file processing
+
+// Allowed image MIME types (secure formats)
+const ALLOWED_IMAGE_TYPES = [
+    'image/jpeg',
+    'image/jpg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+    'image/svg+xml',
+    'image/avif'
+];
+
+// Allowed video MIME types
+const ALLOWED_VIDEO_TYPES = [
+    'video/mp4',
+    'video/webm',
+    'video/quicktime'
+];
+
+// Maximum file size: 10MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+
 // Helper to upload buffer to Cloudinary
 async function uploadBufferToCloudinary(
     buffer: Buffer,
@@ -53,11 +78,29 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // Validate file type
+        const isImage = ALLOWED_IMAGE_TYPES.includes(file.type);
+        const isVideo = ALLOWED_VIDEO_TYPES.includes(file.type);
+
+        if (!isImage && !isVideo) {
+            return NextResponse.json(
+                { error: `Unsupported file type: ${file.type}. Allowed types: ${[...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES].join(', ')}` },
+                { status: 400 }
+            );
+        }
+
         const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Validate file size (10MB max)
+        if (buffer.length > MAX_FILE_SIZE) {
+            return NextResponse.json(
+                { error: `File size exceeds maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB` },
+                { status: 413 }
+            );
+        }
         let processedBuffer: Buffer;
         let contentType: string;
 
-        const isVideo = file.type.startsWith("video/");
         const isSmallFile = buffer.length <= 300 * 1024;
 
         if (isVideo || isSmallFile) {
