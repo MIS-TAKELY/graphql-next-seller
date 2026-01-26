@@ -28,12 +28,14 @@ interface OrderDetailsDialogProps {
   order: SellerOrder;
   onShipmentSuccess?: (orderId: string) => void;
   onConfirmationSuccess?: (orderId: string) => void;
+  children?: React.ReactNode;
 }
 
 export function OrderDetailsDialog({
   order,
   onShipmentSuccess,
   onConfirmationSuccess,
+  children,
 }: OrderDetailsDialogProps) {
   const { confirmSingleOrder, updateOrderStatus } = useOrder();
   const componentRef = useRef<HTMLDivElement>(null);
@@ -93,9 +95,11 @@ export function OrderDetailsDialog({
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted transition-colors">
-          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-        </Button>
+        {children || (
+          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 hover:bg-muted transition-colors">
+            <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0">
         {/* Hidden Print Wrapper */}

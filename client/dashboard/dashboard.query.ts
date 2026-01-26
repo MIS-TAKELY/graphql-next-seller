@@ -57,15 +57,70 @@ export const GET_DASHBOARD_RECENT_ORDERS = gql`
   query getRecentOrders {
     getSellerOrders(limit: 5) {
       sellerOrders {
+        id
+        buyerOrderId
+        status
+        subtotal
+        tax
+        shippingFee
+        commission
+        total
+        createdAt
+        updatedAt
         order {
+          id
+          orderNumber
+          status
+          shippingSnapshot
+          billingSnapshot
           buyer {
+            id
             email
             firstName
             lastName
+            phone
             avatarImageUrl
           }
-          total
-          status
+          payments {
+            id
+            provider
+            status
+            amount
+            transactionId
+          }
+          shipments {
+            id
+            trackingNumber
+            carrier
+            status
+            shippedAt
+            deliveredAt
+            estimatedDelivery
+          }
+        }
+        items {
+          id
+          quantity
+          unitPrice
+          totalPrice
+          commission
+          variant {
+            id
+            sku
+            price
+            mrp
+            attributes
+            product {
+              id
+              name
+              slug
+              brand
+              images {
+                url
+                altText
+              }
+            }
+          }
         }
       }
     }

@@ -8,6 +8,7 @@ import { useRealtime } from "@upstash/realtime/client";
 import { useSession } from "@/lib/auth-client";
 import { useCallback, useMemo } from "react";
 import { toast } from "sonner";
+import { OrderDetailsDialog } from "../orders/OrderDetailsDialog";
 
 export function RecentOrders() {
   const { data: session } = useSession();
@@ -67,46 +68,48 @@ export function RecentOrders() {
   return (
     <div className="space-y-8">
       {recentData?.map((order: any, index: number) => (
-        <div key={order.order?.id || index} className="flex items-center">
-          <Avatar className="h-9 w-9">
-            <AvatarImage
-              src={order?.order?.buyer?.avatarImageUrl || "/placeholder.svg"}
-              alt="Avatar"
-            />
-            <AvatarFallback>
-              {order?.order?.buyer?.firstName?.[0]}
-              {order?.order?.buyer?.lastName?.[0]}
-            </AvatarFallback>
-          </Avatar>
-          <div className="ml-4 space-y-1">
-            <p className="text-sm font-medium leading-none flex gap-x-1">
-              <span>{order?.order?.buyer?.firstName}</span>
-              <span>{order?.order?.buyer?.lastName}</span>
-            </p>
-            <p className="text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-none">
-              {order?.order?.buyer?.email}
-            </p>
-          </div>
-          <div className="ml-auto font-medium">
-            <div className="text-right">
-              <div className="text-sm">Rs. {order.order?.total}</div>
-              <Badge
-                variant={
-                  order.order?.status === "DELIVERED"
-                    ? "default"
-                    : order.order?.status === "PROCESSING" || order.order?.status === "CONFIRMED"
-                      ? "secondary"
-                      : order.order?.status === "SHIPPED"
-                        ? "outline"
-                        : "destructive"
-                }
-                className="text-[10px] h-5 px-1.5"
-              >
-                {order.order?.status}
-              </Badge>
+        <OrderDetailsDialog key={order.id || index} order={order}>
+          <div className="flex items-center hover:bg-muted/50 p-2 rounded-lg cursor-pointer transition-colors -mx-2">
+            <Avatar className="h-9 w-9">
+              <AvatarImage
+                src={order?.order?.buyer?.avatarImageUrl || "/placeholder.svg"}
+                alt="Avatar"
+              />
+              <AvatarFallback>
+                {order?.order?.buyer?.firstName?.[0]}
+                {order?.order?.buyer?.lastName?.[0]}
+              </AvatarFallback>
+            </Avatar>
+            <div className="ml-4 space-y-1">
+              <p className="text-sm font-medium leading-none flex gap-x-1">
+                <span>{order?.order?.buyer?.firstName}</span>
+                <span>{order?.order?.buyer?.lastName}</span>
+              </p>
+              <p className="text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-none">
+                {order?.order?.buyer?.email}
+              </p>
+            </div>
+            <div className="ml-auto font-medium">
+              <div className="text-right">
+                <div className="text-sm">Rs. {order.order?.total}</div>
+                <Badge
+                  variant={
+                    order.status === "DELIVERED"
+                      ? "default"
+                      : order.status === "PROCESSING" || order.status === "CONFIRMED"
+                        ? "secondary"
+                        : order.status === "SHIPPED"
+                          ? "outline"
+                          : "destructive"
+                  }
+                  className="text-[10px] h-5 px-1.5"
+                >
+                  {order.status}
+                </Badge>
+              </div>
             </div>
           </div>
-        </div>
+        </OrderDetailsDialog>
       ))}
       {!recentData?.length && (
         <div className="text-center py-4 text-sm text-muted-foreground">
