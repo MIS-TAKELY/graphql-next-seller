@@ -33,6 +33,7 @@ import { productResolvers } from "./modules/products/product.resolvers";
 import { productTypeDefs } from "./modules/products/product.typeDefs";
 import { productSpecificationTypeDefs } from "./modules/productSpecification/productSpecification.typeDefs";
 import { productVariantTypeDefs } from "./modules/productVariant/productVariant.typeDefs";
+import { returnResolvers } from "./modules/return/return.resolvers";
 import { returnTypedefs } from "./modules/return/return.typeDefs";
 import { reviewTypeDefs } from "./modules/review/review.typeDefs";
 import { sellerOrderResolver } from "./modules/sellerOrder/sellerOrder.resolvers";
@@ -97,6 +98,7 @@ const resolvers = mergeResolvers([
   addressResolvers,
   faqResolvers,
   productResolvers,
+  returnResolvers,
   categoryResolvers,
   categorySpecificationResolvers,
   messageResolvers,
