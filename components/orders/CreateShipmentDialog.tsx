@@ -137,39 +137,91 @@ export function CreateShipmentDialog({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
-            <Label htmlFor="carrier" className="text-sm">
-              Carrier
-            </Label>
-            <Input
-              id="carrier"
-              name="carrier"
-              value={formData.carrier}
-              onChange={handleInputChange}
-              placeholder="e.g., FedEx, UPS"
-              className="text-sm"
-              disabled={isLoading}
-            />
-            {errors.carrier && (
-              <p className="text-xs text-destructive">{errors.carrier}</p>
-            )}
+            <Label className="text-sm">Shipping Method</Label>
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="carrier-method"
+                  name="shippingMethod"
+                  value="carrier"
+                  checked={formData.carrier !== 'Self'}
+                  onChange={() => {
+                    setFormData(prev => ({ ...prev, carrier: '', trackingNumber: '' }));
+                    setErrors({ trackingNumber: '', carrier: '', orderId: '' });
+                  }}
+                  className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+                />
+                <Label htmlFor="carrier-method" className="text-sm font-normal">
+                  Carrier
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="radio"
+                  id="self-method"
+                  name="shippingMethod"
+                  value="self"
+                  checked={formData.carrier === 'Self'}
+                  onChange={() => {
+                    setFormData(prev => ({ ...prev, carrier: 'Self', trackingNumber: 'Self-Delivery' }));
+                    setErrors({ trackingNumber: '', carrier: '', orderId: '' });
+                  }}
+                  className="h-4 w-4 border-gray-300 text-primary focus:ring-primary"
+                />
+                <Label htmlFor="self-method" className="text-sm font-normal">
+                  Self / Local Delivery
+                </Label>
+              </div>
+            </div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="trackingNumber" className="text-sm">
-              Tracking Number
-            </Label>
-            <Input
-              id="trackingNumber"
-              name="trackingNumber"
-              value={formData.trackingNumber}
-              onChange={handleInputChange}
-              placeholder="e.g., 1Z9999W999999999"
-              className="text-sm"
-              disabled={isLoading}
-            />
-            {errors.trackingNumber && (
-              <p className="text-xs text-destructive">{errors.trackingNumber}</p>
-            )}
-          </div>
+
+          {formData.carrier !== 'Self' && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="carrier" className="text-sm">
+                  Carrier
+                </Label>
+                <Input
+                  id="carrier"
+                  name="carrier"
+                  value={formData.carrier}
+                  onChange={handleInputChange}
+                  placeholder="e.g., FedEx, UPS"
+                  className="text-sm"
+                  disabled={isLoading}
+                />
+                {errors.carrier && (
+                  <p className="text-xs text-destructive">{errors.carrier}</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="trackingNumber" className="text-sm">
+                  Tracking Number
+                </Label>
+                <Input
+                  id="trackingNumber"
+                  name="trackingNumber"
+                  value={formData.trackingNumber}
+                  onChange={handleInputChange}
+                  placeholder="e.g., 1Z9999W999999999"
+                  className="text-sm"
+                  disabled={isLoading}
+                />
+                {errors.trackingNumber && (
+                  <p className="text-xs text-destructive">{errors.trackingNumber}</p>
+                )}
+              </div>
+            </>
+          )}
+
+          {formData.carrier === 'Self' && (
+            <div className="text-sm text-muted-foreground bg-muted p-3 rounded-md">
+              <p>Order will be marked as shipped via self-delivery.</p>
+              <p className="text-xs mt-1">Receipt generation will be available after creating shipment.</p>
+            </div>
+          )}
+
           {errors.orderId && (
             <p className="text-xs text-destructive">{errors.orderId}</p>
           )}

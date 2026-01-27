@@ -288,19 +288,23 @@ export function OrderTable({
                               Process Return
                             </DropdownMenuItem>
                           )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => toast.success('Printing invoice...')}
-                          className="text-xs"
-                        >
-                          Print Invoice
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => toast.success('Printing shipping label...')}
-                          className="text-xs"
-                        >
-                          Print Shipping Label
-                        </DropdownMenuItem>
+                        {(order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED || order.status === OrderStatus.RETURNED) && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => toast.success('Printing invoice...')}
+                              className="text-xs"
+                            >
+                              Print Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => toast.success('Printing shipping label...')}
+                              className="text-xs"
+                            >
+                              Print Shipping Label
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuItem
                           onClick={() => toast.success('Opening email client...')}
                           className="text-xs"
