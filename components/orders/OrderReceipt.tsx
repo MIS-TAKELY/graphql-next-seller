@@ -50,6 +50,17 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             <p className="text-[10px] font-semibold text-gray-500 uppercase">Order Details</p>
                             <p className="text-base font-mono">#{order.order.orderNumber}</p>
                             <p className="text-xs text-gray-600">Date: {new Date(order.createdAt).toLocaleDateString()}</p>
+                            {order.order.shipments?.[0] && (
+                                <div className="pt-1 mt-1 border-t border-gray-200">
+                                    <p className="text-[10px] font-semibold text-gray-500 uppercase">Shipping Info</p>
+                                    <p className="text-xs text-gray-800">
+                                        <span className="font-semibold">Carrier:</span> {order.order.shipments[0].carrier || 'N/A'}
+                                    </p>
+                                    <p className="text-xs text-gray-800">
+                                        <span className="font-semibold">Tracking:</span> {order.order.shipments[0].trackingNumber || 'N/A'}
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Payment Status Indicator - Black & White */}
@@ -84,6 +95,9 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                         <h3 className="text-[10px] font-bold text-gray-800 uppercase border-b border-black pb-0.5">Sold By</h3>
                         <div className="text-xs space-y-0.5">
                             <p className="font-bold text-sm">{sellerProfile?.shopName || 'Vanijay Store'}</p>
+                            {sellerProfile?.businessRegNo && (
+                                <p className="text-[10px] font-mono text-gray-600">PAN/VAT: {sellerProfile.businessRegNo}</p>
+                            )}
                             {sellerAddress ? (
                                 <>
                                     <p>{sellerAddress.line1}</p>
