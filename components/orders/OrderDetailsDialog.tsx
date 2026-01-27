@@ -353,24 +353,28 @@ export function OrderDetailsDialog({
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => toast.success('Printing shipping labels...')}
-                className="h-8 shadow-sm"
-              >
-                <Printer className="mr-2 h-3.5 w-3.5" />
-                Labels
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handlePrint()}
-                className="h-8 shadow-sm"
-              >
-                <Printer className="mr-2 h-3.5 w-3.5" />
-                Receipt
-              </Button>
+              {(order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED || order.status === OrderStatus.RETURNED) && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toast.success('Printing shipping labels...')}
+                    className="h-8 shadow-sm"
+                  >
+                    <Printer className="mr-2 h-3.5 w-3.5" />
+                    Labels
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePrint()}
+                    className="h-8 shadow-sm"
+                  >
+                    <Printer className="mr-2 h-3.5 w-3.5" />
+                    Receipt
+                  </Button>
+                </>
+              )}
               <Button
                 variant="outline"
                 size="sm"

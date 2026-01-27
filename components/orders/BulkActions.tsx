@@ -178,25 +178,29 @@ export function BulkActions({ selectedOrders, onClearSelection, orders = [] }: B
 
             <div className="h-6 w-px bg-border/50 mx-1 hidden sm:block" />
 
-            <Button
-              onClick={() => toast.info("Print feature coming soon")}
-              variant="ghost"
-              size="sm"
-              className="rounded-xl px-3 hover:bg-primary/5"
-            >
-              <Printer className="mr-2 h-4 w-4" />
-              Print
-            </Button>
+            {(hasShipped || hasStatus(OrderStatus.DELIVERED) || hasStatus(OrderStatus.RETURNED)) && (
+              <>
+                <Button
+                  onClick={() => toast.info("Print feature coming soon")}
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-xl px-3 hover:bg-primary/5"
+                >
+                  <Printer className="mr-2 h-4 w-4" />
+                  Print
+                </Button>
 
-            <Button
-              onClick={handleExportCSV}
-              variant="ghost"
-              size="sm"
-              className="rounded-xl px-3 hover:bg-primary/5"
-            >
-              <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-500" />
-              Export
-            </Button>
+                <Button
+                  onClick={handleExportCSV}
+                  variant="ghost"
+                  size="sm"
+                  className="rounded-xl px-3 hover:bg-primary/5"
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-500" />
+                  Export
+                </Button>
+              </>
+            )}
           </div>
 
           <button
