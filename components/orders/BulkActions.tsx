@@ -17,6 +17,8 @@ import { OrderStatus, SellerOrder } from "@/types/pages/order.types";
 import { useOrder } from "@/hooks/order/useOrder";
 import { toast } from "sonner";
 import { BulkShipmentDialog } from "./BulkShipmentDialog";
+import { BulkReceiptsDialog } from "./BulkReceiptsDialog";
+
 
 interface BulkActionsProps {
   orders: SellerOrder[];
@@ -28,6 +30,8 @@ export function BulkActions({ selectedOrders, onClearSelection, orders = [] }: B
   const { bulkUpdateOrders } = useOrder();
   const [isVisible, setIsVisible] = useState(false);
   const [isShipmentDialogOpen, setIsShipmentDialogOpen] = useState(false);
+  const [isReceiptsDialogOpen, setIsReceiptsDialogOpen] = useState(false);
+
 
   useEffect(() => {
     if (selectedOrders.length > 0) {
@@ -178,14 +182,15 @@ export function BulkActions({ selectedOrders, onClearSelection, orders = [] }: B
 
             <div className="h-6 w-px bg-border/50 mx-1 hidden sm:block" />
 
-            {(hasShipped || hasStatus(OrderStatus.DELIVERED) || hasStatus(OrderStatus.RETURNED)) && (
+            {(hasConfirmed || hasProcessing || hasShipped || hasStatus(OrderStatus.DELIVERED) || hasStatus(OrderStatus.RETURNED)) && (
               <>
                 <Button
-                  onClick={() => toast.info("Print feature coming soon")}
+                  onClick={() => setIsReceiptsDialogOpen(true)}
                   variant="ghost"
                   size="sm"
                   className="rounded-xl px-3 hover:bg-primary/5"
                 >
+
                   <Printer className="mr-2 h-4 w-4" />
                   Print
                 </Button>
@@ -224,6 +229,12 @@ export function BulkActions({ selectedOrders, onClearSelection, orders = [] }: B
           toast.success("Bulk shipment processed");
         }}
       />
+      <BulkReceiptsDialog
+        orders={orders.filter(o => selectedOrders.includes(o.id))}
+        isOpen={isReceiptsDialogOpen}
+        onOpenChange={setIsReceiptsDialogOpen}
+      />
     </>
+
   );
 }
