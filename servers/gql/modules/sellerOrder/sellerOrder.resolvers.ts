@@ -271,24 +271,99 @@ export const sellerOrderResolver = {
       ctx: ResolverContext
     ) => {
       const user = requireSeller(ctx);
-      return ctx.prisma.orderDispute.findMany({
-        where: {
-          order: {
-            sellerOrders: {
-              some: {
-                sellerId: user.id,
+      const [disputes, returns] = await Promise.all([
+        ctx.prisma.orderDispute.findMany({
+          where: {
+            order: {
+              sellerOrders: {
+                some: {
+                  sellerId: user.id,
+                },
               },
             },
           },
-        },
-        orderBy: { createdAt: "desc" },
-        skip: offset,
-        take: limit,
-        include: {
-          order: true,
-          user: true,
-        },
-      });
+          orderBy: { createdAt: "desc" },
+          include: {
+            order: {
+              include: {
+                items: {
+                  include: {
+                    variant: {
+                      include: {
+                        product: {
+                          include: {
+                            images: true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            user: true,
+          },
+        }),
+        ctx.prisma.return.findMany({
+          where: {
+            items: {
+              some: {
+                orderItem: {
+                  variant: {
+                    product: {
+                      sellerId: user.id
+                    }
+                  }
+                }
+              }
+            }
+          },
+          orderBy: { createdAt: "desc" },
+          include: {
+            order: {
+              include: {
+                items: {
+                  include: {
+                    variant: {
+                      include: {
+                        product: {
+                          include: {
+                            images: true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            user: true,
+          },
+        })
+      ]);
+
+      const mapReturnStatus = (status: string) => {
+        switch (status) {
+          case "REQUESTED": return "PENDING";
+          case "APPROVED": return "APPROVED";
+          case "REJECTED": return "REJECTED";
+          case "ACCEPTED": return "RESOLVED";
+          case "DENIED": return "REJECTED";
+          default: return "PENDING";
+        }
+      };
+
+      const mappedReturns = returns.map((r: any) => ({
+        ...r,
+        type: "RETURN",
+        status: mapReturnStatus(r.status),
+      }));
+
+      const allDisputes = [...disputes, ...mappedReturns].sort(
+        (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      return allDisputes.slice(offset, offset + limit);
     },
   },
 
@@ -1153,49 +1228,82 @@ export const sellerOrderResolver = {
     ) => {
       const user = requireSeller(ctx);
 
+      // Check if it's an OrderDispute
       const dispute = await ctx.prisma.orderDispute.findUnique({
         where: { id: disputeId },
         include: { order: { include: { sellerOrders: true } } },
       });
 
-      if (!dispute) throw new Error("Dispute not found");
+      if (dispute) {
+        // Ensure the seller owns one of the sellerOrders in this order
+        const isMyOrder = dispute.order.sellerOrders.some(
+          (so: any) => so.sellerId === user.id
+        );
+        if (!isMyOrder) throw new Error("Unauthorized");
 
-      // Ensure the seller owns one of the sellerOrders in this order
-      const isMyOrder = dispute.order.sellerOrders.some(
-        (so: any) => so.sellerId === user.id
-      );
-      if (!isMyOrder) throw new Error("Unauthorized");
+        const updatedDispute = await ctx.prisma.orderDispute.update({
+          where: { id: disputeId },
+          data: { status },
+        });
 
-      const updatedDispute = await ctx.prisma.orderDispute.update({
-        where: { id: disputeId },
-        data: { status },
-      });
-
-      // If approved, update order status
-      if (status === "APPROVED") {
-        if (updatedDispute.type === "CANCEL") {
-          await ctx.prisma.order.update({
-            where: { id: updatedDispute.orderId },
-            data: { status: "CANCELLED" },
-          });
-          // Also update seller orders
-          await ctx.prisma.sellerOrder.updateMany({
-            where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
-            data: { status: "CANCELLED" },
-          });
-        } else if (updatedDispute.type === "RETURN") {
-          await ctx.prisma.order.update({
-            where: { id: updatedDispute.orderId },
-            data: { status: "RETURNED" },
-          });
-          await ctx.prisma.sellerOrder.updateMany({
-            where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
-            data: { status: "RETURNED" },
-          });
+        // If approved, update order status
+        if (status === "APPROVED") {
+          if (updatedDispute.type === "CANCEL") {
+            await ctx.prisma.order.update({
+              where: { id: updatedDispute.orderId },
+              data: { status: "CANCELLED" },
+            });
+            // Also update seller orders
+            await ctx.prisma.sellerOrder.updateMany({
+              where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
+              data: { status: "CANCELLED" },
+            });
+          } else if (updatedDispute.type === "RETURN") {
+            await ctx.prisma.order.update({
+              where: { id: updatedDispute.orderId },
+              data: { status: "RETURNED" },
+            });
+            await ctx.prisma.sellerOrder.updateMany({
+              where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
+              data: { status: "RETURNED" },
+            });
+          }
         }
+        return updatedDispute;
       }
 
-      return updatedDispute;
+      // If not a dispute, check if it's a Return
+      const returnReq = await ctx.prisma.return.findUnique({
+        where: { id: disputeId },
+        include: { items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } }, order: true }
+      });
+
+      if (returnReq) {
+        // Access Control
+        const isSeller = returnReq.items.some(i => i.orderItem.variant.product.sellerId === user.id);
+        if (!isSeller) throw new Error("Unauthorized");
+
+        const updatedReturn = await ctx.prisma.return.update({
+          where: { id: disputeId },
+          data: { status: status === "APPROVED" ? "APPROVED" : "REJECTED" },
+          include: { order: true }
+        });
+
+        if (status === "APPROVED") {
+          // Optionally update order status here or later in the flow
+          // For consistency with existing Return flow, we might just mark as approved
+          // and let the rest of the flow handle the rest.
+        }
+
+        // Map back to Dispute format for frontend
+        return {
+          ...updatedReturn,
+          type: "RETURN",
+          status: status // Use the status sent by frontend
+        };
+      }
+
+      throw new Error("Dispute or Return not found");
     },
   },
 };

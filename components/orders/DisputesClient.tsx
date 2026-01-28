@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { DisputeStatus, DisputeType, OrderDispute } from '@/types/pages/order.types';
+import Image from 'next/image';
 
 export default function DisputesClient() {
     const { data, loading, error, refetch } = useQuery(GET_SELLER_DISPUTES, {
@@ -51,6 +52,7 @@ export default function DisputesClient() {
                         <TableRow>
                             <TableHead>Order #</TableHead>
                             <TableHead>Customer</TableHead>
+                            <TableHead>Product</TableHead>
                             <TableHead>Type</TableHead>
                             <TableHead>Reason</TableHead>
                             <TableHead>Status</TableHead>
@@ -61,7 +63,7 @@ export default function DisputesClient() {
                     <TableBody>
                         {disputes.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center h-24 text-muted-foreground">
+                                <TableCell colSpan={8} className="text-center h-24 text-muted-foreground">
                                     No disputes found.
                                 </TableCell>
                             </TableRow>
@@ -73,6 +75,27 @@ export default function DisputesClient() {
                                     </TableCell>
                                     <TableCell>
                                         {dispute.user?.firstName} {dispute.user?.lastName}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center gap-2">
+                                            {dispute.order?.items?.[0] && (
+                                                <>
+                                                    <div className="relative w-8 h-8 rounded bg-muted overflow-hidden shrink-0 border">
+                                                        <Image
+                                                            src={dispute.order.items[0].variant.product.images[0]?.url || "/placeholder.jpg"}
+                                                            alt=""
+                                                            fill
+                                                            className="object-cover"
+                                                            unoptimized
+                                                        />
+                                                    </div>
+                                                    <div className="truncate max-w-[150px] text-xs font-medium">
+                                                        {dispute.order.items[0].variant.product.name}
+                                                        {dispute.order.items.length > 1 && ` (+${dispute.order.items.length - 1} more)`}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant={dispute.type === 'CANCEL' ? 'destructive' : 'outline'}>

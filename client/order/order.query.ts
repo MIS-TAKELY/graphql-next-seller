@@ -95,6 +95,21 @@ export const GET_SELLER_DISPUTES = gql`
       order {
         id
         orderNumber
+        items {
+          id
+          quantity
+          unitPrice
+          variant {
+            id
+            product {
+              id
+              name
+              images {
+                url
+              }
+            }
+          }
+        }
       }
     }
   }
