@@ -3,6 +3,7 @@ import { prisma } from "../../../../lib/db/prisma";
 import { requireAuth, requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 import { syncParentOrderStatus } from "../sellerOrder/sellerOrder.resolvers";
+import { sendReturnNotifications } from "@/services/orderNotificationService";
 
 export const returnResolvers = {
     Query: {
@@ -72,7 +73,11 @@ export const returnResolvers = {
 
             const returnRequest = await prisma.return.findUnique({
                 where: { id: returnId },
-                include: { items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } } }
+                include: {
+                    items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } },
+                    order: true,
+                    user: true,
+                }
             });
 
             if (!returnRequest) throw new Error("Return request not found");
@@ -112,14 +117,35 @@ export const returnResolvers = {
                 }
             }
 
-            return prisma.return.update({
+            const updatedReturn = await prisma.return.update({
                 where: { id: returnId },
                 data: updateData,
                 include: {
-                    items: { include: { orderItem: true } },
-                    order: true
+                    items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } },
+                    order: true,
+                    user: true
                 }
             });
+
+            // Send notifications asynchronous
+            if (updatedReturn.user && updatedReturn.order) {
+                sendReturnNotifications({
+                    returnNumber: updatedReturn.id,
+                    orderNumber: updatedReturn.order.orderNumber || updatedReturn.orderId,
+                    buyerName: updatedReturn.user.name || `${updatedReturn.user.firstName || ""} ${updatedReturn.user.lastName || ""}`.trim() || "Customer",
+                    buyerEmail: updatedReturn.user.email,
+                    buyerPhone: updatedReturn.user.phone,
+                    status: status,
+                    reason: updatedReturn.reason,
+                    rejectionReason: rejectionReason,
+                    items: updatedReturn.items.map(item => ({
+                        productName: item.orderItem.variant.product.name,
+                        quantity: item.quantity
+                    }))
+                }).catch(err => console.error("Error sending return notifications:", err));
+            }
+
+            return updatedReturn;
         }
     }
 };

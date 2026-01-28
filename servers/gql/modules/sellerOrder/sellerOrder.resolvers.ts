@@ -6,7 +6,7 @@ import type {
   ConfirmOrderInput,
   UpdateSellerOrderStatusInput,
 } from "../../types";
-import { sendOrderStatusNotifications } from "@/services/orderNotificationService";
+import { sendOrderStatusNotifications, sendReturnNotifications } from "@/services/orderNotificationService";
 
 type SellerOrderStatus =
   | "PENDING"
@@ -779,7 +779,38 @@ export const sellerOrderResolver = {
           status: "CANCELLED",
           updatedAt: new Date(),
         },
+        include: {
+          items: {
+            include: {
+              variant: {
+                include: { product: { select: { name: true } } }
+              }
+            }
+          },
+          order: {
+            include: {
+              buyer: true
+            }
+          }
+        }
       });
+
+      // Send notifications
+      if (updatedSellerOrder.order.buyer) {
+        sendOrderStatusNotifications({
+          orderNumber: updatedSellerOrder.order.orderNumber || updatedSellerOrder.buyerOrderId,
+          buyerName: updatedSellerOrder.order.buyer.name || "Customer",
+          buyerEmail: updatedSellerOrder.order.buyer.email,
+          buyerPhone: updatedSellerOrder.order.buyer.phone,
+          items: updatedSellerOrder.items.map((item: any) => ({
+            productName: item.variant?.product?.name || "Product",
+            quantity: item.quantity,
+            price: item.totalPrice.toNumber(),
+          })),
+          total: updatedSellerOrder.total.toNumber(),
+          status: "CANCELLED",
+        }).catch(err => console.error("Error sending cancellation notification:", err));
+      }
 
       // Sync parent order status
       await syncParentOrderStatus(updatedSellerOrder.buyerOrderId, prisma);
@@ -1244,6 +1275,26 @@ export const sellerOrderResolver = {
         const updatedDispute = await ctx.prisma.orderDispute.update({
           where: { id: disputeId },
           data: { status },
+          include: {
+            order: {
+              include: {
+                buyer: true,
+                sellerOrders: {
+                  where: { sellerId: user.id },
+                  include: {
+                    items: {
+                      include: {
+                        variant: {
+                          include: { product: true }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            user: true
+          }
         });
 
         // If approved, update order status
@@ -1258,6 +1309,26 @@ export const sellerOrderResolver = {
               where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
               data: { status: "CANCELLED" },
             });
+
+            // Send Cancellation Notification
+            if (updatedDispute.order.buyer) {
+              const sellerOrder = updatedDispute.order.sellerOrders[0];
+              if (sellerOrder) {
+                sendOrderStatusNotifications({
+                  orderNumber: updatedDispute.order.orderNumber || updatedDispute.orderId,
+                  buyerName: updatedDispute.order.buyer.name || "Customer",
+                  buyerEmail: updatedDispute.order.buyer.email,
+                  buyerPhone: updatedDispute.order.buyer.phone,
+                  items: sellerOrder.items.map((item: any) => ({
+                    productName: item.variant?.product?.name || "Product",
+                    quantity: item.quantity,
+                    price: item.totalPrice.toNumber(),
+                  })),
+                  total: sellerOrder.total.toNumber(),
+                  status: "CANCELLED",
+                }).catch(err => console.error("Error sending dispute cancellation notification:", err));
+              }
+            }
           } else if (updatedDispute.type === "RETURN") {
             await ctx.prisma.order.update({
               where: { id: updatedDispute.orderId },
@@ -1267,6 +1338,53 @@ export const sellerOrderResolver = {
               where: { buyerOrderId: updatedDispute.orderId, sellerId: user.id },
               data: { status: "RETURNED" },
             });
+
+            // For returning via dispute, we don't have a direct "ReturnRequest" record always, 
+            // but we can send a general notification or reuse return notification if possible.
+            // Since ReturnDetails expects returnNumber, we'll use disputeId.
+            if (updatedDispute.order.buyer) {
+              const sellerOrder = updatedDispute.order.sellerOrders[0];
+              if (sellerOrder) {
+                sendReturnNotifications({
+                  returnNumber: updatedDispute.id,
+                  orderNumber: updatedDispute.order.orderNumber || updatedDispute.orderId,
+                  buyerName: updatedDispute.order.buyer.name || "Customer",
+                  buyerEmail: updatedDispute.order.buyer.email,
+                  buyerPhone: updatedDispute.order.buyer.phone,
+                  status: "APPROVED",
+                  reason: updatedDispute.reason,
+                  items: sellerOrder.items.map((item: any) => ({
+                    productName: item.variant?.product?.name || "Product",
+                    quantity: item.quantity
+                  }))
+                }).catch(err => console.error("Error sending dispute return notification:", err));
+              }
+            }
+          }
+        } else if (status === "REJECTED") {
+          // Send Rejection Notification
+          if (updatedDispute.order?.buyer) {
+            const sellerOrder = updatedDispute.order.sellerOrders[0];
+            const isReturn = updatedDispute.type === "RETURN";
+            if (isReturn) {
+              sendReturnNotifications({
+                returnNumber: updatedDispute.id,
+                orderNumber: updatedDispute.order.orderNumber || updatedDispute.orderId,
+                buyerName: updatedDispute.order.buyer.name || "Customer",
+                buyerEmail: updatedDispute.order.buyer.email,
+                buyerPhone: updatedDispute.order.buyer.phone,
+                status: "REJECTED",
+                reason: updatedDispute.reason,
+                items: sellerOrder ? sellerOrder.items.map((item: any) => ({
+                  productName: item.variant?.product?.name || "Product",
+                  quantity: item.quantity
+                })) : []
+              }).catch(err => console.error("Error sending dispute rejection notification:", err));
+            } else {
+              // Notification for rejected cancellation
+              // We don't have a specific "Rejected Cancellation" template yet, 
+              // but we can add one or use a general order update.
+            }
           }
         }
         return updatedDispute;
@@ -1275,7 +1393,11 @@ export const sellerOrderResolver = {
       // If not a dispute, check if it's a Return
       const returnReq = await ctx.prisma.return.findUnique({
         where: { id: disputeId },
-        include: { items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } }, order: true }
+        include: {
+          items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } },
+          order: { include: { buyer: true } },
+          user: true
+        }
       });
 
       if (returnReq) {
@@ -1286,13 +1408,28 @@ export const sellerOrderResolver = {
         const updatedReturn = await ctx.prisma.return.update({
           where: { id: disputeId },
           data: { status: status === "APPROVED" ? "APPROVED" : "REJECTED" },
-          include: { order: true }
+          include: {
+            order: { include: { buyer: true } },
+            user: true,
+            items: { include: { orderItem: { include: { variant: { include: { product: true } } } } } }
+          }
         });
 
-        if (status === "APPROVED") {
-          // Optionally update order status here or later in the flow
-          // For consistency with existing Return flow, we might just mark as approved
-          // and let the rest of the flow handle the rest.
+        // Send Notification for Return Request
+        if (updatedReturn.user && updatedReturn.order) {
+          sendReturnNotifications({
+            returnNumber: updatedReturn.id,
+            orderNumber: updatedReturn.order.orderNumber || updatedReturn.orderId,
+            buyerName: updatedReturn.user.name || "Customer",
+            buyerEmail: updatedReturn.user.email,
+            buyerPhone: updatedReturn.user.phone,
+            status: updatedReturn.status,
+            reason: updatedReturn.reason,
+            items: updatedReturn.items.map(item => ({
+              productName: item.orderItem.variant.product.name,
+              quantity: item.quantity
+            }))
+          }).catch(err => console.error("Error sending return notification:", err));
         }
 
         // Map back to Dispute format for frontend
