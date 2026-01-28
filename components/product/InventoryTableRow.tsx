@@ -164,7 +164,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Current Stock Display */}
-              <div className="bg-slate-50 p-4 rounded-lg border">
+              <div className="bg-slate-50 dark:bg-slate-800 p-4 rounded-lg border dark:border-slate-700">
                 <Label className="text-sm text-muted-foreground">Current Stock</Label>
                 <div className="text-3xl font-bold mt-1">{currentStock}</div>
               </div>
@@ -178,7 +178,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setAdjustment(adjustment + 10)}
-                    className="border-green-200 hover:bg-green-50 hover:text-green-700"
+                    className="border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-700 dark:hover:text-green-300"
                   >
                     +10
                   </Button>
@@ -187,7 +187,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setAdjustment(adjustment + 50)}
-                    className="border-green-200 hover:bg-green-50 hover:text-green-700"
+                    className="border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-700 dark:hover:text-green-300"
                   >
                     +50
                   </Button>
@@ -196,7 +196,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setAdjustment(adjustment + 100)}
-                    className="border-green-200 hover:bg-green-50 hover:text-green-700"
+                    className="border-green-200 dark:border-green-800 hover:bg-green-50 dark:hover:bg-green-950 hover:text-green-700 dark:hover:text-green-300"
                   >
                     +100
                   </Button>
@@ -205,7 +205,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setAdjustment(adjustment - 10)}
-                    className="border-red-200 hover:bg-red-50 hover:text-red-700"
+                    className="border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700 dark:hover:text-red-300"
                   >
                     -10
                   </Button>
@@ -214,7 +214,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setAdjustment(adjustment - 50)}
-                    className="border-red-200 hover:bg-red-50 hover:text-red-700"
+                    className="border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700 dark:hover:text-red-300"
                   >
                     -50
                   </Button>
@@ -223,7 +223,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                     variant="outline"
                     size="sm"
                     onClick={() => setAdjustment(adjustment - 100)}
-                    className="border-red-200 hover:bg-red-50 hover:text-red-700"
+                    className="border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-950 hover:text-red-700 dark:hover:text-red-300"
                   >
                     -100
                   </Button>
@@ -250,10 +250,10 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                     onChange={handleAdjustmentChange}
                     placeholder="0"
                     className={`text-center text-lg font-semibold ${adjustment > 0
-                        ? 'border-green-300 bg-green-50'
-                        : adjustment < 0
-                          ? 'border-red-300 bg-red-50'
-                          : ''
+                      ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950 dark:text-green-100'
+                      : adjustment < 0
+                        ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950 dark:text-red-100'
+                        : ''
                       }`}
                     step="1"
                   />
@@ -268,7 +268,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                   </Button>
                 </div>
                 {adjustment !== 0 && (
-                  <p className={`text-sm text-center ${adjustment > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className={`text-sm text-center ${adjustment > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {adjustment > 0 ? `Adding ${adjustment} units` : `Removing ${Math.abs(adjustment)} units`}
                   </p>
                 )}
@@ -276,21 +276,21 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
 
               {/* Final Stock Preview */}
               <div className={`p-4 rounded-lg border-2 ${error
-                  ? 'bg-red-50 border-red-300'
-                  : finalStock !== currentStock
-                    ? 'bg-blue-50 border-blue-300'
-                    : 'bg-slate-50 border-slate-200'
+                ? 'bg-red-50 dark:bg-red-950 border-red-300 dark:border-red-700'
+                : finalStock !== currentStock
+                  ? 'bg-blue-50 dark:bg-blue-950 border-blue-300 dark:border-blue-700'
+                  : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
                 }`}>
                 <Label className="text-sm text-muted-foreground">Final Stock</Label>
                 <div className="flex items-baseline gap-2 mt-1">
                   <span className="text-3xl font-bold">{finalStock}</span>
                   {finalStock !== currentStock && !error && (
-                    <span className={`text-sm font-medium ${adjustment > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <span className={`text-sm font-medium ${adjustment > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       ({adjustment > 0 ? '+' : ''}{adjustment})
                     </span>
                   )}
                 </div>
-                {error && <p className="text-red-600 text-sm mt-2 font-medium">{error}</p>}
+                {error && <p className="text-red-600 dark:text-red-400 text-sm mt-2 font-medium">{error}</p>}
               </div>
 
               {/* Action Buttons */}
