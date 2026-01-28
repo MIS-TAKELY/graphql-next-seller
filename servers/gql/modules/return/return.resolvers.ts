@@ -2,6 +2,7 @@
 import { prisma } from "../../../../lib/db/prisma";
 import { requireAuth, requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
+import { syncParentOrderStatus } from "../sellerOrder/sellerOrder.resolvers";
 
 export const returnResolvers = {
     Query: {
@@ -92,6 +93,23 @@ export const returnResolvers = {
                 updateData.inspectedAt = new Date();
             } else if (status === "ACCEPTED") {
                 updateData.refundStatus = "INITIATED";
+
+                // Update SellerOrder status to RETURNED
+                if (returnRequest.orderId) {
+                    await prisma.sellerOrder.updateMany({
+                        where: {
+                            buyerOrderId: returnRequest.orderId,
+                            sellerId: user.id
+                        },
+                        data: {
+                            status: "RETURNED",
+                            updatedAt: new Date()
+                        }
+                    });
+
+                    // Sync parent order status
+                    await syncParentOrderStatus(returnRequest.orderId, prisma);
+                }
             }
 
             return prisma.return.update({

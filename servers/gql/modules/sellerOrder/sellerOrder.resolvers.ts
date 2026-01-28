@@ -38,7 +38,7 @@ const emitOrderStatusChanged = async (
   );
 };
 
-const syncParentOrderStatus = async (orderId: string, prisma: any) => {
+export const syncParentOrderStatus = async (orderId: string, prisma: any) => {
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     include: { sellerOrders: true }
@@ -660,6 +660,58 @@ export const sellerOrderResolver = {
           extraInfo: { code: "INTERNAL_SERVER_ERROR" },
         });
       }
+    },
+
+    cancelSellerOrder: async (
+      _: unknown,
+      { sellerOrderId, reason }: { sellerOrderId: string; reason?: string },
+      context: ResolverContext
+    ) => {
+      requireSeller(context);
+      const prisma = context.prisma;
+
+      const sellerOrder = await prisma.sellerOrder.findUnique({
+        where: { id: sellerOrderId },
+        include: { order: true },
+      });
+
+      if (!sellerOrder) {
+        throw new ApolloError({
+          errorMessage: "Seller order not found",
+          extraInfo: { code: "NOT_FOUND" },
+        });
+      }
+
+      if (sellerOrder.sellerId !== context.user?.id) {
+        throw new ApolloError({
+          errorMessage: "Unauthorized",
+          extraInfo: { code: "FORBIDDEN" },
+        });
+      }
+
+      // Check if order can be cancelled (e.g., not already shipped/delivered)
+      const nonCancellableStatuses = ["SHIPPED", "DELIVERED", "RETURNED", "CANCELLED"];
+      if (nonCancellableStatuses.includes(sellerOrder.status)) {
+        throw new ApolloError({
+          errorMessage: `Cannot cancel order in ${sellerOrder.status} status`,
+          extraInfo: { code: "INVALID_STATE" },
+        });
+      }
+
+      const updatedSellerOrder = await prisma.sellerOrder.update({
+        where: { id: sellerOrderId },
+        data: {
+          status: "CANCELLED",
+          updatedAt: new Date(),
+        },
+      });
+
+      // Sync parent order status
+      await syncParentOrderStatus(updatedSellerOrder.buyerOrderId, prisma);
+
+      // Optional: Log cancellation reason or notify buyer
+
+      return updatedSellerOrder;
     },
 
     createShipment: async (

@@ -6,6 +6,7 @@ import {
   UPDATE_SELLER_ORDER_STATUS,
   BULK_UPDATE_SELLER_ORDER_STATUS,
   BULK_CREATE_SHIPMENTS,
+  CANCEL_SELLER_ORDER,
 } from "@/client/order/order.mutation";
 import { GET_SELLER_ORDER } from "@/client/order/order.query";
 import {
@@ -95,6 +96,11 @@ export const useOrder = () => {
     BulkCreateShipmentsResponse,
     BulkCreateShipmentsInput
   >(BULK_CREATE_SHIPMENTS, {
+    refetchQueries: ["GetSellerOrders"],
+    awaitRefetchQueries: true,
+  });
+
+  const [cancelSellerOrderMutation] = useMutation(CANCEL_SELLER_ORDER, {
     refetchQueries: ["GetSellerOrders"],
     awaitRefetchQueries: true,
   });
@@ -355,5 +361,18 @@ export const useOrder = () => {
     createSingleShipment,
     bulkUpdateOrders,
     bulkCreateShipments,
+    cancelOrder: async (sellerOrderId: string, reason?: string) => {
+      try {
+        const { data } = await cancelSellerOrderMutation({
+          variables: { sellerOrderId, reason },
+        });
+        toast.success("Order cancelled successfully");
+        return data?.cancelSellerOrder;
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to cancel order";
+        toast.error(message);
+        throw error;
+      }
+    },
   };
 };

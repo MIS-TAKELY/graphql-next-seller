@@ -65,3 +65,12 @@ export const UPDATE_DISPUTE_STATUS = gql`
     }
   }
 `;
+
+export const CANCEL_SELLER_ORDER = gql`
+  mutation CancelSellerOrder($sellerOrderId: String!, $reason: String) {
+    cancelSellerOrder(sellerOrderId: $sellerOrderId, reason: $reason) {
+      id
+      status
+    }
+  }
+`;

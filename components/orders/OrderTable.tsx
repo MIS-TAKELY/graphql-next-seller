@@ -55,7 +55,7 @@ export function OrderTable({
   selectedOrders = [],
   onSelectionChange,
 }: OrderTableProps) {
-  const { confirmSingleOrder, updateOrderStatus } = useOrder();
+  const { confirmSingleOrder, updateOrderStatus, cancelOrder } = useOrder();
 
   const selectOrder = (orderId: string) => {
     const newSelected = selectedOrders.includes(orderId)
@@ -82,6 +82,17 @@ export function OrderTable({
       }
     } catch (error) {
       // Error handling is managed by the hook
+    }
+  };
+
+  const handleCancelOrder = async (orderId: string) => {
+    const reason = window.prompt("Enter cancellation reason (optional):");
+    if (reason === null) return; // User cancelled prompt
+
+    try {
+      await cancelOrder(orderId, reason);
+    } catch (error) {
+      // Error handled by hook
     }
   };
 
@@ -251,6 +262,14 @@ export function OrderTable({
                             className="text-xs"
                           >
                             Confirm Order
+                          </DropdownMenuItem>
+                        )}
+                        {(order.status === OrderStatus.PENDING || order.status === OrderStatus.CONFIRMED || order.status === OrderStatus.PROCESSING) && (
+                          <DropdownMenuItem
+                            onClick={() => handleCancelOrder(order.id)}
+                            className="text-xs text-destructive"
+                          >
+                            Cancel Order
                           </DropdownMenuItem>
                         )}
                         {order.status === OrderStatus.CONFIRMED && (

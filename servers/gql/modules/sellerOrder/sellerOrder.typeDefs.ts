@@ -109,5 +109,6 @@ export const sellerOrderTypeDefs = gql`
       carrier: String!
     ): [SellerOrder!]!
     updateDisputeStatus(disputeId: ID!, status: DisputeStatus!): OrderDispute!
+    cancelSellerOrder(sellerOrderId: String!, reason: String): SellerOrder!
   }
 `;
