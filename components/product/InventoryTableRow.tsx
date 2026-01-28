@@ -158,48 +158,143 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
               Update Stock
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>Update Stock for {item.name}</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="currentStock">Current Stock</Label>
-                <Input
-                  id="currentStock"
-                  type="number"
-                  value={currentStock}
-                  disabled
-                  className="bg-gray-100"
-                />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Current Stock Display */}
+              <div className="bg-slate-50 p-4 rounded-lg border">
+                <Label className="text-sm text-muted-foreground">Current Stock</Label>
+                <div className="text-3xl font-bold mt-1">{currentStock}</div>
               </div>
-              <div>
-                <Label htmlFor="adjustment">
-                  Add/Subtract Stock (e.g., +10 or -5)
-                </Label>
-                <Input
-                  id="adjustment"
-                  type="number"
-                  value={adjustment}
-                  onChange={handleAdjustmentChange}
-                  placeholder="e.g., +10 or -5"
-                  required
-                  step="1"
-                  autoFocus
-                />
+
+              {/* Quick Action Buttons */}
+              <div className="space-y-3">
+                <Label className="text-sm font-medium">Quick Adjustments</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdjustment(adjustment + 10)}
+                    className="border-green-200 hover:bg-green-50 hover:text-green-700"
+                  >
+                    +10
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdjustment(adjustment + 50)}
+                    className="border-green-200 hover:bg-green-50 hover:text-green-700"
+                  >
+                    +50
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdjustment(adjustment + 100)}
+                    className="border-green-200 hover:bg-green-50 hover:text-green-700"
+                  >
+                    +100
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdjustment(adjustment - 10)}
+                    className="border-red-200 hover:bg-red-50 hover:text-red-700"
+                  >
+                    -10
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdjustment(adjustment - 50)}
+                    className="border-red-200 hover:bg-red-50 hover:text-red-700"
+                  >
+                    -50
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setAdjustment(adjustment - 100)}
+                    className="border-red-200 hover:bg-red-50 hover:text-red-700"
+                  >
+                    -100
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Label htmlFor="finalStock">Final Stock</Label>
-                <Input
-                  id="finalStock"
-                  type="number"
-                  value={finalStock}
-                  disabled
-                  className="bg-gray-100"
-                />
-                {error && <p className="text-red-500 text-sm mt-1">{error}</p>}
+
+              {/* Manual Adjustment with Increment/Decrement */}
+              <div className="space-y-2">
+                <Label htmlFor="adjustment">Manual Adjustment</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setAdjustment(adjustment - 1)}
+                    className="h-10 w-10 shrink-0"
+                  >
+                    <span className="text-lg">−</span>
+                  </Button>
+                  <Input
+                    id="adjustment"
+                    type="number"
+                    value={adjustment}
+                    onChange={handleAdjustmentChange}
+                    placeholder="0"
+                    className={`text-center text-lg font-semibold ${adjustment > 0
+                        ? 'border-green-300 bg-green-50'
+                        : adjustment < 0
+                          ? 'border-red-300 bg-red-50'
+                          : ''
+                      }`}
+                    step="1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setAdjustment(adjustment + 1)}
+                    className="h-10 w-10 shrink-0"
+                  >
+                    <span className="text-lg">+</span>
+                  </Button>
+                </div>
+                {adjustment !== 0 && (
+                  <p className={`text-sm text-center ${adjustment > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {adjustment > 0 ? `Adding ${adjustment} units` : `Removing ${Math.abs(adjustment)} units`}
+                  </p>
+                )}
               </div>
-              <div className="flex justify-end space-x-2">
+
+              {/* Final Stock Preview */}
+              <div className={`p-4 rounded-lg border-2 ${error
+                  ? 'bg-red-50 border-red-300'
+                  : finalStock !== currentStock
+                    ? 'bg-blue-50 border-blue-300'
+                    : 'bg-slate-50 border-slate-200'
+                }`}>
+                <Label className="text-sm text-muted-foreground">Final Stock</Label>
+                <div className="flex items-baseline gap-2 mt-1">
+                  <span className="text-3xl font-bold">{finalStock}</span>
+                  {finalStock !== currentStock && !error && (
+                    <span className={`text-sm font-medium ${adjustment > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      ({adjustment > 0 ? '+' : ''}{adjustment})
+                    </span>
+                  )}
+                </div>
+                {error && <p className="text-red-600 text-sm mt-2 font-medium">{error}</p>}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex justify-end gap-2 pt-2">
                 <Button
                   type="button"
                   variant="outline"
@@ -207,8 +302,12 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
                 >
                   Cancel
                 </Button>
-                <Button type="submit" disabled={finalStock < 0}>
-                  Save
+                <Button
+                  type="submit"
+                  disabled={finalStock < 0 || updating}
+                  className="min-w-[100px]"
+                >
+                  {updating ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </form>
