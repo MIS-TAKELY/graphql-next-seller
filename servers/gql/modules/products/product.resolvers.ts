@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { generateEmbedding } from "@/lib/embemdind";
+import { generateEmbedding } from "@/lib/embedding";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
 import { delCache, getCache, setCache } from "@/services/redis.services";
@@ -447,11 +447,17 @@ export const productResolvers = {
         // 3. Generate Embedding (Optional)
         const textToEmbed = `${input.name} ${input.description || ""} ${input.brand || ""
           }`.trim();
+        console.log(`🔍 [GQL mutation] addProduct: generating embedding for "${input.name}"`);
         let embedding: number[] | undefined;
         try {
-          if (textToEmbed) embedding = await generateEmbedding(textToEmbed);
+          if (textToEmbed) {
+            embedding = await generateEmbedding(textToEmbed);
+            console.log("✅ Embedding generated successfully");
+          } else {
+            console.log("⚠️ No text to embed, skipping embedding generation");
+          }
         } catch (e) {
-          console.warn("Embedding generation failed", e);
+          console.warn("❌ Embedding generation failed in resolver:", e);
         }
 
         // 4. Transaction
