@@ -7,24 +7,30 @@ const openai = new OpenAI({
 
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
+    // OpenRouter/Free tier limits can be extremely tight (e.g., 74 tokens).
+    // We truncate to ~250 characters to stay within these limits while keeping the most relevant info (Product Name).
+    const truncatedText = text.slice(0, 250);
+
     const response = await openai.embeddings.create({
       model: "openai/text-embedding-3-large",
-      input: text,
-      dimensions: 3072,
+      input: truncatedText,
+      dimensions: 3072, // Keep 3072 for DB compatibility
     });
 
     if (!response || !response.data || !Array.isArray(response.data) || response.data.length === 0) {
-      console.error("❌ Unexpected response from OpenRouter embeddings API:", JSON.stringify(response, null, 2));
+      if ((response as any).error?.code === 402) {
+        throw new Error(`Credits/Limit exceeded: ${(response as any).error.message}`);
+      }
+      console.error("❌ Unexpected response structure:", JSON.stringify(response, null, 2));
       throw new Error("Invalid response structure from embeddings API");
     }
 
     return response.data[0].embedding;
   } catch (error: any) {
-    console.error("❌ Error generating embedding:", error.message || error);
-    // Log the full error if it's from OpenAI/OpenRouter client
-    if (error.response) {
-      console.error("Provider Response Data:", JSON.stringify(error.response.data, null, 2));
+    if (error.message?.includes("tokens limit exceeded")) {
+      console.error("❌ Token limit exceeded (very tight limit). Truncating further might be needed.");
     }
-    throw error; // Re-throw to be caught by the resolver's try-catch
+    console.error("❌ Error generating embedding:", error.message || error);
+    throw error;
   }
 }
