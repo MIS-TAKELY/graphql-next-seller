@@ -620,6 +620,25 @@ export const productResolvers = {
         if (input.specificationDisplayFormat !== undefined)
           productData.specificationDisplayFormat = input.specificationDisplayFormat;
 
+        // 2.1 Embedding Update (if relevant fields changed)
+        let updatedEmbedding: number[] | undefined;
+        const nameToEmbed = input.name || existingProduct.name;
+        const descriptionToEmbed = input.description !== undefined ? input.description : existingProduct.description;
+        const brandToEmbed = input.brand !== undefined ? input.brand : existingProduct.brand;
+
+        if (input.name || input.description !== undefined || input.brand !== undefined) {
+          const textToEmbed = `${nameToEmbed} ${descriptionToEmbed || ""} ${brandToEmbed || ""}`.trim();
+          console.log(`🔍 [GQL mutation] updateProduct: regenerating embedding for "${nameToEmbed}"`);
+          try {
+            if (textToEmbed) {
+              updatedEmbedding = await generateEmbedding(textToEmbed);
+              console.log("✅ New embedding generated successfully");
+            }
+          } catch (e) {
+            console.warn("❌ Embedding regeneration failed in updateProduct:", e);
+          }
+        }
+
         await prisma.$transaction(
           async (tx: any) => {
             // A. Update Product Root
@@ -628,6 +647,11 @@ export const productResolvers = {
                 where: { id: input.id },
                 data: productData,
               });
+            }
+
+            // Update embedding if generated
+            if (updatedEmbedding) {
+              await tx.$executeRaw`UPDATE "products" SET embedding = ${JSON.stringify(updatedEmbedding)}::vector WHERE id = ${input.id}`;
             }
 
             // B. SYNC VARIANTS (Robust Synchronization)
