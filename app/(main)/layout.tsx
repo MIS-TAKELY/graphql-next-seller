@@ -5,8 +5,8 @@ import type { Metadata } from "next";
 import type React from "react";
 
 export const metadata: Metadata = {
-  title: "Seller Dashboard - E-commerce Platform",
-  description: "Comprehensive seller dashboard for managing your online store",
+  title: "Vanijay-Best Online Shopping in Nepal - Best Prices, No Seller Charges",
+  description: "Comprehensive vanijay seller dashboard for managing your online store",
 };
 
 import { MobileNav } from "@/components/layout/MobileNav";
