@@ -382,7 +382,7 @@ model Product {
   updatedAt          DateTime               @updatedAt
   categoryId         String?
   brand              String
-  embedding          Unsupported("vector")?
+  embedding          Unsupported("vector(384)")?
   keywords           String[]
   metaDescription    String?
   metaTitle          String?
