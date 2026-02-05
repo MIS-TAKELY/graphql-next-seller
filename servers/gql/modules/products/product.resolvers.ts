@@ -920,5 +920,91 @@ export const productResolvers = {
         throw new Error(error.message || "Failed to update product");
       }
     },
+
+    deleteProduct: async (
+      _: any,
+      { productId }: { productId: string },
+      ctx: GraphQLContext
+    ) => {
+      try {
+        const user = requireSeller(ctx);
+        const sellerId = user.id;
+
+        if (!productId) throw new Error("Product ID is required");
+
+        // 1. Authorize & Fetch
+        const product = await prisma.product.findFirst({
+          where: { id: productId, sellerId },
+          include: {
+            variants: {
+              include: {
+                orderItems: { select: { id: true } },
+                SellerOrderItem: { select: { id: true } },
+              },
+            },
+            reviews: { select: { id: true } }
+          },
+        });
+
+        if (!product) {
+          throw new Error("Product not found or unauthorized");
+        }
+
+        // 2. Validate Safely
+        const hasOrders = product.variants.some(
+          (v) => v.orderItems.length > 0 || v.SellerOrderItem.length > 0
+        );
+
+        if (hasOrders) {
+          throw new Error("Cannot delete product with existing orders. Archive it instead.");
+        }
+
+        console.log(`🗑️ Deleting product ${product.name} (${productId})`);
+
+        // 3. Remove from Typesense
+        try {
+          await typesenseClient.collections('products').documents(productId).delete();
+          console.log("✅ Removed from Typesense");
+        } catch (error: any) {
+          if (error?.httpStatus !== 404) {
+            console.warn("⚠️ Failed to remove from Typesense:", error);
+          }
+        }
+
+        // 4. Database Deletion (Manual cascades for non-cascading relations)
+        await prisma.$transaction(async (tx) => {
+          // A. Delete Reviews explicitly if not cascading (Schema said Review->Product is regular relation)
+          // But looking at schema: reviews Review[]
+          // Review model: product Product @relation(fields: [productId], references: [id])
+          // It does NOT have onDelete: Cascade. So we MUST delete manually.
+          if (product.reviews.length > 0) {
+            await tx.review.deleteMany({
+              where: { productId }
+            });
+          }
+
+          // B. Delete Product (Variants, Images, etc. should cascade)
+          await tx.product.delete({
+            where: { id: productId },
+          });
+        });
+
+        // 5. Invalidate Cache
+        const keys = [
+          `product:${product.slug}`,
+          getProductCacheKey(product.slug),
+          "products:all",
+          `products:seller:${sellerId}`
+        ];
+        await Promise.all(keys.map(k => delCache(k)));
+
+        console.log("✅ Product deleted successfully");
+        return true;
+
+      } catch (error: any) {
+        console.error("Error deleting product:", error);
+        throw new Error(error.message || "Failed to delete product");
+      }
+    },
   },
 };
