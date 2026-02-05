@@ -3,6 +3,7 @@ import { generateEmbedding } from "@/lib/embedding";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
 import { delCache, getCache, setCache } from "@/services/redis.services";
+import { typesenseClient } from "@/lib/typesense";
 import { ProductStatus } from "@/app/generated/prisma";
 import { requireAuth, requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
@@ -551,9 +552,7 @@ export const productResolvers = {
               },
             });
 
-            // console.log("new products-->",newProduct)
-
-            // Save Embedding via raw SQL (Prisma doesn't fully type pgvector yet)
+            // Save Embedding via raw SQL
             if (embedding) {
               await tx.$executeRaw`UPDATE "products" SET embedding = ${JSON.stringify(embedding)}::vector WHERE id = ${newProduct.id}`;
             }
@@ -563,7 +562,43 @@ export const productResolvers = {
           { timeout: 15000 }
         );
 
-        if (product) console.log("product created");
+        if (product) {
+          console.log("product created");
+
+          // 6. Index to Typesense
+          try {
+            // Construct document matching Buyer's schema
+            const defaultVariant = input.variants.find((v: any, i: number) => v.isDefault || i === 0);
+            const price = defaultVariant ? Number(defaultVariant.price) : 0;
+            const document = {
+              id: product.id,
+              name: product.name,
+              slug: product.slug,
+              description: product.description || '',
+              brand: product.brand,
+              categoryName: 'Uncategorized', // Placeholder, will fix below in fetch
+              categoryId: product.categoryId || '',
+              price: price,
+              image: input.images[0]?.url || '',
+              status: product.status,
+              soldCount: 0,
+              averageRating: 0,
+              createdAt: Math.floor(product.createdAt.getTime() / 1000),
+              facet_attributes: defaultVariant?.specifications?.map((s: any) => `${s.key}:${s.value}`) || [],
+            };
+
+            // Fetch category name if exists
+            if (product.categoryId) {
+              const cat = await prisma.category.findUnique({ where: { id: product.categoryId }, select: { name: true } });
+              if (cat) document.categoryName = cat.name;
+            }
+
+            await typesenseClient.collections('products').documents().upsert(document);
+            console.log("✅ Indexed to Typesense");
+          } catch (error) {
+            console.error("❌ Failed to index to Typesense:", error);
+          }
+        }
 
         // 5. Cleanup Cache
         await Promise.all([
@@ -799,9 +834,7 @@ export const productResolvers = {
 
             // Return Policy
             if (input.returnPolicy) {
-              await tx.returnPolicy.deleteMany({
-                where: { productId: input.id },
-              });
+              await tx.returnPolicy.deleteMany({ where: { productId: input.id } });
               await tx.returnPolicy.createMany({
                 data: input.returnPolicy.map((p: any) => ({
                   productId: input.id,
@@ -813,133 +846,78 @@ export const productResolvers = {
               });
             }
           },
-          { timeout: 15000 }
+          { timeout: 20000 }
         );
 
-        // Trigger notifications if restocking (0 → > 0)
-        for (const v of input.variants || []) {
-          const oldVariant = existingProduct.variants.find(ov => ov.sku === v.sku || (v.id && ov.id === v.id));
-          if (oldVariant && oldVariant.stock === 0 && v.stock > 0) {
-            console.log(`🔔 Product restocked via updateProduct! Triggering notifications for variant ${oldVariant.id}`);
-            // We'll call the same logic as in updateVariantStock
-            // For simplicity in this large file, I'll extract it if I can or just repeat it carefully.
-            // Actually, let's keep it consistent.
-            triggerNotifications(input.id, oldVariant.id, existingProduct.name, existingProduct.slug);
+        // 3. Typesense Sync (After Transaction)
+        try {
+          const freshProduct = await prisma.product.findUnique({
+            where: { id: input.id },
+            include: {
+              category: true,
+              variants: { include: { specifications: true } },
+              images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+              reviews: { select: { rating: true } }
+            }
+          });
+
+          if (freshProduct && freshProduct.status === 'ACTIVE') {
+            const defaultVariant = freshProduct.variants.find((v: any) => v.isDefault) || freshProduct.variants[0];
+            const price = defaultVariant ? Number(defaultVariant.price) : 0;
+
+            // Calculate derived fields
+            const soldCount = freshProduct.variants.reduce((acc: number, v: any) => acc + (v.soldCount || 0), 0);
+            const totalRating = freshProduct.reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
+            const averageRating = freshProduct.reviews.length > 0 ? totalRating / freshProduct.reviews.length : 0;
+
+            const document = {
+              id: freshProduct.id,
+              name: freshProduct.name,
+              slug: freshProduct.slug,
+              description: freshProduct.description || '',
+              brand: freshProduct.brand,
+              categoryName: freshProduct.category?.name || 'Uncategorized',
+              categoryId: freshProduct.categoryId || '',
+              price: price,
+              image: freshProduct.images[0]?.url || '',
+              status: freshProduct.status,
+              soldCount: soldCount,
+              averageRating: averageRating,
+              createdAt: Math.floor(freshProduct.createdAt.getTime() / 1000),
+              facet_attributes: defaultVariant?.specifications.map((s: any) => `${s.key}:${s.value}`) || [],
+            };
+
+            await typesenseClient.collections('products').documents().upsert(document);
+            console.log("✅ Updated Typesense index for product:", freshProduct.name);
+          } else if (freshProduct && freshProduct.status !== 'ACTIVE') {
+            // If product became inactive, remove from index
+            await typesenseClient.collections('products').documents(freshProduct.id).delete().catch(() => { });
+            console.log("⚠️ Removed inactive product from Typesense:", freshProduct.name);
           }
+        } catch (error) {
+          console.error("❌ Failed to update Typesense:", error);
         }
+
+        // 4. Cleanup Cache
+        const slug = input.name ? await generateUniqueSlug(input.name) : existingProduct.slug;
+        const keys = [
+          `product:${slug}`,
+          "products:all",
+          `products:seller:${sellerId}`
+        ];
+        // Also clear old slug if name changed
+        if (existingProduct.slug !== slug) {
+          keys.push(`product:${existingProduct.slug}`);
+          keys.push(getProductCacheKey(existingProduct.slug));
+        }
+        keys.push(getProductCacheKey(slug));
+
+        await Promise.all(keys.map(key => delCache(key)));
 
         return true;
       } catch (error: any) {
         console.error("Error updating product:", error);
         throw new Error(error.message || "Failed to update product");
-      }
-    },
-
-    updateVariantStock: async (
-      _: any,
-      { variantId, stock }: { variantId: string; stock: number },
-      ctx: GraphQLContext
-    ) => {
-      try {
-        const user = requireSeller(ctx);
-        const sellerId = user.id;
-
-        if (!variantId) throw new Error("Variant ID is required");
-
-        // 1. Authorization Check: Ensure the variant belongs to a product owned by the seller
-        const variant = await prisma.productVariant.findFirst({
-          where: {
-            id: variantId,
-            product: {
-              sellerId,
-            },
-          },
-          include: {
-            product: true,
-          },
-        });
-
-        if (!variant) {
-          throw new Error("Variant not found or unauthorized");
-        }
-
-        // Store old stock value to check if we're restocking
-        const oldStock = variant.stock;
-        const wasOutOfStock = oldStock === 0;
-        const isNowInStock = stock > 0;
-
-        // 2. Update Stock
-        await prisma.productVariant.update({
-          where: { id: variantId },
-          data: { stock },
-        });
-
-        // 3. Trigger notifications if restocking (0 → > 0)
-        if (wasOutOfStock && isNowInStock) {
-          triggerNotifications(variant.product.id, variantId, variant.product.name, variant.product.slug);
-        }
-
-        // 4. Cache Invalidation
-        await Promise.all([
-          delCache(`product:${variant.product.slug}`),
-          delCache(getProductCacheKey(variant.product.slug)),
-          delCache("products:all"),
-          delCache(`products:seller:${sellerId}`),
-        ]);
-
-        return true;
-      } catch (error: any) {
-        console.error("Error updating variant stock:", error);
-        throw new Error(error.message || "Failed to update stock");
-      }
-    },
-
-    deleteProduct: async (
-      _: any,
-      { productId }: { productId: string },
-      ctx: GraphQLContext
-    ) => {
-      const user = requireSeller(ctx);
-      const sellerId = user.id;
-      if (!productId) {
-        throw new Error("Product ID is required");
-      }
-      // console.log("prodyvt ir-->", productId);/
-      // Ensure the product exists and belongs to the seller
-      const product = await prisma.product.findUnique({
-        where: { id: productId },
-      });
-
-      if (!product) {
-        throw new Error("Product not found");
-      }
-
-      if (product.sellerId !== ctx.user!.id) {
-        throw new Error("Unauthorized: You can only delete your own products");
-      }
-
-      try {
-        // Delete will cascade to related entities based on your schema
-        const productDeleteResponse = await prisma.product.delete({
-          where: { id: productId },
-          include: {
-            variants: true,
-            images: true,
-          },
-        });
-        if (!productDeleteResponse)
-          throw new Error("Unable to to delete the product");
-
-        await Promise.all([
-          delCache(`product:${product.slug}`),
-          delCache(getProductCacheKey(product.slug)),
-          delCache("products:all"),
-          delCache(`products:seller:${sellerId}`),
-        ]);
-        return true;
-      } catch (error: any) {
-        console.error("Error deleting product:", error);
-        throw new Error(`Failed to delete product: ${error.message}`);
       }
     },
   },

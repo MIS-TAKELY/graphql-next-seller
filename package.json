@@ -90,6 +90,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "tsx": "^4.20.6",
+    "typesense": "^2.1.0",
     "vaul": "^1.1.2",
     "zod": "^4.2.1",
     "zustand": "^5.0.8"

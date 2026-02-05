@@ -1,8 +1,8 @@
-import { OpenAI } from "openai";
 
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
-    const response = await fetch(process.env.EMBEDDING_API_URL!, {
+    const EMBEDDING_API_URL = process.env.EMBEDDING_API_URL || "http://72.61.249.56:8000/embed";
+    const response = await fetch(EMBEDDING_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
