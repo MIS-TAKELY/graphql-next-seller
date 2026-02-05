@@ -158,39 +158,47 @@ export const useProduct = (variables?: {
   });
 
   // --- DELETE MUTATION ---
+  // --- DELETE MUTATION ---
   const [deleteProduct] = useMutation<
     { deleteProduct: boolean },
     { productId: string }
   >(DELETE_PRODUCT, {
     update: (cache, { data }, { variables }) => {
-      try {
-        const productId = variables?.productId;
-        if (!productId) return;
-        const existing = cache.readQuery<GetMyProductsResponse>({
-          query: GET_MY_PRODUCTS,
-        });
-        if (!existing?.getMyProducts) return;
-        const updatedProducts = existing.getMyProducts.products.filter(
-          (p: Product) => p.id !== productId
-        );
-        cache.writeQuery({
-          query: GET_MY_PRODUCTS,
-          data: {
-            getMyProducts: {
-              __typename: "getMyProductsResponse",
+      const productId = variables?.productId;
+      if (!productId) return;
+
+      cache.modify({
+        fields: {
+          getMyProducts(existingData = {}, { readField }) {
+            if (!existingData.products) return existingData;
+
+            const updatedProducts = existingData.products.filter(
+              (productRef: any) => readField("id", productRef) !== productId
+            );
+
+            // Update totalCount if it exists
+            const newTotalCount = existingData.totalCount
+              ? existingData.totalCount - 1
+              : existingData.totalCount;
+
+            return {
+              ...existingData,
               products: updatedProducts,
-              percentChange: existing.getMyProducts.percentChange ?? 0,
-            },
+              totalCount: newTotalCount,
+            };
           },
-        });
-      } catch (error) {
-        console.error("Error updating cache for delete:", error);
-      }
+        },
+      });
+
+      // Evict the product from the cache to ensure it's gone from all queries
+      cache.evict({ id: cache.identify({ __typename: "Product", id: productId }) });
+      cache.gc();
     },
-    optimisticResponse: () => ({
+    optimisticResponse: (vars: { productId: string }) => ({
       deleteProduct: true,
     }),
-    onError: () => {
+    onError: (error) => {
+      console.error("Delete error:", error);
       toast.error("Failed to delete product. Changes reverted.");
     },
   });
