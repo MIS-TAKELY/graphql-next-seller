@@ -41,10 +41,10 @@ export const validateStep = (
       } else {
         const description = formData.description;
 
-        // Word count: 250 - 600 words
+        // Word count: 5 - 600 words
         const wordCount = description.trim().split(/\s+/).length;
-        if (wordCount < 250 || wordCount > 600) {
-          newErrors.description = `Description must be between 250 and 600 words. Current: ${wordCount}`;
+        if (wordCount < 5 || wordCount > 600) {
+          newErrors.description = `Description must be between 5 and 600 words. Current: ${wordCount}`;
         }
 
         // No Emojis
