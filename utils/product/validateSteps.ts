@@ -19,15 +19,11 @@ export const validateStep = (
         if (formData.name.length > 70) {
           newErrors.name = "Product title must be 70 characters or less";
         }
-        // Allowed symbols: pipe (|), hypen (-), comma (,) bracket (()), colon (:)
-        // Regex: allow alphanumeric, spaces, and specific symbols.
-        // ^[a-zA-Z0-9\s|,\-():]+$ 
-        // Note: You might want to allow other common chars like . or & but user specified ONLY these symbols.
-        // Let's stick strictly to user request: "Symbols: pipe (|), hypen (-), comma (,) bracket (()), colon (:) only"
-        const validTitleRegex = /^[a-zA-Z0-9\s|,\-():]+$/;
-        if (!validTitleRegex.test(formData.name)) {
-          newErrors.name =
-            "Title can only contain letters, numbers, spaces, and: | - , ( ) :";
+        // Allowed symbols: ALL special characters allowed.
+        // Restriction: No Emojis.
+        const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/;
+        if (emojiRegex.test(formData.name)) {
+          newErrors.name = "Emojis are not allowed in the title";
         }
       }
 
@@ -48,19 +44,12 @@ export const validateStep = (
         }
 
         // No Emojis
-        // Regex for emoji ranges is complex. Using a common range set.
         const emojiRegex = /(\u00a9|\u00ae|[\u2000-\u3300]|\ud83c[\ud000-\udfff]|\ud83d[\ud000-\udfff]|\ud83e[\ud000-\udfff])/;
         if (emojiRegex.test(description)) {
           newErrors.description = "Emojis are not allowed in the description";
         }
 
-        // No All-Caps
-        // Check if there are letters, and if all letters are uppercase.
-        // Ignore non-letters.
-        const letters = description.replace(/[^a-zA-Z]/g, "");
-        if (letters.length > 0 && letters === letters.toUpperCase()) {
-          newErrors.description = "Description cannot be in all capital letters";
-        }
+        // All-Caps check removed.
       }
       break;
 

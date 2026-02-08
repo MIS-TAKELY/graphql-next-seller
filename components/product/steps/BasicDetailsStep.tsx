@@ -139,7 +139,7 @@ export const BasicDetailsStep = React.memo(
                                 {formData.name?.length || 0}/70 characters
                             </div>
                             <p className="text-[10px] text-muted-foreground mt-1">
-                                Allowed symbols: | - , ( ) :
+                                No emojis. Special characters allowed.
                             </p>
                         </div>
                     </FormField>
@@ -281,7 +281,7 @@ export const BasicDetailsStep = React.memo(
                             {(formData.description?.trim().split(/\s+/).filter(Boolean).length || 0)} words (Min: 5, Max: 600)
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-1">
-                            No emojis, No all-caps.
+                            No emojis.
                         </p>
                     </div>
                 </FormField>
