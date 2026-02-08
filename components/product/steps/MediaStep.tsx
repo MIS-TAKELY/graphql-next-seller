@@ -169,7 +169,7 @@ export const MediaStep = React.memo(
               onReorder={(activeIndex, overIndex) =>
                 handleReorder(activeIndex, overIndex, "productMedia")
               }
-              maxFiles={10}
+              maxFiles={20}
               allowVideo
               maxFilesSize={25 * 1024 * 1024}
             />
@@ -196,7 +196,7 @@ export const MediaStep = React.memo(
               onReorder={(activeIndex, overIndex) =>
                 handleReorder(activeIndex, overIndex, "promotionalMedia")
               }
-              maxFiles={5}
+              maxFiles={20}
               allowVideo
               maxFilesSize={25 * 1024 * 1024}
             />
