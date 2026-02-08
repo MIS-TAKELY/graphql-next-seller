@@ -50,6 +50,8 @@ export const transformProductToFormData = (product: Product): FormData => {
       value: spec.value,
     })) || [];
 
+  const specificationTable = firstVariant.specificationTable || product.specificationTable;
+
   // Get offer data if exists
   const offer = product.productOffers?.[0]?.offer;
 
@@ -96,6 +98,7 @@ export const transformProductToFormData = (product: Product): FormData => {
       key: spec.key,
       value: spec.value,
     })),
+    specificationTable: variant.specificationTable,
   })) || [];
 
   // Transform delivery options
@@ -120,6 +123,7 @@ export const transformProductToFormData = (product: Product): FormData => {
     // Specifications
     features: product.features || [],
     specifications,
+    specificationTable,
     specificationDisplayFormat: product.specificationDisplayFormat || "bullet",
 
     // Pricing & Inventory

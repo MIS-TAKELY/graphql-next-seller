@@ -35,10 +35,7 @@ export interface ProductVariantData {
   attributes: Record<string, string>;
   isDefault: boolean;
   specifications?: Array<{ key: string; value: string }>;
-  specificationTable?: {
-    headers: string[];
-    rows: string[][];
-  };
+  specificationTable?: any;
 }
 
 export interface DeliveryOptionData {
@@ -82,10 +79,7 @@ export interface FormData {
     key: string;
     value: string;
   }>;
-  specificationTable?: {
-    headers: string[];
-    rows: string[][];
-  };
+  specificationTable?: any;
   specificationDisplayFormat: "bullet" | "table" | "custom_table";
 
   // Offers

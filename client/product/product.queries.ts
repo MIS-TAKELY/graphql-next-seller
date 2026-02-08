@@ -66,6 +66,7 @@ export const GET_PRODUCT = gql`
       }
       brand
       specificationDisplayFormat
+      specificationTable
       variants {
         sku
         price
@@ -73,6 +74,7 @@ export const GET_PRODUCT = gql`
         mrp
         stock
         attributes
+        specificationTable
         specifications {
           key
           value
