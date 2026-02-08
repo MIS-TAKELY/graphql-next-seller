@@ -124,15 +124,24 @@ export const BasicDetailsStep = React.memo(
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField label="Product Title" error={errors.name} required>
-            <ValidatedInput
-              placeholder="Enter product title"
-              value={formData.name || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                updateFormData("name", e.target.value);
-                updateFormData("name", e.target.value);
-              }}
-              error={errors.name}
-            />
+            <div className="relative">
+              <ValidatedInput
+                placeholder="Enter product title"
+                value={formData.name || ""}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                  updateFormData("name", e.target.value);
+                }}
+                error={errors.name}
+              />
+              <div className={cn("text-xs text-right mt-1",
+                (formData.name?.length || 0) > 70 ? "text-red-500" : "text-muted-foreground"
+              )}>
+                {formData.name?.length || 0}/70 characters
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Allowed symbols: | - , ( ) :
+              </p>
+            </div>
           </FormField>
 
           <FormField label="Brand" error={errors.brand}>
@@ -253,15 +262,28 @@ export const BasicDetailsStep = React.memo(
           error={errors.description}
           required
         >
-          <ValidatedTextarea
-            placeholder="Describe your product..."
-            className="min-h-[120px]"
-            value={formData.description}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-              updateFormData("description", e.target.value)
-            }
-            error={errors.description}
-          />
+          <div className="relative">
+            <ValidatedTextarea
+              placeholder="Describe your product... (250-600 words)"
+              className="min-h-[120px]"
+              value={formData.description}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                updateFormData("description", e.target.value)
+              }
+              error={errors.description}
+            />
+            <div className={cn("text-xs text-right mt-1",
+              (() => {
+                const count = formData.description?.trim().split(/\s+/).filter(Boolean).length || 0;
+                return (count < 250 || count > 600) ? "text-red-500" : "text-muted-foreground";
+              })()
+            )}>
+              {(formData.description?.trim().split(/\s+/).filter(Boolean).length || 0)} words (Min: 250, Max: 600)
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              No emojis, No all-caps.
+            </p>
+          </div>
         </FormField>
       </div>
     );
