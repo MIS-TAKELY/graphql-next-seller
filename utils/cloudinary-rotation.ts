@@ -51,7 +51,8 @@ export async function uploadBufferWithRotation(
     buffer: Buffer,
     filename?: string,
     mimeType: string = "image/webp",
-    maxRetries: number = 3
+    maxRetries: number = 3,
+    resourceType: "image" | "video" | "raw" | "auto" = "auto"
 ): Promise<any> {
     let lastError: Error | null = null;
 
@@ -61,24 +62,31 @@ export async function uploadBufferWithRotation(
 
             const formData = new FormData();
             const blob = new Blob([buffer as any], { type: mimeType });
-            formData.append("file", blob, filename || "image");
+            formData.append("file", blob, filename || (resourceType === "video" ? "video.mp4" : "image.webp"));
             formData.append("upload_preset", account.uploadPreset);
 
             if (process.env.NODE_ENV === 'development') {
-                console.log(`[Cloudinary] Uploading to account ${account.index} (${account.cloudName})`);
+                console.log(`[Cloudinary] Uploading ${resourceType} to account ${account.index} (${account.cloudName}) - Attempt ${attempt + 1}`);
             }
 
+            // Create an AbortController for the timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 seconds timeout
+
             const response = await fetch(
-                `https://api.cloudinary.com/v1_1/${account.cloudName}/auto/upload`,
+                `https://api.cloudinary.com/v1_1/${account.cloudName}/${resourceType}/upload`,
                 {
                     method: "POST",
                     body: formData,
+                    signal: controller.signal
                 }
             );
 
+            clearTimeout(timeoutId);
+
             if (!response.ok) {
                 const errorText = await response.text();
-                throw new Error(`Upload failed: ${response.statusText} - ${errorText}`);
+                throw new Error(`Cloudinary API Error: ${response.status} ${response.statusText} - ${errorText}`);
             }
 
             const data = await response.json();
@@ -88,9 +96,11 @@ export async function uploadBufferWithRotation(
             }
 
             return data;
-        } catch (error) {
-            lastError = error as Error;
-            console.error(`[Cloudinary] Upload attempt ${attempt + 1} failed:`, error);
+        } catch (error: any) {
+            lastError = error;
+
+            const isTimeout = error.name === 'AbortError';
+            console.error(`[Cloudinary] Upload attempt ${attempt + 1} failed ${isTimeout ? '(TIMEOUT)' : ''}:`, error.message);
 
             // If this is the last attempt, throw the error
             if (attempt === maxRetries - 1) {
@@ -98,11 +108,12 @@ export async function uploadBufferWithRotation(
             }
 
             // Wait briefly before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
+            const delay = Math.pow(2, attempt) * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
         }
     }
 
     throw new Error(
-        `Failed to upload after ${maxRetries} attempts. Last error: ${lastError?.message || 'Unknown error'}`
+        `Failed to upload to Cloudinary after ${maxRetries} attempts. Last error: ${lastError?.message || 'Unknown error'}`
     );
 }
