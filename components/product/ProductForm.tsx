@@ -237,7 +237,6 @@ export function ProductForm({
 
     if (hasPendingMedia) {
       if (!pendingSubmitStatus) {
-        toast.info("Waiting for uploads to finish...");
         setPendingSubmitStatus(status);
       }
       return;
@@ -298,9 +297,11 @@ export function ProductForm({
       <FullScreenLoader
         isLoading={loadingState}
         message={
-          mode === "edit"
-            ? "Updating your product..."
-            : "Creating your product..."
+          !!pendingSubmitStatus
+            ? "Finishing uploads..."
+            : mode === "edit"
+              ? "Updating your product..."
+              : "Creating your product..."
         }
         showProgress={true}
         steps={LOADING_STEPS}
