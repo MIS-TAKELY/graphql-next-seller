@@ -21,7 +21,7 @@ export const validateStep = (
         }
         // Allowed symbols: ALL special characters allowed.
         // Restriction: No Emojis.
-        const emojiRegex = /\p{Extended_Pictographic}/u;
+        const emojiRegex = /\p{Emoji_Presentation}/u;
         if (emojiRegex.test(formData.name)) {
           newErrors.name = "Emojis are not allowed in the title";
         }
@@ -44,7 +44,7 @@ export const validateStep = (
         }
 
         // No Emojis
-        const emojiRegex = /\p{Extended_Pictographic}/u;
+        const emojiRegex = /\p{Emoji_Presentation}/u;
         if (emojiRegex.test(description)) {
           newErrors.description = "Emojis are not allowed in the description";
         }
