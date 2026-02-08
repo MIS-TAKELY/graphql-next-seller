@@ -2,7 +2,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { FormNavigation } from "@/components/product/FormNavigation";
@@ -138,6 +138,23 @@ export function ProductForm({
   );
 
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [pendingSubmitStatus, setPendingSubmitStatus] = useState<ProductStatus | null>(null);
+
+  // Effect to handle auto-submission when uploads complete
+  useEffect(() => {
+    if (pendingSubmitStatus) {
+      const hasPendingMedia = [...formData.productMedia, ...formData.promotionalMedia].some(
+        (media) => media.url.startsWith("blob:") || media.pending
+      );
+
+      if (!hasPendingMedia) {
+        // All uploads finished, proceed to submit
+        const status = pendingSubmitStatus;
+        setPendingSubmitStatus(null);
+        handleSubmit(status);
+      }
+    }
+  }, [formData.productMedia, formData.promotionalMedia, pendingSubmitStatus]);
 
   const updateFormData = <K extends keyof FormData>(
     field: K,
@@ -209,16 +226,20 @@ export function ProductForm({
   const handleSubmit = async (status: ProductStatus) => {
     // Validate all steps first
     if (!validateAllSteps()) {
+      setPendingSubmitStatus(null); // Reset if validation fails
       return;
     }
 
     // Check for pending uploads
     const hasPendingMedia = [...formData.productMedia, ...formData.promotionalMedia].some(
-      (media) => media.url.startsWith("blob:")
+      (media) => media.url.startsWith("blob:") || media.pending
     );
 
     if (hasPendingMedia) {
-      toast.error("Please wait for all media to finish uploading before publishing.");
+      if (!pendingSubmitStatus) {
+        toast.info("Waiting for uploads to finish...");
+        setPendingSubmitStatus(status);
+      }
       return;
     }
 
@@ -270,7 +291,7 @@ export function ProductForm({
     }
   };
 
-  const loadingState = isSubmitting || externalIsSubmitting || false;
+  const loadingState = isSubmitting || externalIsSubmitting || !!pendingSubmitStatus || false;
 
   return (
     <>
