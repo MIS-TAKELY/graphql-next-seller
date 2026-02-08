@@ -406,8 +406,8 @@ export const useSellerChat = (conversationId?: string | null) => {
       setError(null);
 
       try {
-        const tooBig = files?.find((f) => f.size > 10 * 1024 * 1024);
-        if (tooBig) throw new Error(`"${tooBig.name}" exceeds 10MB limit`);
+        const tooBig = files?.find((f) => f.size > 50 * 1024 * 1024);
+        if (tooBig) throw new Error(`"${tooBig.name}" exceeds 50MB limit`);
 
         const uploadedAttachments = files?.length
           ? await uploadFilesToStorage(files)

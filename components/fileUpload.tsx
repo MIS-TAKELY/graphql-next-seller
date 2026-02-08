@@ -288,7 +288,7 @@ export function FileUpload({
             Choose Files
           </Button>
           <p className="mt-2 text-sm text-muted-foreground">
-            {allowVideo ? "Images and videos" : "Images only"} up to 10MB each.{" "}
+            {allowVideo ? "Images and videos" : "Images only"} up to 50MB each.{" "}
             {value.length}/{maxFiles} uploaded.
           </p>
         </div>

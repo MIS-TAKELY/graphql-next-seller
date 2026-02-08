@@ -10,6 +10,7 @@ const publicRoutes = [
 ];
 
 export default async function middleware(request: NextRequest) {
+    console.log(`[Middleware] Processing ${request.method} ${request.nextUrl.pathname}`);
     const { nextUrl } = request;
 
     // Enforce canonical domain (seller.vanijay.com)
