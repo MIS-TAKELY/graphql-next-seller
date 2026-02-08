@@ -257,9 +257,8 @@ export function ProductForm({
       console.log("input after change-->", input)
       await onSubmit(input, status);
 
-      const actionText = mode === "edit" ? "updated" : "created";
-      const statusText = status === ProductStatus.DRAFT ? "draft" : "published";
-      toast.success(`Product ${actionText} and ${statusText} successfully!`);
+      await onSubmit(input, status);
+
     } catch (err: unknown) {
       console.error("Submit error:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to save product";
