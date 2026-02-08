@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { File, Upload, X, GripVertical } from "lucide-react";
+import { toast } from "sonner";
 import React, { useCallback, useState } from "react";
 import {
   DndContext,
@@ -36,6 +37,7 @@ interface FileUploadProps {
   onRemove?: (index: number) => void;
   onReorder?: (activeIndex: number, overIndex: number) => void;
   maxFiles?: number;
+  maxFilesSize?: number; // In bytes
   className?: string;
   allowVideo?: boolean;
   disabled?: boolean;
@@ -154,6 +156,7 @@ export function FileUpload({
   onRemove,
   onReorder,
   maxFiles = 10,
+  maxFilesSize = 50 * 1024 * 1024, // Default 50MB
   className,
   allowVideo = false,
   disabled = false,
@@ -185,6 +188,10 @@ export function FileUpload({
             file.type.startsWith("image/") ||
             (allowVideo && file.type.startsWith("video/"))
           ) {
+            if (file.size > maxFilesSize) {
+              toast.error(`File ${file.name} is too large. Max size is ${Math.round(maxFilesSize / (1024 * 1024))}MB.`);
+              return;
+            }
             newFiles.push({
               file,
               preview: URL.createObjectURL(file),
@@ -288,7 +295,7 @@ export function FileUpload({
             Choose Files
           </Button>
           <p className="mt-2 text-sm text-muted-foreground">
-            {allowVideo ? "Images and videos" : "Images only"} up to 50MB each.{" "}
+            {allowVideo ? "Images and videos" : "Images only"} up to {Math.round(maxFilesSize / (1024 * 1024))}MB each.{" "}
             {value.length}/{maxFiles} uploaded.
           </p>
         </div>

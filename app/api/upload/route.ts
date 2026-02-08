@@ -26,6 +26,7 @@ const ALLOWED_VIDEO_TYPES = [
 
 // Maximum file size: 50MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB in bytes
+const MAX_VIDEO_SIZE = 25 * 1024 * 1024; // 25MB in bytes
 
 // Helper to upload buffer to Cloudinary with rotation
 import { uploadBufferWithRotation } from "@/utils/cloudinary-rotation";
@@ -73,11 +74,19 @@ export async function POST(req: NextRequest) {
 
         const buffer = Buffer.from(await file.arrayBuffer());
 
-        // Validate file size (50MB max)
+        // Validate file size (50MB max global, 25MB for videos)
         if (buffer.length > MAX_FILE_SIZE) {
             console.error(`[API Upload] File too large: ${buffer.length} bytes`);
             return NextResponse.json(
                 { error: `File size exceeds maximum limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB` },
+                { status: 413 }
+            );
+        }
+
+        if (isVideo && buffer.length > MAX_VIDEO_SIZE) {
+            console.error(`[API Upload] Video too large: ${buffer.length} bytes`);
+            return NextResponse.json(
+                { error: `Video size exceeds maximum limit of ${MAX_VIDEO_SIZE / (1024 * 1024)}MB` },
                 { status: 413 }
             );
         }

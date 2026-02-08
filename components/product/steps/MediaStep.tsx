@@ -171,6 +171,7 @@ export const MediaStep = React.memo(
               }
               maxFiles={10}
               allowVideo
+              maxFilesSize={25 * 1024 * 1024}
             />
           </FormField>
         </Card>
@@ -197,6 +198,7 @@ export const MediaStep = React.memo(
               }
               maxFiles={5}
               allowVideo
+              maxFilesSize={25 * 1024 * 1024}
             />
           </FormField>
         </Card>
