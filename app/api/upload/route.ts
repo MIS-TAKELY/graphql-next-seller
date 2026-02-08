@@ -4,7 +4,7 @@ import sharp from "sharp";
 
 // Configure route to accept larger files (10MB)
 export const runtime = 'nodejs';
-export const maxDuration = 60; // 60 seconds timeout for large file processing
+export const maxDuration = 300; // 300 seconds (5 mins) timeout for large file processing
 
 // Allowed image MIME types (secure formats)
 const ALLOWED_IMAGE_TYPES = [

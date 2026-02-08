@@ -65,9 +65,7 @@ export async function uploadBufferWithRotation(
             formData.append("file", blob, filename || (resourceType === "video" ? "video.mp4" : "image.webp"));
             formData.append("upload_preset", account.uploadPreset);
 
-            if (process.env.NODE_ENV === 'development') {
-                console.log(`[Cloudinary] Uploading ${resourceType} to account ${account.index} (${account.cloudName}) - Attempt ${attempt + 1}`);
-            }
+            console.log(`[Cloudinary] Uploading ${resourceType} to account ${account.index} (${account.cloudName}) - Attempt ${attempt + 1}`);
 
             // Create an AbortController for the timeout
             const controller = new AbortController();
@@ -91,9 +89,7 @@ export async function uploadBufferWithRotation(
 
             const data = await response.json();
 
-            if (process.env.NODE_ENV === 'development') {
-                console.log(`[Cloudinary] Upload successful to account ${account.index}`);
-            }
+            console.log(`[Cloudinary] Upload successful to account ${account.index}`);
 
             return data;
         } catch (error: any) {

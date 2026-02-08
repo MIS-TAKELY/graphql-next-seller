@@ -11,9 +11,9 @@ export const uploadToCloudinary = async (file: File, type: "product" | "banner" 
 
   console.log(`[Upload] Starting upload: name=${file.name}, type=${file.type}, size=${file.size}`);
 
-  // 2. Timeout (60 seconds) - Prevent infinite hanging
+  // 2. Timeout (5 minutes) - Prevent infinite hanging
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60000);
+  const timeoutId = setTimeout(() => controller.abort(), 300000);
 
   try {
     // Use local API for server-side processing (sharp)
@@ -42,7 +42,7 @@ export const uploadToCloudinary = async (file: File, type: "product" | "banner" 
   } catch (error: any) {
     clearTimeout(timeoutId);
     if (error.name === 'AbortError') {
-      console.error("[Upload] Request timed out after 60s");
+      console.error("[Upload] Request timed out after 5 minutes");
       throw new Error("Upload timed out. Please check your internet connection.");
     }
     throw error;
