@@ -212,6 +212,16 @@ export function ProductForm({
       return;
     }
 
+    // Check for pending uploads
+    const hasPendingMedia = [...formData.productMedia, ...formData.promotionalMedia].some(
+      (media) => media.url.startsWith("blob:")
+    );
+
+    if (hasPendingMedia) {
+      toast.error("Please wait for all media to finish uploading before publishing.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
