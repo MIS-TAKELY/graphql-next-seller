@@ -2,7 +2,7 @@
 "use client";
 import { GET_SALES_ANALYTICS } from "@/client/analytics/analytics.queries";
 import { useQuery } from "@apollo/client";
-import { DollarSign, ShoppingCart } from "lucide-react";
+import { Banknote, ShoppingCart } from "lucide-react";
 import {
   CartesianGrid,
   Legend,
@@ -61,19 +61,19 @@ export default function SalesTab({ period, chartConfig }: SalesTabProps) {
           title="Daily Sales"
           value={metrics.dailySales.formatted}
           description="Today's sales"
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
         />
         <MetricCard
           title="Weekly Sales"
           value={metrics.weeklySales.formatted}
           description="This week's sales"
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
         />
         <MetricCard
           title="Monthly Sales"
           value={metrics.monthlySales.formatted}
           description="This month's sales"
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
         />
         <MetricCard
           title="Average Order"
@@ -90,17 +90,17 @@ export default function SalesTab({ period, chartConfig }: SalesTabProps) {
       >
         <LineChart data={salesTrends}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="name" 
+          <XAxis
+            dataKey="name"
             tick={{ fontSize: 12 }}
             className="text-xs sm:text-sm"
           />
-          <YAxis 
+          <YAxis
             tick={{ fontSize: 12 }}
             className="text-xs sm:text-sm"
           />
           <ChartTooltip content={<ChartTooltipContent />} />
-          <Legend 
+          <Legend
             wrapperStyle={{ fontSize: '12px' }}
             className="text-xs sm:text-sm"
           />

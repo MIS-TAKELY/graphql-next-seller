@@ -2,7 +2,7 @@
 "use client";
 import { GET_CUSTOMERS_ANALYTICS } from "@/client/analytics/analytics.queries";
 import { useQuery } from "@apollo/client";
-import { DollarSign, Users } from "lucide-react";
+import { Banknote, Users } from "lucide-react";
 import {
   Area,
   AreaChart,
@@ -76,12 +76,9 @@ export default function CustomersTab({ period, chartConfig }: CustomersTabProps)
         />
         <MetricCard
           title="Customer LTV"
-          value={new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-          }).format(metrics.averageLifetimeValue)}
+          value={`रू ${metrics.averageLifetimeValue.toLocaleString()}`}
           description="Average lifetime value"
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
         />
       </div>
       <ChartCard
@@ -92,12 +89,12 @@ export default function CustomersTab({ period, chartConfig }: CustomersTabProps)
       >
         <AreaChart data={customerAcquisition}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="name" 
+          <XAxis
+            dataKey="name"
             tick={{ fontSize: 12 }}
             className="text-xs sm:text-sm"
           />
-          <YAxis 
+          <YAxis
             tick={{ fontSize: 12 }}
             className="text-xs sm:text-sm"
           />

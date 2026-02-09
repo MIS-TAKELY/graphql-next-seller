@@ -6,7 +6,7 @@ import {
 } from "@/client/dashboard/dashboard.query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getServerApolloClient } from "@/lib/apollo/apollo-server-client";
-import { DollarSign, Package, ShoppingCart, Users } from "lucide-react";
+import { Banknote, Package, ShoppingCart, Users } from "lucide-react";
 import { getCachedData, setCachedData } from "@/lib/cache";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
@@ -57,12 +57,12 @@ export async function DashboardOverview() {
           <CardTitle className="text-xs sm:text-sm font-medium">
             Total Revenue
           </CardTitle>
-          <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+          <Banknote className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
         </CardHeader>
         {revenueData && (
           <CardContent>
             <div className="text-lg sm:text-xl md:text-2xl font-bold">
-              {revenueData?.getTotalRevenue?.currentRevenue}
+              रू {revenueData?.getTotalRevenue?.currentRevenue}
             </div>
             <p className="text-xs text-muted-foreground">
               {revenueData?.getTotalRevenue?.percentChange}% from last month

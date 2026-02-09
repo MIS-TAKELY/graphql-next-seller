@@ -68,10 +68,7 @@ export default function CustomerSection({ customers }: CustomerSectionProps) {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+    return `रू ${amount.toLocaleString()}`;
   };
 
   const getInitials = (firstName: string | null, lastName: string | null) => {

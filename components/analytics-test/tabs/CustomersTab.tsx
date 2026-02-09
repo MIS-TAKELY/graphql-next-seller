@@ -1,5 +1,5 @@
 "use client"
-import { Users, DollarSign } from "lucide-react"
+import { Users, Banknote } from "lucide-react"
 import { MetricCard } from "../MetricCard"
 import { CustomerAcquisitionChart } from "../charts/CustomerAcquisitionChart"
 
@@ -31,7 +31,7 @@ export function CustomersTab({ salesData }: CustomersTabProps) {
       title: "Customer LTV",
       value: "रू 324",
       description: "Average lifetime value",
-      icon: DollarSign
+      icon: Banknote
     }
   ]
 

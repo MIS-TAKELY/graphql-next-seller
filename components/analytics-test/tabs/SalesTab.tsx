@@ -1,6 +1,6 @@
 "use client"
 
-import { DollarSign, ShoppingCart } from "lucide-react"
+import { Banknote, ShoppingCart } from "lucide-react"
 import { MetricCard } from "../MetricCard"
 import { SalesTrendsChart } from "../charts/SalesTrendsChart"
 
@@ -14,19 +14,19 @@ export function SalesTab({ salesData }: SalesTabProps) {
       title: "Daily Sales",
       value: "रू 1,234",
       description: "Today's sales",
-      icon: DollarSign
+      icon: Banknote
     },
     {
       title: "Weekly Sales",
       value: "रू 8,642",
       description: "This week's sales",
-      icon: DollarSign
+      icon: Banknote
     },
     {
       title: "Monthly Sales",
       value: "रू 45,231",
       description: "This month's sales",
-      icon: DollarSign
+      icon: Banknote
     },
     {
       title: "Average Order",

@@ -91,7 +91,7 @@ export function RecentOrders() {
             </div>
             <div className="ml-auto font-medium">
               <div className="text-right">
-                <div className="text-sm">रू {order.order?.total}</div>
+                <div className="text-sm">रू {order.total}</div>
                 <Badge
                   variant={
                     order.status === "DELIVERED"

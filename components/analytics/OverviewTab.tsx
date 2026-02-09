@@ -2,7 +2,7 @@
 "use client";
 import { GET_OVERVIEW_ANALYTICS } from "@/client/analytics/analytics.queries";
 import { useQuery } from "@apollo/client";
-import { DollarSign, ShoppingCart, TrendingUp, Users } from "lucide-react";
+import { Banknote, ShoppingCart, TrendingUp, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Area,
@@ -86,10 +86,7 @@ export default function OverviewTab({ period, chartConfig }: OverviewTabProps) {
     type: "currency" | "number" | "percent" = "number"
   ) => {
     if (type === "currency") {
-      return new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-      }).format(value);
+      return `रू ${value.toLocaleString()}`;
     }
     if (type === "percent") {
       return `${value.toFixed(1)}%`;
@@ -111,7 +108,7 @@ export default function OverviewTab({ period, chartConfig }: OverviewTabProps) {
           description={`${formatTrend(
             metrics.totalRevenue.percentChange
           )} from previous period`}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          icon={<Banknote className="h-4 w-4 text-muted-foreground" />}
           trend={{
             value: formatTrend(metrics.totalRevenue.percentChange),
             isPositive: metrics.totalRevenue.percentChange >= 0,

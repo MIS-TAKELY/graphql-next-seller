@@ -1,6 +1,6 @@
 "use client"
 
-import { DollarSign, ShoppingCart, TrendingUp, Users } from "lucide-react"
+import { Banknote, ShoppingCart, TrendingUp, Users } from "lucide-react"
 import { MetricCard } from "../MetricCard"
 import { RevenueChart } from "../charts/RevenueChart"
 import { TopProductsChart } from "../charts/TopProductsChart"
@@ -15,7 +15,7 @@ export function OverviewTab({ salesData, productData }: OverviewTabProps) {
     {
       title: "Total Revenue",
       value: "रू 45,231.89",
-      icon: DollarSign,
+      icon: Banknote,
       trend: { value: "+20.1% from last month", isPositive: true }
     },
     {

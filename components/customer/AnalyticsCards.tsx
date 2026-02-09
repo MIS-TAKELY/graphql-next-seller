@@ -21,10 +21,7 @@ const AnalyticsCards: React.FC<AnalyticsCardsProps> = ({
   const openDisputes = disputes.filter((d: any) => d.status === "open").length;
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(amount);
+    return `रू ${amount.toLocaleString()}`;
   };
 
   return (

@@ -98,18 +98,13 @@ export function TopProducts() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top Products</CardTitle>
+        <CardTitle>Top Products (Nepal Rupee)</CardTitle>
         <CardDescription>Your best performing items</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {products.map((product, index) => {
           const progress = maxRevenue > 0 ? (product.totalRevenue / maxRevenue) * 100 : 0;
-          const revenueFormatted = new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          }).format(product.totalRevenue);
+          const revenueFormatted = `रु ${product.totalRevenue.toLocaleString()}`;
 
           return (
             <div key={product.productId} className="space-y-3">
