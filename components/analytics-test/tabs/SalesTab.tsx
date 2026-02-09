@@ -12,25 +12,25 @@ export function SalesTab({ salesData }: SalesTabProps) {
   const salesMetrics = [
     {
       title: "Daily Sales",
-      value: "$1,234",
+      value: "रू 1,234",
       description: "Today's sales",
       icon: DollarSign
     },
     {
       title: "Weekly Sales",
-      value: "$8,642",
+      value: "रू 8,642",
       description: "This week's sales",
       icon: DollarSign
     },
     {
       title: "Monthly Sales",
-      value: "$45,231",
+      value: "रू 45,231",
       description: "This month's sales",
       icon: DollarSign
     },
     {
       title: "Average Order",
-      value: "$89.50",
+      value: "रू 89.50",
       description: "Average order value",
       icon: ShoppingCart
     }

@@ -167,11 +167,11 @@ export const ProductPreview = React.memo(
               <div className="space-y-2 p-4 rounded-2xl bg-muted/30 border border-border/50 transition-all duration-300">
                 <div className="flex items-baseline gap-3">
                   <span className="text-3xl font-black text-primary">
-                    NPR {price.toLocaleString()}
+                    रू {price.toLocaleString()}
                   </span>
                   {mrp > price && (
                     <span className="text-lg text-muted-foreground line-through decoration-red-500/50">
-                      NPR {mrp.toLocaleString()}
+                      रू {mrp.toLocaleString()}
                     </span>
                   )}
                 </div>

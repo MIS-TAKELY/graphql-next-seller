@@ -32,9 +32,9 @@ export const PricingStep = React.memo(
         case "PERCENTAGE":
           if (!value) return "N/A";
           const discount = (price * value) / 100;
-          return `NPR ${discount.toFixed(2)}`;
+          return `रू ${discount.toFixed(2)}`;
         case "FIXED_AMOUNT":
-          return value ? `NPR ${value.toFixed(2)}` : "N/A";
+          return value ? `रू ${value.toFixed(2)}` : "N/A";
         default:
           return "N/A";
       }
@@ -49,7 +49,7 @@ export const PricingStep = React.memo(
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
-              label="Sale Price (NPR)"
+              label="Sale Price (रू)"
               error={errors.price}
               required
             >
@@ -65,7 +65,7 @@ export const PricingStep = React.memo(
               />
             </FormField>
             <FormField
-              label="Maximum Retail Price (NPR)"
+              label="Maximum Retail Price (रू)"
               error={errors.price}
               required
             >
@@ -170,7 +170,7 @@ export const PricingStep = React.memo(
                     <SelectContent className="bg-white dark:bg-black text-gray-900 dark:text-gray-100">
                       <SelectItem value="PERCENTAGE">Percentage (%)</SelectItem>
                       <SelectItem value="FIXED_AMOUNT">
-                        Fixed Amount (NPR)
+                        Fixed Amount (रू)
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -196,41 +196,41 @@ export const PricingStep = React.memo(
                 </FormField>
                 {(formData.offerType === "PERCENTAGE" ||
                   formData.offerType === "FIXED_AMOUNT") && (
-                  <FormField
-                    label={
-                      formData.offerType === "PERCENTAGE"
-                        ? "Percentage Value"
-                        : "Fixed Amount (NPR)"
-                    }
-                    error={errors.offerValue}
-                    required
-                  >
-                    <ValidatedInput
-                      type="number"
-                      placeholder={
+                    <FormField
+                      label={
                         formData.offerType === "PERCENTAGE"
-                          ? "e.g., 20"
-                          : "e.g., 500"
-                      }
-                      value={formData.offerValue}
-                      onChange={(e) =>
-                        updateFormData("offerValue", e.target.value)
+                          ? "Percentage Value"
+                          : "Fixed Amount (रू)"
                       }
                       error={errors.offerValue}
-                      min="0"
-                      step={formData.offerType === "PERCENTAGE" ? "1" : "0.01"}
-                      max={
-                        formData.offerType === "PERCENTAGE" ? "100" : undefined
-                      }
-                      className="bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
-                    />
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {formData.offerType === "PERCENTAGE"
-                        ? "Enter percentage (e.g., 20 for 20%)"
-                        : "Enter amount in NPR"}
-                    </p>
-                  </FormField>
-                )}
+                      required
+                    >
+                      <ValidatedInput
+                        type="number"
+                        placeholder={
+                          formData.offerType === "PERCENTAGE"
+                            ? "e.g., 20"
+                            : "e.g., 500"
+                        }
+                        value={formData.offerValue}
+                        onChange={(e) =>
+                          updateFormData("offerValue", e.target.value)
+                        }
+                        error={errors.offerValue}
+                        min="0"
+                        step={formData.offerType === "PERCENTAGE" ? "1" : "0.01"}
+                        max={
+                          formData.offerType === "PERCENTAGE" ? "100" : undefined
+                        }
+                        className="bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 border-gray-300 dark:border-gray-600"
+                      />
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                        {formData.offerType === "PERCENTAGE"
+                          ? "Enter percentage (e.g., 20 for 20%)"
+                          : "Enter amount in रू"}
+                      </p>
+                    </FormField>
+                  )}
                 <FormField
                   label="Start Date"
                   error={errors.offerStart}

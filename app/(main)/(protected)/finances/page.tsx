@@ -9,18 +9,18 @@ const transactions = [
   {
     id: "TXN-001",
     type: "sale",
-    amount: "$299.99",
-    fee: "$8.99",
-    net: "$291.00",
+    amount: "रू 299.99",
+    fee: "रू 8.99",
+    net: "रू 291.00",
     date: "2024-01-15",
     status: "completed",
   },
   {
     id: "TXN-002",
     type: "refund",
-    amount: "-$149.99",
-    fee: "-$4.50",
-    net: "-$145.49",
+    amount: "-रू 149.99",
+    fee: "-रू 4.50",
+    net: "-रू 145.49",
     date: "2024-01-14",
     status: "completed",
   },
@@ -44,7 +44,7 @@ export default function FinancesPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$45,231.89</div>
+            <div className="text-2xl font-bold">रू 45,231.89</div>
             <p className="text-xs text-muted-foreground">+20.1% from last month</p>
           </CardContent>
         </Card>
@@ -54,7 +54,7 @@ export default function FinancesPage() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$2,350.00</div>
+            <div className="text-2xl font-bold">रू 2,350.00</div>
             <p className="text-xs text-muted-foreground">Next payout in 2 days</p>
           </CardContent>
         </Card>
@@ -64,7 +64,7 @@ export default function FinancesPage() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$1,234.56</div>
+            <div className="text-2xl font-bold">रू 1,234.56</div>
             <p className="text-xs text-muted-foreground">Platform & payment fees</p>
           </CardContent>
         </Card>
@@ -74,7 +74,7 @@ export default function FinancesPage() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">$43,997.33</div>
+            <div className="text-2xl font-bold">रू 43,997.33</div>
             <p className="text-xs text-muted-foreground">After fees & refunds</p>
           </CardContent>
         </Card>
@@ -159,14 +159,14 @@ export default function FinancesPage() {
                     <div className="font-medium">Platform Fee</div>
                     <div className="text-sm text-muted-foreground">2.9% per transaction</div>
                   </div>
-                  <div className="font-medium">$892.34</div>
+                  <div className="font-medium">रू 892.34</div>
                 </div>
                 <div className="flex justify-between items-center p-3 border rounded-lg">
                   <div>
                     <div className="font-medium">Payment Processing</div>
-                    <div className="text-sm text-muted-foreground">0.3% + $0.30 per transaction</div>
+                    <div className="text-sm text-muted-foreground">0.3% + रू 0.30 per transaction</div>
                   </div>
-                  <div className="font-medium">$342.22</div>
+                  <div className="font-medium">रू 342.22</div>
                 </div>
               </div>
             </CardContent>

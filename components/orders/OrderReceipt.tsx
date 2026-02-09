@@ -17,7 +17,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
         const formatPrice = (amount: number | string | undefined | null) => {
             if (amount === undefined || amount === null) return 'N/A';
             const value = typeof amount === 'number' ? amount : parseFloat(amount);
-            return isNaN(value) ? 'N/A' : `NPR ${value.toLocaleString()}`;
+            return isNaN(value) ? 'N/A' : `रू ${value.toLocaleString()}`;
         };
 
         const parseAddress = (address: any): AddressSnapshot | null => {

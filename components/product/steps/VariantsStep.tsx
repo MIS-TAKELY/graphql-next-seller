@@ -195,9 +195,9 @@ export const VariantsStep = ({
         <Card className="border-none bg-muted/20">
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <FormField label="Sale Price (NPR)" error={errors.price} required>
+              <FormField label="Sale Price (रू)" error={errors.price} required>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">Rs.</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">रू</span>
                   <ValidatedInput
                     type="number"
                     className="pl-10"
@@ -207,9 +207,9 @@ export const VariantsStep = ({
                   />
                 </div>
               </FormField>
-              <FormField label="MRP (NPR)" error={errors.mrp} required>
+              <FormField label="MRP (रू)" error={errors.mrp} required>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">Rs.</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-bold">रू</span>
                   <ValidatedInput
                     type="number"
                     className="pl-10"
@@ -387,8 +387,8 @@ export const VariantsStep = ({
                     <TableHeader className="bg-muted/20">
                       <TableRow>
                         <TableHead className="w-[200px] font-bold">Variant</TableHead>
-                        <TableHead className="font-bold">Price (NPR)</TableHead>
-                        <TableHead className="font-bold">MRP (NPR)</TableHead>
+                        <TableHead className="font-bold">Price (रू)</TableHead>
+                        <TableHead className="font-bold">MRP (रू)</TableHead>
                         <TableHead className="font-bold">SKU ID</TableHead>
                         <TableHead className="font-bold">Stock</TableHead>
                         <TableHead className="w-[80px] font-bold text-center">Default</TableHead>

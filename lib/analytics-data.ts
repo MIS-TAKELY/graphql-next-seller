@@ -24,7 +24,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     overview: [
       {
         title: "Total Revenue",
-        value: "$45,231.89",
+        value: "रू 45,231.89",
         trend: { value: "+20.1% from last month", isPositive: true },
       },
       // ... other metrics
@@ -32,7 +32,7 @@ export async function getAnalyticsData(): Promise<AnalyticsData> {
     sales: [
       {
         title: "Daily Sales",
-        value: "$1,234",
+        value: "रू 1,234",
         description: "Today's sales",
       },
       // ... other metrics

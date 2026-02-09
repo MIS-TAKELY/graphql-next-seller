@@ -14,7 +14,7 @@ export function OverviewTab({ salesData, productData }: OverviewTabProps) {
   const metrics = [
     {
       title: "Total Revenue",
-      value: "$45,231.89",
+      value: "रू 45,231.89",
       icon: DollarSign,
       trend: { value: "+20.1% from last month", isPositive: true }
     },

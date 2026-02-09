@@ -108,11 +108,11 @@ export function OrderTable({
 
   const formatTotal = (total: SellerOrder['total']) => {
     if (typeof total === 'number') {
-      return `NPR ${total.toFixed(2)}`;
+      return `रू ${total.toFixed(2)}`;
     }
     if (typeof total === 'string') {
       const parsed = parseFloat(total);
-      return isNaN(parsed) ? 'N/A' : `NPR ${parsed.toFixed(2)}`;
+      return isNaN(parsed) ? 'N/A' : `रू ${parsed.toFixed(2)}`;
     }
     return 'N/A';
   };

@@ -99,14 +99,14 @@ export function SalesChart() {
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(value) => `$${value.toLocaleString()}`}
+            tickFormatter={(value) => `रू ${value.toLocaleString()}`}
             domain={yAxisDomain}
             ticks={yAxisTicks}
           />
           <ChartTooltip
             content={
               <ChartTooltipContent
-                formatter={(value) => `$${value.toLocaleString()}`}
+                formatter={(value) => `रू ${value.toLocaleString()}`}
               />
             }
           />

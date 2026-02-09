@@ -9,12 +9,12 @@ export interface Order {
   email: string;
   total: string;
   status:
-    | "pending"
-    | "processing"
-    | "shipped"
-    | "delivered"
-    | "cancelled"
-    | "returned";
+  | "pending"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled"
+  | "returned";
   date: string;
   items: number;
   priority: "low" | "normal" | "high";
@@ -124,10 +124,10 @@ export interface Promotion {
   id: string;
   name: string;
   type:
-    | "featured_listing"
-    | "banner"
-    | "category_feature"
-    | "homepage_spotlight";
+  | "featured_listing"
+  | "banner"
+  | "category_feature"
+  | "homepage_spotlight";
   products: string[];
   status: "active" | "scheduled" | "completed" | "paused";
   startDate: string;
@@ -225,7 +225,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       id: "ORD-001",
       customer: "John Doe",
       email: "john@example.com",
-      total: "$299.99",
+      total: "रू 299.99",
       status: "processing",
       date: "2024-01-15",
       items: 2,
@@ -233,28 +233,28 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       shippingAddress: "123 Main St, New York, NY 10001",
       trackingNumber: "",
       products: [
-        { name: "Wireless Headphones", quantity: 1, price: "$199.99" },
-        { name: "Phone Case", quantity: 1, price: "$99.99" },
+        { name: "Wireless Headphones", quantity: 1, price: "रू 199.99" },
+        { name: "Phone Case", quantity: 1, price: "रू 99.99" },
       ],
     },
     {
       id: "ORD-002",
       customer: "Jane Smith",
       email: "jane@example.com",
-      total: "$149.99",
+      total: "रू 149.99",
       status: "shipped",
       date: "2024-01-14",
       items: 1,
       priority: "normal",
       shippingAddress: "456 Oak Ave, Los Angeles, CA 90210",
       trackingNumber: "1Z999AA1234567890",
-      products: [{ name: "Smart Watch", quantity: 1, price: "$149.99" }],
+      products: [{ name: "Smart Watch", quantity: 1, price: "रू 149.99" }],
     },
     {
       id: "ORD-003",
       customer: "Bob Johnson",
       email: "bob@example.com",
-      total: "$599.99",
+      total: "रू 599.99",
       status: "delivered",
       date: "2024-01-13",
       items: 3,
@@ -262,27 +262,27 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       shippingAddress: "789 Pine St, Chicago, IL 60601",
       trackingNumber: "1Z999AA1234567891",
       products: [
-        { name: "Laptop Stand", quantity: 2, price: "$199.99" },
-        { name: "USB-C Cable", quantity: 1, price: "$199.99" },
+        { name: "Laptop Stand", quantity: 2, price: "रू 199.99" },
+        { name: "USB-C Cable", quantity: 1, price: "रू 199.99" },
       ],
     },
     {
       id: "ORD-004",
       customer: "Alice Brown",
       email: "alice@example.com",
-      total: "$89.99",
+      total: "रू 89.99",
       status: "pending",
       date: "2024-01-12",
       items: 1,
       priority: "low",
       shippingAddress: "321 Elm St, Houston, TX 77001",
-      products: [{ name: "Phone Charger", quantity: 1, price: "$89.99" }],
+      products: [{ name: "Phone Charger", quantity: 1, price: "रू 89.99" }],
     },
     {
       id: "ORD-005",
       customer: "Mike Brown",
       email: "mike@example.com",
-      total: "$459.99",
+      total: "रू 459.99",
       status: "returned",
       date: "2024-01-10",
       items: 2,
@@ -290,8 +290,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       shippingAddress: "654 Maple Ave, Seattle, WA 98101",
       trackingNumber: "1Z999AA1234567892",
       products: [
-        { name: "Gaming Mouse", quantity: 1, price: "$79.99" },
-        { name: "Mechanical Keyboard", quantity: 1, price: "$379.99" },
+        { name: "Gaming Mouse", quantity: 1, price: "रू 79.99" },
+        { name: "Mechanical Keyboard", quantity: 1, price: "रू 379.99" },
       ],
     },
   ],
@@ -309,7 +309,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "John Doe",
       email: "john@example.com",
       orders: 12,
-      spent: "$2,340.00",
+      spent: "रू 2,340.00",
       rating: 4.8,
       status: "active",
       lastOrder: "2024-01-15",
@@ -321,7 +321,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Jane Smith",
       email: "jane@example.com",
       orders: 8,
-      spent: "$1,890.00",
+      spent: "रू 1,890.00",
       rating: 4.9,
       status: "active",
       lastOrder: "2024-01-14",
@@ -333,7 +333,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Bob Johnson",
       email: "bob@example.com",
       orders: 15,
-      spent: "$3,450.00",
+      spent: "रू 3,450.00",
       rating: 4.7,
       status: "vip",
       lastOrder: "2024-01-13",
@@ -345,7 +345,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Alice Brown",
       email: "alice@example.com",
       orders: 5,
-      spent: "$890.00",
+      spent: "रू 890.00",
       rating: 4.6,
       status: "active",
       lastOrder: "2024-01-12",
@@ -357,7 +357,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Mike Brown",
       email: "mike@example.com",
       orders: 3,
-      spent: "$1,250.00",
+      spent: "रू 1,250.00",
       rating: 3.2,
       status: "inactive",
       lastOrder: "2024-01-10",
@@ -369,7 +369,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Sarah Wilson",
       email: "sarah@example.com",
       orders: 22,
-      spent: "$4,890.00",
+      spent: "रू 4,890.00",
       rating: 4.9,
       status: "vip",
       lastOrder: "2024-01-16",
@@ -492,7 +492,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
         {
           id: "REPLY-004",
           message:
-            "Great question! I'd recommend our Premium Wireless Charging Pad (Model WCP-Pro). It supports 15W fast charging for iPhone 14 Pro, has a sleek aluminum design perfect for offices, and includes LED indicators. It's currently on sale for $49.99. Would you like me to send you the product link?",
+            "Great question! I'd recommend our Premium Wireless Charging Pad (Model WCP-Pro). It supports 15W fast charging for iPhone 14 Pro, has a sleek aluminum design perfect for offices, and includes LED indicators. It's currently on sale for रू 49.99. Would you like me to send you the product link?",
           sender: "seller",
           date: "2024-01-12",
         },
@@ -669,7 +669,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       orderId: "ORD-006",
       issue: "Billing discrepancy",
       description:
-        "I was charged twice for the same order. My credit card shows two identical charges of $299.99 for order ORD-006, but I only placed one order. I've checked my account and there's definitely a duplicate charge.",
+        "I was charged twice for the same order. My credit card shows two identical charges of रू 299.99 for order ORD-006, but I only placed one order. I've checked my account and there's definitely a duplicate charge.",
       date: "2024-01-06",
       status: "closed",
       priority: "normal",
@@ -684,8 +684,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Summer Sale 2024",
       type: "discount",
       status: "active",
-      budget: "$5,000",
-      spent: "$3,200",
+      budget: "रू 5,000",
+      spent: "रू 3,200",
       impressions: "125,000",
       clicks: "8,500",
       conversions: "340",
@@ -701,8 +701,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "New Product Launch - Gaming Series",
       type: "promotion",
       status: "draft",
-      budget: "$3,000",
-      spent: "$0",
+      budget: "रू 3,000",
+      spent: "रू 0",
       impressions: "0",
       clicks: "0",
       conversions: "0",
@@ -718,8 +718,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Back to School Electronics",
       type: "advertisement",
       status: "completed",
-      budget: "$2,500",
-      spent: "$2,450",
+      budget: "रू 2,500",
+      spent: "रू 2,450",
       impressions: "89,000",
       clicks: "5,200",
       conversions: "180",
@@ -735,8 +735,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Holiday Gift Guide",
       type: "social_media",
       status: "paused",
-      budget: "$4,200",
-      spent: "$1,800",
+      budget: "रू 4,200",
+      spent: "रू 1,800",
       impressions: "156,000",
       clicks: "12,400",
       conversions: "520",
@@ -752,8 +752,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       name: "Influencer Partnership - Tech Reviews",
       type: "social_media",
       status: "active",
-      budget: "$6,000",
-      spent: "$4,100",
+      budget: "रू 6,000",
+      spent: "रू 4,100",
       impressions: "234,000",
       clicks: "18,700",
       conversions: "890",
@@ -779,7 +779,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       description:
         "Summer seasonal discount for all electronics and accessories",
       conditions: {
-        minOrderValue: "$50",
+        minOrderValue: "रू 50",
         applicableProducts: ["Electronics", "Accessories"],
         firstTimeCustomers: false,
       },
@@ -793,9 +793,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       limit: 200,
       status: "active",
       expires: "2024-02-15",
-      description: "Free shipping promotion for orders over $75",
+      description: "Free shipping promotion for orders over रू 75",
       conditions: {
-        minOrderValue: "$75",
+        minOrderValue: "रू 75",
         applicableProducts: [],
         firstTimeCustomers: false,
       },
@@ -811,7 +811,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       expires: "2024-12-31",
       description: "Welcome discount for first-time customers",
       conditions: {
-        minOrderValue: "$25",
+        minOrderValue: "रू 25",
         applicableProducts: [],
         firstTimeCustomers: true,
       },
@@ -825,9 +825,9 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       limit: 100,
       status: "active",
       expires: "2024-03-31",
-      description: "$50 off bulk orders of 5 or more items",
+      description: "रू 50 off bulk orders of 5 or more items",
       conditions: {
-        minOrderValue: "$200",
+        minOrderValue: "रू 200",
         applicableProducts: [],
         firstTimeCustomers: false,
       },
@@ -843,7 +843,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       expires: "2023-12-31",
       description: "Holiday season discount (expired)",
       conditions: {
-        minOrderValue: "$30",
+        minOrderValue: "रू 30",
         applicableProducts: [],
         firstTimeCustomers: false,
       },
@@ -859,7 +859,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       expires: "2024-06-30",
       description: "Exclusive VIP customer discount",
       conditions: {
-        minOrderValue: "$100",
+        minOrderValue: "रू 100",
         applicableProducts: [],
         firstTimeCustomers: false,
       },
@@ -882,7 +882,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       views: "15,200",
       clicks: "1,840",
       conversions: "156",
-      budget: "$800",
+      budget: "रू 800",
     },
     {
       id: "PROMO-002",
@@ -895,7 +895,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       views: "45,600",
       clicks: "3,200",
       conversions: "280",
-      budget: "$1,200",
+      budget: "रू 1,200",
     },
     {
       id: "PROMO-003",
@@ -908,7 +908,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       views: "0",
       clicks: "0",
       conversions: "0",
-      budget: "$600",
+      budget: "रू 600",
     },
     {
       id: "PROMO-004",
@@ -925,7 +925,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       views: "28,900",
       clicks: "2,100",
       conversions: "189",
-      budget: "$900",
+      budget: "रू 900",
     },
     {
       id: "PROMO-005",
@@ -938,7 +938,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       views: "8,400",
       clicks: "650",
       conversions: "45",
-      budget: "$400",
+      budget: "रू 400",
     },
   ],
 
@@ -947,8 +947,8 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       id: "AD-001",
       name: "Google Ads - Electronics Keywords",
       platform: "google",
-      budget: "$1,000",
-      spent: "$650",
+      budget: "रू 1,000",
+      spent: "रू 650",
       impressions: "45,000",
       clicks: "2,100",
       status: "active",
@@ -958,14 +958,14 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       targetAudience:
         "Tech enthusiasts, ages 25-45, interested in electronics and gadgets",
       ctr: "4.67%",
-      cpc: "$0.31",
+      cpc: "रू 0.31",
     },
     {
       id: "AD-002",
       name: "Facebook Product Catalog Ads",
       platform: "facebook",
-      budget: "$800",
-      spent: "$320",
+      budget: "रू 800",
+      spent: "रू 320",
       impressions: "32,000",
       clicks: "1,500",
       status: "paused",
@@ -975,14 +975,14 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       targetAudience:
         "Online shoppers, ages 20-50, interested in technology and shopping",
       ctr: "4.69%",
-      cpc: "$0.21",
+      cpc: "रू 0.21",
     },
     {
       id: "AD-003",
       name: "Instagram Stories - Gaming Products",
       platform: "instagram",
-      budget: "$600",
-      spent: "$480",
+      budget: "रू 600",
+      spent: "रू 480",
       impressions: "28,500",
       clicks: "1,200",
       status: "active",
@@ -991,14 +991,14 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       objective: "brand_awareness",
       targetAudience: "Gamers, esports fans, ages 16-35",
       ctr: "4.21%",
-      cpc: "$0.40",
+      cpc: "रू 0.40",
     },
     {
       id: "AD-004",
       name: "LinkedIn Professional Tech Ads",
       platform: "linkedin",
-      budget: "$1,200",
-      spent: "$890",
+      budget: "रू 1,200",
+      spent: "रू 890",
       impressions: "18,000",
       clicks: "720",
       status: "completed",
@@ -1007,14 +1007,14 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       objective: "lead_generation",
       targetAudience: "IT professionals, business owners, ages 25-55",
       ctr: "4.00%",
-      cpc: "$1.24",
+      cpc: "रू 1.24",
     },
     {
       id: "AD-005",
       name: "Twitter Tech Trends Campaign",
       platform: "twitter",
-      budget: "$400",
-      spent: "$280",
+      budget: "रू 400",
+      spent: "रू 280",
       impressions: "52,000",
       clicks: "1,800",
       status: "active",
@@ -1023,14 +1023,14 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       objective: "traffic",
       targetAudience: "Tech news followers, early adopters, ages 20-45",
       ctr: "3.46%",
-      cpc: "$0.16",
+      cpc: "रू 0.16",
     },
     {
       id: "AD-006",
       name: "YouTube Pre-roll - Product Reviews",
       platform: "google",
-      budget: "$1,500",
-      spent: "$1,200",
+      budget: "रू 1,500",
+      spent: "रू 1,200",
       impressions: "125,000",
       clicks: "3,500",
       status: "completed",
@@ -1039,7 +1039,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       objective: "brand_awareness",
       targetAudience: "Tech review watchers, gadget enthusiasts, ages 18-50",
       ctr: "2.80%",
-      cpc: "$0.34",
+      cpc: "रू 0.34",
     },
   ],
 
@@ -1062,13 +1062,13 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       orders: state.orders.map((order) =>
         order.id === orderId
           ? {
-              ...order,
-              status,
-              trackingNumber:
-                status === "shipped" && !order.trackingNumber
-                  ? `1Z999AA${Math.random().toString().slice(2, 12)}`
-                  : order.trackingNumber,
-            }
+            ...order,
+            status,
+            trackingNumber:
+              status === "shipped" && !order.trackingNumber
+                ? `1Z999AA${Math.random().toString().slice(2, 12)}`
+                : order.trackingNumber,
+          }
           : order
       ),
     }));
@@ -1079,13 +1079,13 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       orders: state.orders.map((order) =>
         orderIds.includes(order.id)
           ? {
-              ...order,
-              status,
-              trackingNumber:
-                status === "shipped" && !order.trackingNumber
-                  ? `1Z999AA${Math.random().toString().slice(2, 12)}`
-                  : order.trackingNumber,
-            }
+            ...order,
+            status,
+            trackingNumber:
+              status === "shipped" && !order.trackingNumber
+                ? `1Z999AA${Math.random().toString().slice(2, 12)}`
+                : order.trackingNumber,
+          }
           : order
       ),
       selectedOrders: [],
@@ -1139,18 +1139,18 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
       messages: state.messages.map((message) =>
         message.id === messageId
           ? {
-              ...message,
-              status: "replied" as const,
-              replies: [
-                ...(message.replies || []),
-                {
-                  id: `REPLY-${Date.now()}`,
-                  message: reply,
-                  sender: "seller" as const,
-                  date: new Date().toISOString().split("T")[0],
-                },
-              ],
-            }
+            ...message,
+            status: "replied" as const,
+            replies: [
+              ...(message.replies || []),
+              {
+                id: `REPLY-${Date.now()}`,
+                message: reply,
+                sender: "seller" as const,
+                date: new Date().toISOString().split("T")[0],
+              },
+            ],
+          }
           : message
       ),
     }));
@@ -1194,7 +1194,7 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     const newCampaign = {
       ...campaign,
       id: `CAMP-${Date.now()}`,
-      spent: "$0",
+      spent: "रू 0",
       impressions: "0",
       clicks: "0",
       conversions: "0",
@@ -1256,11 +1256,11 @@ export const useDashboardStore = create<DashboardStore>((set, get) => ({
     const newAd = {
       ...ad,
       id: `AD-${Date.now()}`,
-      spent: "$0",
+      spent: "रू 0",
       impressions: "0",
       clicks: "0",
       ctr: "0%",
-      cpc: "$0.00",
+      cpc: "रू 0.00",
     };
     set((state) => ({
       advertisements: [...state.advertisements, newAd],

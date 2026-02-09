@@ -29,7 +29,7 @@ export function CustomersTab({ salesData }: CustomersTabProps) {
     },
     {
       title: "Customer LTV",
-      value: "$324",
+      value: "रू 324",
       description: "Average lifetime value",
       icon: DollarSign
     }
