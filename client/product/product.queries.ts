@@ -179,6 +179,10 @@ export const GET_INVENTORY = gql`
       products {
         id
         name
+        slug
+        images {
+          url
+        }
         variants {
           id
           sku

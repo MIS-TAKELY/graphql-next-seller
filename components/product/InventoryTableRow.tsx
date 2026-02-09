@@ -129,6 +129,36 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
 
   return (
     <TableRow>
+      <TableCell>
+        <div className="h-12 w-12 rounded-md border bg-muted flex items-center justify-center overflow-hidden">
+          {item.images && item.images.length > 0 ? (
+            <img
+              src={item.images[0].url}
+              alt={item.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="text-muted-foreground">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-image"
+              >
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                <circle cx="9" cy="9" r="2" />
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+              </svg>
+            </div>
+          )}
+        </div>
+      </TableCell>
       <TableCell className="font-medium">{item.name}</TableCell>
       <TableCell className="font-mono">{variant?.sku ?? "N/A"}</TableCell>
       <TableCell>{(variant?.stock ?? 0) + (variant?.soldCount ?? 0)}</TableCell>

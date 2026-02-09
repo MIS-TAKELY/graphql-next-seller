@@ -67,6 +67,7 @@ export function InventoryClient() {
         id: product.id,
         name: product.name,
         slug: product.slug,
+        images: product.images,
         variants: product.variants.map((v: ProductVariant) => ({
             id: v.id,
             sku: v.sku,
@@ -140,6 +141,7 @@ export function InventoryClient() {
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[80px]">Image</TableHead>
                                 <TableHead>Product</TableHead>
                                 <TableHead>SKU</TableHead>
                                 <TableHead>Stock</TableHead>

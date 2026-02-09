@@ -97,6 +97,7 @@ export interface InventoryProduct {
   id: string;
   name: string;
   slug: string;
+  images?: Array<{ url: string }>;
   variants: Array<{
     id: string;
     sku: string;
