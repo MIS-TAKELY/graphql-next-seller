@@ -98,13 +98,13 @@ export function TopProducts() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Top Products (Nepal Rupee)</CardTitle>
+        <CardTitle>Top Products</CardTitle>
         <CardDescription>Your best performing items</CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {products.map((product, index) => {
           const progress = maxRevenue > 0 ? (product.totalRevenue / maxRevenue) * 100 : 0;
-          const revenueFormatted = `रु ${product.totalRevenue.toLocaleString()}`;
+          const revenueFormatted = `रू ${product.totalRevenue.toLocaleString()}`;
 
           return (
             <div key={product.productId} className="space-y-3">

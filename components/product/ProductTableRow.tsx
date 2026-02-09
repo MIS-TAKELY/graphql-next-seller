@@ -54,7 +54,7 @@ export function ProductTableRow({ product, onDelete }: ProductTableRowProps) {
       </TableCell>
 
       <TableCell className="font-medium">
-        ${product.variants?.[0]?.price || "0.00"}
+        रू {product.variants?.[0]?.price || "0.00"}
       </TableCell>
       <TableCell className="hidden lg:table-cell">
         <span
