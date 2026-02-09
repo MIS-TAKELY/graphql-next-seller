@@ -28,15 +28,27 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
   const [adjustment, setAdjustment] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
+  const variant = item.variants[0]; // Assume at least one variant exists
+  const currentStock = variant?.stock ?? 0;
+  const finalStock = currentStock + adjustment;
+
   const [updateStock, { loading: updating }] = useMutation(UPDATE_VARIANT_STOCK, {
     // Optimistic UI update
     optimisticResponse: {
-      updateVariantStock: true,
+      updateVariantStock: {
+        __typename: "ProductVariant",
+        id: variant?.id,
+        stock: finalStock,
+      },
     },
+    // Apollo handles the cache update automatically because we return the ID and updated field.
+    // However, if we need to update the list manually (e.g., if the query doesn't use normalize IDs well):
     update: (cache, { data }) => {
-      // Only update if mutation was successful (optimistic or real)
-      if (data?.updateVariantStock) {
+      const updatedVariant = data?.updateVariantStock;
+      if (updatedVariant) {
         try {
+          // We can also let Apollo's normalization handle it, 
+          // but for complex lists it's safer to ensure the query is updated.
           const existingInventory = cache.readQuery<any>({
             query: GET_INVENTORY,
           });
@@ -45,7 +57,7 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
             const updatedProducts = existingInventory.getMyProducts.products.map((p: any) => ({
               ...p,
               variants: p.variants.map((v: any) =>
-                v.id === variant.id ? { ...v, stock: finalStock } : v
+                v.id === updatedVariant.id ? { ...v, stock: updatedVariant.stock } : v
               ),
             }));
 
@@ -60,17 +72,14 @@ export function InventoryTableRow({ item }: InventoryTableRowProps) {
             });
           }
         } catch (err) {
-          console.error("Cache update error:", err);
+          console.debug("Cache update skipped (query not in cache)");
         }
       }
     },
-    // We can keep refetchQueries as a fallback to ensure consistency with DB
-    refetchQueries: [{ query: GET_INVENTORY }],
+    // No need for refetchQueries if optimistic and manual update are correct, 
+    // but good as a safety net if there are side effects like soldCount changes.
+    // refetchQueries: [{ query: GET_INVENTORY }], 
   });
-
-  const variant = item.variants[0]; // Assume at least one variant exists
-  const currentStock = variant?.stock ?? 0;
-  const finalStock = currentStock + adjustment;
 
   useEffect(() => {
     if (finalStock < 0) {

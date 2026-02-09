@@ -1006,5 +1006,115 @@ export const productResolvers = {
         throw new Error(error.message || "Failed to delete product");
       }
     },
+
+    updateVariantStock: async (
+      _: any,
+      { variantId, stock }: { variantId: string; stock: number },
+      ctx: GraphQLContext
+    ) => {
+      try {
+        const user = requireSeller(ctx);
+        const sellerId = user.id;
+
+        if (!variantId) throw new Error("Variant ID is required");
+        if (stock < 0) throw new Error("Stock cannot be negative");
+
+        // 1. Authorization: Ensure the variant belongs to a product owned by this seller
+        const variant = await prisma.productVariant.findFirst({
+          where: {
+            id: variantId,
+            product: { sellerId },
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        });
+
+        if (!variant) {
+          throw new Error("Variant not found or unauthorized");
+        }
+
+        const oldStock = variant.stock;
+
+        // 2. Update stock
+        const updatedVariant = await prisma.productVariant.update({
+          where: { id: variantId },
+          data: { stock },
+        });
+
+        // 3. Handle Restock Notifications (proactive async call)
+        if (oldStock === 0 && stock > 0) {
+          triggerNotifications(
+            variant.product.id,
+            variant.id,
+            variant.product.name,
+            variant.product.slug
+          ).catch((e) => console.error("Notification trigger fail:", e));
+        }
+
+        // 4. Typesense Sync
+        try {
+          const freshProduct = await prisma.product.findUnique({
+            where: { id: variant.productId },
+            include: {
+              category: true,
+              variants: { include: { specifications: true } },
+              images: { orderBy: { sortOrder: "asc" }, take: 1 },
+              reviews: { select: { rating: true } },
+            },
+          });
+
+          if (freshProduct && freshProduct.status === "ACTIVE") {
+            const defaultVariant = freshProduct.variants.find((v: any) => v.isDefault) || freshProduct.variants[0];
+            const price = defaultVariant ? Number(defaultVariant.price) : 0;
+            const soldCount = freshProduct.variants.reduce((acc: number, v: any) => acc + (v.soldCount || 0), 0);
+            const totalRating = freshProduct.reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
+            const averageRating = freshProduct.reviews.length > 0 ? totalRating / freshProduct.reviews.length : 0;
+
+            const document = {
+              id: freshProduct.id,
+              name: freshProduct.name,
+              slug: freshProduct.slug,
+              description: freshProduct.description || "",
+              brand: freshProduct.brand,
+              categoryName: freshProduct.category?.name || "Uncategorized",
+              categoryId: freshProduct.categoryId || "",
+              price: price,
+              image: freshProduct.images[0]?.url || "",
+              status: freshProduct.status,
+              soldCount: soldCount,
+              averageRating: averageRating,
+              createdAt: Math.floor(freshProduct.createdAt.getTime() / 1000),
+              facet_attributes: defaultVariant?.specifications.map((s: any) => `${s.key}:${s.value}`) || [],
+            };
+
+            await typesenseClient.collections("products").documents().upsert(document);
+          }
+        } catch (error) {
+          console.error("❌ Failed to update Typesense in updateVariantStock:", error);
+        }
+
+        // 5. Cache Invalidation
+        const keys = [
+          `product:${variant.product.slug}`,
+          getProductCacheKey(variant.product.slug),
+          "products:all",
+          `products:seller:${sellerId}`,
+        ];
+        await Promise.all(keys.map((k) => delCache(k)));
+
+        console.log(`✅ Stock updated for variant ${variantId}: ${oldStock} -> ${stock}`);
+        return updatedVariant;
+      } catch (error: any) {
+        console.error("Error updating variant stock:", error);
+        throw new Error(error.message || "Failed to update stock");
+      }
+    },
   },
 };
