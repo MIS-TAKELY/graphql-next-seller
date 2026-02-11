@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { GraphQLError } from "graphql";
 import { generateEmbedding } from "@/lib/embedding";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { generateUniqueSlug } from "@/servers/utils/slugfy";
@@ -630,33 +631,47 @@ export const productResolvers = {
 
           // SKU duplicate error
           if (targetStr.toLowerCase().includes('sku')) {
-            throw new Error("This SKU is already in use. Please use a different SKU for this product.");
+            throw new GraphQLError("This SKU is already in use. Please use another SKU.", {
+              extensions: { code: 'BAD_USER_INPUT', target: 'sku' }
+            });
           }
 
           // Product name/slug duplicate error
           if (targetStr.toLowerCase().includes('slug') || targetStr.toLowerCase().includes('name')) {
-            throw new Error("A product with a similar name already exists. Please use a different product name.");
+            throw new GraphQLError("A product with a similar name already exists. Please use a different product name.", {
+              extensions: { code: 'BAD_USER_INPUT', target: 'name' }
+            });
           }
 
           // Generic unique constraint error
-          throw new Error("This value is already in use. Please use a unique value.");
+          throw new GraphQLError("This value is already in use. Please use a unique value.", {
+            extensions: { code: 'BAD_USER_INPUT', target }
+          });
         }
 
         // Check for foreign key constraint violations
         if (error.code === 'P2003') {
           if (error.meta?.field_name?.includes('category')) {
-            throw new Error("Invalid category selected. Please choose a valid category.");
+            throw new GraphQLError("Invalid category selected. Please choose a valid category.", {
+              extensions: { code: 'BAD_USER_INPUT', target: 'categoryId' }
+            });
           }
-          throw new Error("Invalid reference. Please check your selections and try again.");
+          throw new GraphQLError("Invalid reference. Please check your selections and try again.", {
+            extensions: { code: 'BAD_USER_INPUT' }
+          });
         }
 
         // Check for required field violations
         if (error.code === 'P2011' || error.code === 'P2012') {
-          throw new Error("Required field is missing. Please fill in all required fields.");
+          throw new GraphQLError("Required field is missing. Please fill in all required fields.", {
+            extensions: { code: 'BAD_USER_INPUT' }
+          });
         }
 
         // Pass through validation errors with their messages
-        throw new Error(error.message || "Failed to create product. Please try again.");
+        throw new GraphQLError(error.message || "Failed to create product. Please try again.", {
+          extensions: { code: error.code === 'P2002' || error.code === 'P2003' ? 'BAD_USER_INPUT' : 'INTERNAL_SERVER_ERROR' }
+        });
       }
     },
 
@@ -975,33 +990,47 @@ export const productResolvers = {
 
           // SKU duplicate error
           if (targetStr.toLowerCase().includes('sku')) {
-            throw new Error("This SKU is already in use. Please use a different SKU for this product.");
+            throw new GraphQLError("This SKU is already in use. Please use another SKU.", {
+              extensions: { code: 'BAD_USER_INPUT', target: 'sku' }
+            });
           }
 
           // Product name/slug duplicate error
           if (targetStr.toLowerCase().includes('slug') || targetStr.toLowerCase().includes('name')) {
-            throw new Error("A product with a similar name already exists. Please use a different product name.");
+            throw new GraphQLError("A product with a similar name already exists. Please use a different product name.", {
+              extensions: { code: 'BAD_USER_INPUT', target: 'name' }
+            });
           }
 
           // Generic unique constraint error
-          throw new Error("This value is already in use. Please use a unique value.");
+          throw new GraphQLError("This value is already in use. Please use a unique value.", {
+            extensions: { code: 'BAD_USER_INPUT', target }
+          });
         }
 
         // Check for foreign key constraint violations
         if (error.code === 'P2003') {
           if (error.meta?.field_name?.includes('category')) {
-            throw new Error("Invalid category selected. Please choose a valid category.");
+            throw new GraphQLError("Invalid category selected. Please choose a valid category.", {
+              extensions: { code: 'BAD_USER_INPUT', target: 'categoryId' }
+            });
           }
-          throw new Error("Invalid reference. Please check your selections and try again.");
+          throw new GraphQLError("Invalid reference. Please check your selections and try again.", {
+            extensions: { code: 'BAD_USER_INPUT' }
+          });
         }
 
         // Check for required field violations
         if (error.code === 'P2011' || error.code === 'P2012') {
-          throw new Error("Required field is missing. Please fill in all required fields.");
+          throw new GraphQLError("Required field is missing. Please fill in all required fields.", {
+            extensions: { code: 'BAD_USER_INPUT' }
+          });
         }
 
         // Pass through validation errors with their messages
-        throw new Error(error.message || "Failed to update product. Please try again.");
+        throw new GraphQLError(error.message || "Failed to update product. Please try again.", {
+          extensions: { code: error.code === 'P2002' || error.code === 'P2003' ? 'BAD_USER_INPUT' : 'INTERNAL_SERVER_ERROR' }
+        });
       }
     },
 
