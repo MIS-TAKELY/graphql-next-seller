@@ -291,16 +291,13 @@ export const useProduct = (variables?: {
       if (!productInput.variants?.length)
         throw new Error("At least one variant is required");
 
-      const { data } = await addProductMutation({
+      await addProductMutation({
         variables: { input: productInput },
       });
-
-      if (!data?.addProduct) {
-        throw new Error("Failed to save product from server");
-      }
     } catch (error: any) {
       console.error("Submit error details:", error);
-      const errorMessage = error.message || (error.graphQLErrors?.[0]?.message) || "An unexpected error occurred while saving";
+      // Prioritize the error message from the resolver if available
+      const errorMessage = error.graphQLErrors?.[0]?.message || error.message || "An unexpected error occurred while saving";
       throw new Error(errorMessage);
     }
   };
@@ -331,16 +328,13 @@ export const useProduct = (variables?: {
         throw new Error("Cannot update product with empty variants");
       }
 
-      const { data } = await updateProduct({
+      await updateProduct({
         variables: { input: productInput as ICreateProductInput & { id: string } }
       });
-
-      if (!data?.updateProduct) {
-        throw new Error("Failed to update product from server");
-      }
     } catch (error: any) {
       console.error("Update error details:", error);
-      const errorMessage = error.message || (error.graphQLErrors?.[0]?.message) || "An unexpected error occurred while updating";
+      // Prioritize the error message from the resolver if available
+      const errorMessage = error.graphQLErrors?.[0]?.message || error.message || "An unexpected error occurred while updating";
       throw new Error(errorMessage);
     }
   };
