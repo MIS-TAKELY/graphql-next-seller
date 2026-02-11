@@ -216,7 +216,7 @@ export const useProduct = (variables?: {
     },
     onError: (error) => {
       console.error("Add error:", error);
-      // Let the caller handle the toast to avoid duplicates
+      // Removed silent catch to allow propagation
     },
   });
 
@@ -275,7 +275,7 @@ export const useProduct = (variables?: {
     },
     onError: (error) => {
       console.error("Update error:", error);
-      // Let the caller handle the toast
+      // Removed silent catch
     },
   });
 
@@ -291,13 +291,17 @@ export const useProduct = (variables?: {
       if (!productInput.variants?.length)
         throw new Error("At least one variant is required");
 
-      await addProductMutation({
+      const { data } = await addProductMutation({
         variables: { input: productInput },
       });
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-      console.error("Submit error:", error);
-      throw new Error(errorMessage); // Let ProductForm catch and show toast
+
+      if (!data?.addProduct) {
+        throw new Error("Failed to save product from server");
+      }
+    } catch (error: any) {
+      console.error("Submit error details:", error);
+      const errorMessage = error.message || (error.graphQLErrors?.[0]?.message) || "An unexpected error occurred while saving";
+      throw new Error(errorMessage);
     }
   };
 
@@ -323,20 +327,21 @@ export const useProduct = (variables?: {
     try {
       if (!productInput.id) throw new Error("Product ID is required");
 
-      // UPDATED: Validation for Array of Variants
       if (productInput.variants && productInput.variants.length === 0) {
         throw new Error("Cannot update product with empty variants");
       }
 
-      toast.success("Updating product...");
-      await updateProduct({ variables: { input: productInput as ICreateProductInput & { id: string } } });
-    } catch (error) {
-      console.error("Error updating product:", error);
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to update product. Please try again."
-      );
+      const { data } = await updateProduct({
+        variables: { input: productInput as ICreateProductInput & { id: string } }
+      });
+
+      if (!data?.updateProduct) {
+        throw new Error("Failed to update product from server");
+      }
+    } catch (error: any) {
+      console.error("Update error details:", error);
+      const errorMessage = error.message || (error.graphQLErrors?.[0]?.message) || "An unexpected error occurred while updating";
+      throw new Error(errorMessage);
     }
   };
 
