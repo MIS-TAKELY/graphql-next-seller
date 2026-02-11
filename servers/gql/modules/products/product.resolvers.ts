@@ -420,12 +420,14 @@ export const productResolvers = {
         const user = requireSeller(context);
 
         // 1. Basic Validation
-        if (!input.name) throw new Error("Product name is required");
+        if (!input.name || !input.name.trim()) {
+          throw new Error("Product name is required. Please provide a valid product name.");
+        }
         if (!input.variants || input.variants.length === 0) {
-          throw new Error("At least one product variant is required");
+          throw new Error("At least one product variant is required. Please add variant details.");
         }
         if (!input.images || input.images.length === 0) {
-          throw new Error("At least one product image is required");
+          throw new Error("At least one product image is required. Please upload product images.");
         }
 
         input.status === ProductStatus.ACTIVE
@@ -434,12 +436,15 @@ export const productResolvers = {
 
         // 2. Validate Variants Data
         input.variants.forEach((v: any, index: number) => {
-          if (!v.sku)
-            throw new Error(`SKU is required for variant #${index + 1}`);
-          if (v.price == null)
-            throw new Error(`Price is required for variant #${index + 1}`);
-          if (v.stock == null)
-            throw new Error(`Stock is required for variant #${index + 1}`);
+          if (!v.sku || !v.sku.trim()) {
+            throw new Error(`SKU is required for variant #${index + 1}. Please provide a unique SKU.`);
+          }
+          if (v.price == null || v.price <= 0) {
+            throw new Error(`Valid price is required for variant #${index + 1}. Please enter a price greater than 0.`);
+          }
+          if (v.stock == null || v.stock < 0) {
+            throw new Error(`Valid stock quantity is required for variant #${index + 1}. Please enter 0 or more.`);
+          }
         });
 
         const sellerId = user.id;
@@ -614,15 +619,40 @@ export const productResolvers = {
         return true;
       } catch (error: any) {
         console.error("Error creating product:", error);
-        // Robust SKU duplicate check
-        const isSkuError =
-          error.code === 'P2002' &&
-          (error.meta?.target?.includes('sku') || JSON.stringify(error.meta?.target || "").toLowerCase().includes('sku'));
 
-        if (isSkuError) {
-          throw new Error("A product with this SKU already exists. Please use a unique SKU.");
+        // Check for Prisma unique constraint violations
+        if (error.code === 'P2002') {
+          const target = error.meta?.target;
+
+          // SKU duplicate error
+          if (target?.includes('sku') || JSON.stringify(target || "").toLowerCase().includes('sku')) {
+            throw new Error("This SKU is already in use. Please use a different SKU for this product.");
+          }
+
+          // Product name/slug duplicate error
+          if (target?.includes('slug') || target?.includes('name')) {
+            throw new Error("A product with a similar name already exists. Please use a different product name.");
+          }
+
+          // Generic unique constraint error
+          throw new Error("This value is already in use. Please use a unique value.");
         }
-        throw new Error(error.message || "Failed to create product");
+
+        // Check for foreign key constraint violations
+        if (error.code === 'P2003') {
+          if (error.meta?.field_name?.includes('category')) {
+            throw new Error("Invalid category selected. Please choose a valid category.");
+          }
+          throw new Error("Invalid reference. Please check your selections and try again.");
+        }
+
+        // Check for required field violations
+        if (error.code === 'P2011' || error.code === 'P2012') {
+          throw new Error("Required field is missing. Please fill in all required fields.");
+        }
+
+        // Pass through validation errors with their messages
+        throw new Error(error.message || "Failed to create product. Please try again.");
       }
     },
 
@@ -930,15 +960,40 @@ export const productResolvers = {
         return true;
       } catch (error: any) {
         console.error("Error updating product:", error);
-        // Robust SKU duplicate check
-        const isSkuError =
-          error.code === 'P2002' &&
-          (error.meta?.target?.includes('sku') || JSON.stringify(error.meta?.target || "").toLowerCase().includes('sku'));
 
-        if (isSkuError) {
-          throw new Error("A product with this SKU already exists. Please use a unique SKU.");
+        // Check for Prisma unique constraint violations
+        if (error.code === 'P2002') {
+          const target = error.meta?.target;
+
+          // SKU duplicate error
+          if (target?.includes('sku') || JSON.stringify(target || "").toLowerCase().includes('sku')) {
+            throw new Error("This SKU is already in use. Please use a different SKU for this product.");
+          }
+
+          // Product name/slug duplicate error
+          if (target?.includes('slug') || target?.includes('name')) {
+            throw new Error("A product with a similar name already exists. Please use a different product name.");
+          }
+
+          // Generic unique constraint error
+          throw new Error("This value is already in use. Please use a unique value.");
         }
-        throw new Error(error.message || "Failed to update product");
+
+        // Check for foreign key constraint violations
+        if (error.code === 'P2003') {
+          if (error.meta?.field_name?.includes('category')) {
+            throw new Error("Invalid category selected. Please choose a valid category.");
+          }
+          throw new Error("Invalid reference. Please check your selections and try again.");
+        }
+
+        // Check for required field violations
+        if (error.code === 'P2011' || error.code === 'P2012') {
+          throw new Error("Required field is missing. Please fill in all required fields.");
+        }
+
+        // Pass through validation errors with their messages
+        throw new Error(error.message || "Failed to update product. Please try again.");
       }
     },
 
