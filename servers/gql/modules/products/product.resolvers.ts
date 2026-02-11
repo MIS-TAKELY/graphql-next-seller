@@ -565,39 +565,41 @@ export const productResolvers = {
         if (product) {
           console.log("product created");
 
-          // 6. Index to Typesense
-          try {
-            // Construct document matching Buyer's schema
-            const defaultVariant = input.variants.find((v: any, i: number) => v.isDefault || i === 0);
-            const price = defaultVariant ? Number(defaultVariant.price) : 0;
-            const document = {
-              id: product.id,
-              name: product.name,
-              slug: product.slug,
-              description: product.description || '',
-              brand: product.brand,
-              categoryName: 'Uncategorized', // Placeholder, will fix below in fetch
-              categoryId: product.categoryId || '',
-              price: price,
-              image: input.images[0]?.url || '',
-              status: product.status,
-              soldCount: 0,
-              averageRating: 0,
-              createdAt: Math.floor(product.createdAt.getTime() / 1000),
-              facet_attributes: defaultVariant?.specifications?.map((s: any) => `${s.key}:${s.value}`) || [],
-            };
+          // 6. Index to Typesense (Non-blocking)
+          (async () => {
+            try {
+              // Construct document matching Buyer's schema
+              const defaultVariant = input.variants.find((v: any, i: number) => v.isDefault || i === 0);
+              const price = defaultVariant ? Number(defaultVariant.price) : 0;
+              const document: any = {
+                id: product.id,
+                name: product.name,
+                slug: product.slug,
+                description: product.description || '',
+                brand: product.brand,
+                categoryName: 'Uncategorized', // Placeholder, will fix below in fetch
+                categoryId: product.categoryId || '',
+                price: price,
+                image: input.images[0]?.url || '',
+                status: product.status,
+                soldCount: 0,
+                averageRating: 0,
+                createdAt: Math.floor(product.createdAt.getTime() / 1000),
+                facet_attributes: defaultVariant?.specifications?.map((s: any) => `${s.key}:${s.value}`) || [],
+              };
 
-            // Fetch category name if exists
-            if (product.categoryId) {
-              const cat = await prisma.category.findUnique({ where: { id: product.categoryId }, select: { name: true } });
-              if (cat) document.categoryName = cat.name;
+              // Fetch category name if exists
+              if (product.categoryId) {
+                const cat = await prisma.category.findUnique({ where: { id: product.categoryId }, select: { name: true } });
+                if (cat) document.categoryName = cat.name;
+              }
+
+              await typesenseClient.collections('products').documents().upsert(document);
+              console.log("✅ Indexed to Typesense");
+            } catch (error) {
+              console.error("❌ Failed to index to Typesense:", error);
             }
-
-            await typesenseClient.collections('products').documents().upsert(document);
-            console.log("✅ Indexed to Typesense");
-          } catch (error) {
-            console.error("❌ Failed to index to Typesense:", error);
-          }
+          })();
         }
 
         // 5. Cleanup Cache
@@ -852,54 +854,56 @@ export const productResolvers = {
           { timeout: 20000 }
         );
 
-        // 3. Typesense Sync (After Transaction)
-        try {
-          const freshProduct = await prisma.product.findUnique({
-            where: { id: input.id },
-            include: {
-              category: true,
-              variants: { include: { specifications: true } },
-              images: { orderBy: { sortOrder: 'asc' }, take: 1 },
-              reviews: { select: { rating: true } }
+        // 3. Typesense Sync (After Transaction - Non-blocking)
+        (async () => {
+          try {
+            const freshProduct = await prisma.product.findUnique({
+              where: { id: input.id },
+              include: {
+                category: true,
+                variants: { include: { specifications: true } },
+                images: { orderBy: { sortOrder: 'asc' }, take: 1 },
+                reviews: { select: { rating: true } }
+              }
+            });
+
+            if (freshProduct && freshProduct.status === 'ACTIVE') {
+              const defaultVariant = freshProduct.variants.find((v: any) => v.isDefault) || freshProduct.variants[0];
+              const price = defaultVariant ? Number(defaultVariant.price) : 0;
+
+              // Calculate derived fields
+              const soldCount = freshProduct.variants.reduce((acc: number, v: any) => acc + (v.soldCount || 0), 0);
+              const totalRating = freshProduct.reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
+              const averageRating = freshProduct.reviews.length > 0 ? totalRating / freshProduct.reviews.length : 0;
+
+              const document = {
+                id: freshProduct.id,
+                name: freshProduct.name,
+                slug: freshProduct.slug,
+                description: freshProduct.description || '',
+                brand: freshProduct.brand,
+                categoryName: freshProduct.category?.name || 'Uncategorized',
+                categoryId: freshProduct.categoryId || '',
+                price: price,
+                image: freshProduct.images[0]?.url || '',
+                status: freshProduct.status,
+                soldCount: soldCount,
+                averageRating: averageRating,
+                createdAt: Math.floor(freshProduct.createdAt.getTime() / 1000),
+                facet_attributes: defaultVariant?.specifications.map((s: any) => `${s.key}:${s.value}`) || [],
+              };
+
+              await typesenseClient.collections('products').documents().upsert(document);
+              console.log("✅ Updated Typesense index for product:", freshProduct.name);
+            } else if (freshProduct && freshProduct.status !== 'ACTIVE') {
+              // If product became inactive, remove from index
+              await typesenseClient.collections('products').documents(freshProduct.id).delete().catch(() => { });
+              console.log("⚠️ Removed inactive product from Typesense:", freshProduct.name);
             }
-          });
-
-          if (freshProduct && freshProduct.status === 'ACTIVE') {
-            const defaultVariant = freshProduct.variants.find((v: any) => v.isDefault) || freshProduct.variants[0];
-            const price = defaultVariant ? Number(defaultVariant.price) : 0;
-
-            // Calculate derived fields
-            const soldCount = freshProduct.variants.reduce((acc: number, v: any) => acc + (v.soldCount || 0), 0);
-            const totalRating = freshProduct.reviews.reduce((acc: number, r: any) => acc + r.rating, 0);
-            const averageRating = freshProduct.reviews.length > 0 ? totalRating / freshProduct.reviews.length : 0;
-
-            const document = {
-              id: freshProduct.id,
-              name: freshProduct.name,
-              slug: freshProduct.slug,
-              description: freshProduct.description || '',
-              brand: freshProduct.brand,
-              categoryName: freshProduct.category?.name || 'Uncategorized',
-              categoryId: freshProduct.categoryId || '',
-              price: price,
-              image: freshProduct.images[0]?.url || '',
-              status: freshProduct.status,
-              soldCount: soldCount,
-              averageRating: averageRating,
-              createdAt: Math.floor(freshProduct.createdAt.getTime() / 1000),
-              facet_attributes: defaultVariant?.specifications.map((s: any) => `${s.key}:${s.value}`) || [],
-            };
-
-            await typesenseClient.collections('products').documents().upsert(document);
-            console.log("✅ Updated Typesense index for product:", freshProduct.name);
-          } else if (freshProduct && freshProduct.status !== 'ACTIVE') {
-            // If product became inactive, remove from index
-            await typesenseClient.collections('products').documents(freshProduct.id).delete().catch(() => { });
-            console.log("⚠️ Removed inactive product from Typesense:", freshProduct.name);
+          } catch (error) {
+            console.error("❌ Failed to update Typesense:", error);
           }
-        } catch (error) {
-          console.error("❌ Failed to update Typesense:", error);
-        }
+        })();
 
         // 4. Cleanup Cache
         const slug = input.name ? await generateUniqueSlug(input.name) : existingProduct.slug;
@@ -967,15 +971,17 @@ export const productResolvers = {
 
         console.log(`🗑️ Deleting product ${product.name} (${productId})`);
 
-        // 3. Remove from Typesense
-        try {
-          await typesenseClient.collections('products').documents(productId).delete();
-          console.log("✅ Removed from Typesense");
-        } catch (error: any) {
-          if (error?.httpStatus !== 404) {
-            console.warn("⚠️ Failed to remove from Typesense:", error);
+        // 3. Remove from Typesense (Non-blocking)
+        (async () => {
+          try {
+            await typesenseClient.collections('products').documents(productId).delete();
+            console.log("✅ Removed from Typesense");
+          } catch (error: any) {
+            if (error?.httpStatus !== 404) {
+              console.warn("⚠️ Failed to remove from Typesense:", error);
+            }
           }
-        }
+        })();
 
         // 4. Database Deletion (Manual cascades for non-cascading relations)
         await prisma.$transaction(async (tx) => {
