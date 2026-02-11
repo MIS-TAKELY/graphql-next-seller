@@ -629,22 +629,30 @@ export const productResolvers = {
           // Convert target to string for checking (handles both array and string cases)
           const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
 
+          // Combine target string and error message for keyword checking
+          const fullErrorInfo = (targetStr + " " + (error.message || "")).toLowerCase();
+
           // SKU duplicate error
-          if (targetStr.toLowerCase().includes('sku')) {
+          if (fullErrorInfo.includes('sku')) {
             throw new GraphQLError("This SKU is already in use. Please use another SKU.", {
               extensions: { code: 'BAD_USER_INPUT', target: 'sku' }
             });
           }
 
           // Product name/slug duplicate error
-          if (targetStr.toLowerCase().includes('slug') || targetStr.toLowerCase().includes('name')) {
+          if (fullErrorInfo.includes('slug') || fullErrorInfo.includes('name')) {
             throw new GraphQLError("A product with a similar name already exists. Please use a different product name.", {
               extensions: { code: 'BAD_USER_INPUT', target: 'name' }
             });
           }
 
-          // Generic unique constraint error
-          throw new GraphQLError("This value is already in use. Please use a unique value.", {
+          // Generic unique constraint error - try to be specific if target is known
+          const readableTarget = targetStr.replace(/_/g, ' ');
+          const genericMessage = readableTarget
+            ? `The ${readableTarget} is already in use. Please use a unique value.`
+            : "This value is already in use. Please use a unique value.";
+
+          throw new GraphQLError(genericMessage, {
             extensions: { code: 'BAD_USER_INPUT', target }
           });
         }
@@ -988,22 +996,30 @@ export const productResolvers = {
           // Convert target to string for checking (handles both array and string cases)
           const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
 
+          // Combine target string and error message for keyword checking
+          const fullErrorInfo = (targetStr + " " + (error.message || "")).toLowerCase();
+
           // SKU duplicate error
-          if (targetStr.toLowerCase().includes('sku')) {
+          if (fullErrorInfo.includes('sku')) {
             throw new GraphQLError("This SKU is already in use. Please use another SKU.", {
               extensions: { code: 'BAD_USER_INPUT', target: 'sku' }
             });
           }
 
           // Product name/slug duplicate error
-          if (targetStr.toLowerCase().includes('slug') || targetStr.toLowerCase().includes('name')) {
+          if (fullErrorInfo.includes('slug') || fullErrorInfo.includes('name')) {
             throw new GraphQLError("A product with a similar name already exists. Please use a different product name.", {
               extensions: { code: 'BAD_USER_INPUT', target: 'name' }
             });
           }
 
-          // Generic unique constraint error
-          throw new GraphQLError("This value is already in use. Please use a unique value.", {
+          // Generic unique constraint error - try to be specific if target is known
+          const readableTarget = targetStr.replace(/_/g, ' ');
+          const genericMessage = readableTarget
+            ? `The ${readableTarget} is already in use. Please use a unique value.`
+            : "This value is already in use. Please use a unique value.";
+
+          throw new GraphQLError(genericMessage, {
             extensions: { code: 'BAD_USER_INPUT', target }
           });
         }
