@@ -216,7 +216,9 @@ export const useProduct = (variables?: {
     },
     onError: (error) => {
       console.error("Add error:", error);
-      // Removed silent catch to allow propagation
+      // Display the error message from the backend
+      const errorMessage = error.graphQLErrors?.[0]?.message || error.message || "Failed to save product";
+      toast.error(errorMessage);
     },
   });
 
@@ -275,31 +277,26 @@ export const useProduct = (variables?: {
     },
     onError: (error) => {
       console.error("Update error:", error);
-      // Removed silent catch
+      // Display the error message from the backend
+      const errorMessage = error.graphQLErrors?.[0]?.message || error.message || "Failed to update product";
+      toast.error(errorMessage);
     },
   });
 
   // --- HANDLERS ---
 
   const handleSubmitHandler = async (productInput: ICreateProductInput) => {
-    try {
-      // Final validation
-      if (!productInput.name?.trim())
-        throw new Error("Product name is required");
-      if (!productInput.images?.length)
-        throw new Error("At least one image is required");
-      if (!productInput.variants?.length)
-        throw new Error("At least one variant is required");
+    // Final validation
+    if (!productInput.name?.trim())
+      throw new Error("Product name is required");
+    if (!productInput.images?.length)
+      throw new Error("At least one image is required");
+    if (!productInput.variants?.length)
+      throw new Error("At least one variant is required");
 
-      await addProductMutation({
-        variables: { input: productInput },
-      });
-    } catch (error: any) {
-      console.error("Submit error details:", error);
-      // Prioritize the error message from the resolver if available
-      const errorMessage = error.graphQLErrors?.[0]?.message || error.message || "An unexpected error occurred while saving";
-      throw new Error(errorMessage);
-    }
+    await addProductMutation({
+      variables: { input: productInput },
+    });
   };
 
   const handleDelete = async (productId: string) => {
@@ -321,22 +318,15 @@ export const useProduct = (variables?: {
     productInput: ICreateProductInput,
     _status?: ProductStatus
   ) => {
-    try {
-      if (!productInput.id) throw new Error("Product ID is required");
+    if (!productInput.id) throw new Error("Product ID is required");
 
-      if (productInput.variants && productInput.variants.length === 0) {
-        throw new Error("Cannot update product with empty variants");
-      }
-
-      await updateProduct({
-        variables: { input: productInput as ICreateProductInput & { id: string } }
-      });
-    } catch (error: any) {
-      console.error("Update error details:", error);
-      // Prioritize the error message from the resolver if available
-      const errorMessage = error.graphQLErrors?.[0]?.message || error.message || "An unexpected error occurred while updating";
-      throw new Error(errorMessage);
+    if (productInput.variants && productInput.variants.length === 0) {
+      throw new Error("Cannot update product with empty variants");
     }
+
+    await updateProduct({
+      variables: { input: productInput as ICreateProductInput & { id: string } }
+    });
   };
 
   return {

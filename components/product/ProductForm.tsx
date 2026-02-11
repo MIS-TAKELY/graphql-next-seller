@@ -259,9 +259,12 @@ export function ProductForm({
 
     } catch (err: any) {
       console.error("Submit error in ProductForm:", err);
-      // Apollo errors might have the message in different places
-      const errorMessage = err.message || (err.graphQLErrors?.[0]?.message) || "Failed to save product";
-      toast.error(errorMessage);
+      // Only show toast for validation errors (non-GraphQL errors)
+      // GraphQL errors are already handled by the mutation's onError callback
+      if (!err.graphQLErrors || err.graphQLErrors.length === 0) {
+        const errorMessage = err.message || "Failed to save product";
+        toast.error(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }
