@@ -2,9 +2,6 @@
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     const EMBEDDING_API_URL = process.env.EMBEDDING_API_URL || "http://72.61.249.56:8000/embed";
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2000);
-
     const response = await fetch(EMBEDDING_API_URL, {
       method: "POST",
       headers: {
@@ -13,10 +10,7 @@ export async function generateEmbedding(text: string): Promise<number[]> {
       body: JSON.stringify({
         texts: [text],
       }),
-      signal: controller.signal,
     });
-    
-    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(`Embedding API error: ${response.statusText}`);

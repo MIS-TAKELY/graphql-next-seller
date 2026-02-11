@@ -220,7 +220,7 @@ export const useProduct = (variables?: {
     },
     onError: (error) => {
       console.error("Add error:", error);
-      toast.error(error.message || "Failed to create product");
+      // Let the caller handle the toast to avoid duplicates
     },
   });
 
@@ -276,9 +276,13 @@ export const useProduct = (variables?: {
         status: vars.input.status,
       }),
     }),
-    onError: () => {
-      toast.error("Failed to update product. Changes reverted.");
+    onCompleted: () => {
+      toast.success("Product updated successfully!");
       router.push("/products");
+    },
+    onError: (error) => {
+      console.error("Update error:", error);
+      // Let the caller handle the toast
     },
   });
 
@@ -332,7 +336,6 @@ export const useProduct = (variables?: {
       }
 
       toast.success("Updating product...");
-      router.push("/products");
       await updateProduct({ variables: { input: productInput as ICreateProductInput & { id: string } } });
     } catch (error) {
       console.error("Error updating product:", error);

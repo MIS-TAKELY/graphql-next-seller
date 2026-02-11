@@ -257,11 +257,11 @@ export function ProductForm({
       console.log("input after change-->", input)
       await onSubmit(input, status);
 
-      await onSubmit(input, status);
-
-    } catch (err: unknown) {
+    } catch (err: any) {
       console.error("Submit error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to save product";
+      // Apollo errors might have the message in different places, 
+      // but usually err.message captures it if thrown from the resolver.
+      const errorMessage = err.message || "Failed to save product";
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);

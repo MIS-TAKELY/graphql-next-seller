@@ -611,6 +611,9 @@ export const productResolvers = {
         return true;
       } catch (error: any) {
         console.error("Error creating product:", error);
+        if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+          throw new Error("A product with this SKU already exists. Please use a unique SKU.");
+        }
         throw new Error(error.message || "Failed to create product");
       }
     },
@@ -917,6 +920,9 @@ export const productResolvers = {
         return true;
       } catch (error: any) {
         console.error("Error updating product:", error);
+        if (error.code === 'P2002' && error.meta?.target?.includes('sku')) {
+          throw new Error("A product with this SKU already exists. Please use a unique SKU.");
+        }
         throw new Error(error.message || "Failed to update product");
       }
     },
