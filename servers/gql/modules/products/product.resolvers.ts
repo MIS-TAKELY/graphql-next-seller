@@ -597,7 +597,8 @@ export const productResolvers = {
               await typesenseClient.collections('products').documents().upsert(document);
               console.log("✅ Indexed to Typesense");
             } catch (error) {
-              console.error("❌ Failed to index to Typesense:", error);
+              // Silently log or warning for background sync failures
+              console.warn("⚠️ Background Typesense index failed (handled):", error instanceof Error ? error.message : "Timeout");
             }
           })();
         }
@@ -901,7 +902,7 @@ export const productResolvers = {
               console.log("⚠️ Removed inactive product from Typesense:", freshProduct.name);
             }
           } catch (error) {
-            console.error("❌ Failed to update Typesense:", error);
+            console.warn("⚠️ Background Typesense update failed (handled):", error instanceof Error ? error.message : "Timeout");
           }
         })();
 
