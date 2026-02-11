@@ -623,14 +623,18 @@ export const productResolvers = {
         // Check for Prisma unique constraint violations
         if (error.code === 'P2002') {
           const target = error.meta?.target;
+          console.log("P2002 Unique constraint error - target:", target, "type:", Array.isArray(target) ? 'array' : typeof target);
+
+          // Convert target to string for checking (handles both array and string cases)
+          const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
 
           // SKU duplicate error
-          if (target?.includes('sku') || JSON.stringify(target || "").toLowerCase().includes('sku')) {
+          if (targetStr.toLowerCase().includes('sku')) {
             throw new Error("This SKU is already in use. Please use a different SKU for this product.");
           }
 
           // Product name/slug duplicate error
-          if (target?.includes('slug') || target?.includes('name')) {
+          if (targetStr.toLowerCase().includes('slug') || targetStr.toLowerCase().includes('name')) {
             throw new Error("A product with a similar name already exists. Please use a different product name.");
           }
 
@@ -964,14 +968,18 @@ export const productResolvers = {
         // Check for Prisma unique constraint violations
         if (error.code === 'P2002') {
           const target = error.meta?.target;
+          console.log("P2002 Unique constraint error - target:", target, "type:", Array.isArray(target) ? 'array' : typeof target);
+
+          // Convert target to string for checking (handles both array and string cases)
+          const targetStr = Array.isArray(target) ? target.join(',') : String(target || '');
 
           // SKU duplicate error
-          if (target?.includes('sku') || JSON.stringify(target || "").toLowerCase().includes('sku')) {
+          if (targetStr.toLowerCase().includes('sku')) {
             throw new Error("This SKU is already in use. Please use a different SKU for this product.");
           }
 
           // Product name/slug duplicate error
-          if (target?.includes('slug') || target?.includes('name')) {
+          if (targetStr.toLowerCase().includes('slug') || targetStr.toLowerCase().includes('name')) {
             throw new Error("A product with a similar name already exists. Please use a different product name.");
           }
 
