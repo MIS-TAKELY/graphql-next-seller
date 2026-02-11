@@ -205,17 +205,13 @@ export const useProduct = (variables?: {
 
   // --- ADD MUTATION ---
   const [addProductMutation, { loading: isAdding }] = useMutation<
-    { addProduct: Product },
+    { addProduct: boolean },
     { input: ICreateProductInput }
   >(ADD_PRODUCT, {
     refetchQueries: [{ query: GET_MY_PRODUCTS }],
     awaitRefetchQueries: true,
-    onCompleted: (data) => {
-      const statusText =
-        data.addProduct.status === ProductStatus.DRAFT
-          ? "saved as draft"
-          : "published";
-      toast.success(`Product ${statusText} successfully!`);
+    onCompleted: () => {
+      toast.success("Product saved successfully!");
       router.push("/products");
     },
     onError: (error) => {
@@ -226,7 +222,7 @@ export const useProduct = (variables?: {
 
   // --- UPDATE MUTATION ---
   const [updateProduct] = useMutation<
-    { updateProduct: Product },
+    { updateProduct: boolean },
     { input: ICreateProductInput & { id: string } }
   >(UPDATE_PRODUCT, {
     update: (cache, { data }, { variables }) => {
@@ -271,10 +267,7 @@ export const useProduct = (variables?: {
     optimisticResponse: (vars: {
       input: ICreateProductInput & { id: string };
     }) => ({
-      updateProduct: buildOptimisticProduct(vars.input, {
-        id: vars.input.id,
-        status: vars.input.status,
-      }),
+      updateProduct: true,
     }),
     onCompleted: () => {
       toast.success("Product updated successfully!");

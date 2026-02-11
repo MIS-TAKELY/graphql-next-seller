@@ -9,7 +9,7 @@ export const typesenseClient = new Typesense.Client({
         },
     ],
     apiKey: process.env.TYPESENSE_API_KEY || 'xyz',
-    connectionTimeoutSeconds: 5,
+    connectionTimeoutSeconds: 2,
 });
 
 export const PRODUCT_SCHEMA = {
