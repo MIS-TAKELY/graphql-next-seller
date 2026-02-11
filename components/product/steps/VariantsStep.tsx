@@ -232,6 +232,7 @@ export const VariantsStep = ({
                   placeholder="e.g. PRD-001"
                   value={formData.sku}
                   onChange={(e) => updateFormData("sku", e.target.value)}
+                  error={errors.sku}
                 />
               </FormField>
             </div>
@@ -408,12 +409,18 @@ export const VariantsStep = ({
                           </TableCell>
                           <TableCell>
                             <div className="relative group/input max-w-[120px]">
-                              <Input
+                              <ValidatedInput
                                 type="number"
                                 className="h-9 focus-visible:ring-primary pl-1 transition-all"
                                 value={variant.price}
                                 onChange={(e) => updateVariant(index, "price", e.target.value)}
+                                error={errors[`variant_price_${index}`]}
                               />
+                              {errors[`variant_price_${index}`] && (
+                                <p className="text-[10px] text-red-600 mt-1 line-clamp-1">
+                                  {errors[`variant_price_${index}`]}
+                                </p>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
@@ -428,21 +435,33 @@ export const VariantsStep = ({
                           </TableCell>
                           <TableCell>
                             <div className="relative max-w-[160px]">
-                              <Input
+                              <ValidatedInput
                                 className="h-9 font-mono text-xs focus-visible:ring-primary transition-all"
                                 value={variant.sku}
                                 onChange={(e) => updateVariant(index, "sku", e.target.value)}
+                                error={errors[`variant_sku_${index}`]}
                               />
+                              {errors[`variant_sku_${index}`] && (
+                                <p className="text-[10px] text-red-600 mt-1 line-clamp-1">
+                                  {errors[`variant_sku_${index}`]}
+                                </p>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell>
                             <div className="relative max-w-[100px]">
-                              <Input
+                              <ValidatedInput
                                 type="number"
                                 className="h-9 focus-visible:ring-primary pl-1 transition-all"
                                 value={variant.stock}
                                 onChange={(e) => updateVariant(index, "stock", e.target.value)}
+                                error={errors[`variant_stock_${index}`]}
                               />
+                              {errors[`variant_stock_${index}`] && (
+                                <p className="text-[10px] text-red-600 mt-1 line-clamp-1">
+                                  {errors[`variant_stock_${index}`]}
+                                </p>
+                              )}
                             </div>
                           </TableCell>
                           <TableCell className="text-center">
