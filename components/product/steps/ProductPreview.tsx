@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FormData, ProductVariantData } from "@/types/pages/product";
+import { FormData, ProductVariantData, Media } from "@/types/pages/product";
 import React, { useState, useMemo, useEffect } from "react";
 import { SpecificationTable } from "../SpecificationTable";
 import {
@@ -22,12 +22,58 @@ import {
   Star,
   ShoppingBag,
   ExternalLink,
-  ChevronRight
+  ChevronRight,
+  Video
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export const ProductPreview = React.memo(
   ({ formData }: { formData: FormData }) => {
+    const getExternalVideoType = (url: string) => {
+      if (!url) return null;
+      if (url.includes("youtube.com") || url.includes("youtu.be")) return "youtube";
+      if (url.includes("tiktok.com")) return "tiktok";
+      if (url.includes("instagram.com")) return "instagram";
+      return null;
+    };
+
+    const getYouTubeEmbedUrl = (url: string) => {
+      let videoId = "";
+      if (url.includes("youtu.be/")) {
+        videoId = url.split("youtu.be/")[1];
+      } else if (url.includes("watch?v=")) {
+        videoId = url.split("watch?v=")[1].split("&")[0];
+      } else if (url.includes("youtube.com/embed/")) {
+        videoId = url.split("youtube.com/embed/")[1];
+      } else if (url.includes("youtube.com/v/")) {
+        videoId = url.split("youtube.com/v/")[1];
+      }
+      return `https://www.youtube.com/embed/${videoId}`;
+    };
+
+    const getYouTubeThumbnail = (url: string) => {
+      let videoId = "";
+      if (url.includes("youtu.be/")) {
+        videoId = url.split("youtu.be/")[1];
+      } else if (url.includes("watch?v=")) {
+        videoId = url.split("watch?v=")[1].split("&")[0];
+      }
+      return videoId ? `https://img.youtube.com/vi/${videoId}/0.jpg` : null;
+    };
+
+    const getInstagramEmbedUrl = (url: string) => {
+      const baseUrl = url.split("?")[0].replace(/\/$/, "");
+      return `${baseUrl}/embed`;
+    };
+
+    const getTikTokEmbedUrl = (url: string) => {
+      if (url.includes("/video/")) {
+        const videoId = url.split("/video/")[1].split("?")[0].split("/")[0];
+        return `https://www.tiktok.com/embed/v2/${videoId}`;
+      }
+      return url;
+    };
+
     const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
     // State for attribute selection
@@ -93,11 +139,26 @@ export const ProductPreview = React.memo(
                       className="max-w-full max-h-full object-contain transition-transform duration-500 group-hover:scale-105"
                     />
                   ) : (
-                    <video
-                      src={currentMedia.url}
-                      controls
-                      className="max-w-full max-h-full object-contain"
-                    />
+                    getExternalVideoType(currentMedia.url) ? (
+                      <iframe
+                        src={
+                          getExternalVideoType(currentMedia.url) === "youtube"
+                            ? getYouTubeEmbedUrl(currentMedia.url)
+                            : getExternalVideoType(currentMedia.url) === "instagram"
+                              ? getInstagramEmbedUrl(currentMedia.url)
+                              : getTikTokEmbedUrl(currentMedia.url)
+                        }
+                        className="w-full h-full border-0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <video
+                        src={currentMedia.url}
+                        controls
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    )
                   )
                 ) : (
                   <div className="flex flex-col items-center gap-2 text-muted-foreground/40">
@@ -128,11 +189,23 @@ export const ProductPreview = React.memo(
                         : "border-transparent opacity-80 hover:opacity-100"
                     )}
                   >
-                    <img
-                      src={media.url}
-                      alt={`Thumb ${idx}`}
-                      className="w-full h-full object-cover"
-                    />
+                    {media.fileType === "IMAGE" ? (
+                      <img
+                        src={media.url}
+                        alt={`Thumb ${idx}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : getExternalVideoType(media.url) === "youtube" ? (
+                      <img
+                        src={getYouTubeThumbnail(media.url) || ""}
+                        alt={`Thumb ${idx}`}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <Video className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                    )}
                     {media.fileType === "VIDEO" && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                         <div className="bg-white/90 rounded-full p-1">

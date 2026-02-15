@@ -5,9 +5,20 @@ import { FileUpload, FileWithPreview } from "@/components/fileUpload";
 import { FormField } from "@/components/form-field";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Errors, FormData, Media } from "@/types/pages/product";
 import { uploadToCloudinary } from "@/utils/uploadToCloudinary";
-import React, { useCallback } from "react";
+import { Video, Plus } from "lucide-react";
+import React, { useCallback, useState } from "react";
 import { toast } from "sonner";
 
 interface MediaStepProps {
@@ -25,6 +36,43 @@ interface IPreviewMediaInterface {
 
 export const MediaStep = React.memo(
   ({ formData, errors, updateFormData }: MediaStepProps) => {
+    const [isVideoDialogOpen, setIsVideoDialogOpen] = useState(false);
+    const [videoUrl, setVideoUrl] = useState("");
+    const [currentMediaSection, setCurrentMediaSection] = useState<"productMedia" | "promotionalMedia">("productMedia");
+
+    const validateVideoUrl = (url: string) => {
+      const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+      const tiktokRegex = /^(https?:\/\/)?(www\.)?(tiktok\.com)\/.+$/;
+      const instagramRegex = /^(https?:\/\/)?(www\.)?(instagram\.com)\/(p|reels|reel)\/.+$/;
+
+      return youtubeRegex.test(url) || tiktokRegex.test(url) || instagramRegex.test(url);
+    };
+
+    const handleAddVideoLink = () => {
+      if (!videoUrl.trim()) {
+        toast.error("Please enter a video URL");
+        return;
+      }
+
+      if (!validateVideoUrl(videoUrl)) {
+        toast.error("Invalid video URL. Supported: YouTube, TikTok, Instagram (Posts/Reels)");
+        return;
+      }
+
+      const mediaRole = currentMediaSection === "productMedia" ? "PRIMARY" : "PROMOTIONAL";
+
+      const newVideoMedia: Media = {
+        url: videoUrl.trim(),
+        mediaType: mediaRole as any,
+        fileType: "VIDEO" as any,
+        sortOrder: formData[currentMediaSection].length,
+      };
+
+      updateFormData(currentMediaSection, (prev: any[]) => [...prev, newVideoMedia]);
+      setVideoUrl("");
+      setIsVideoDialogOpen(false);
+      toast.success("Video link added successfully");
+    };
     const handleMediaUpload = useCallback(
       async (
         files: FileWithPreview[],
@@ -148,7 +196,22 @@ export const MediaStep = React.memo(
     return (
       <div className="space-y-8">
         <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">Product Media</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium">Product Media</h3>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => {
+                setCurrentMediaSection("productMedia");
+                setIsVideoDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Add Video Link
+            </Button>
+          </div>
           <FormField
             label="Product Media (Minimum 1 Primary Image required)"
             error={errors.productMedia}
@@ -179,7 +242,22 @@ export const MediaStep = React.memo(
         <Separator />
 
         <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">Promotional Media</h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-medium">Promotional Media</h3>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => {
+                setCurrentMediaSection("promotionalMedia");
+                setIsVideoDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              Add Video Link
+            </Button>
+          </div>
           <FormField label="Promotional Media (Optional)">
             <FileUpload
               value={formData.promotionalMedia.map((m) => ({
@@ -202,6 +280,41 @@ export const MediaStep = React.memo(
             />
           </FormField>
         </Card>
+
+        {/* Video Link Dialog */}
+        <Dialog open={isVideoDialogOpen} onOpenChange={setIsVideoDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Video Link</DialogTitle>
+              <DialogDescription>
+                Paste a link from YouTube, TikTok, or Instagram (Posts/Reels).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Video URL</label>
+                <div className="relative">
+                  <Video className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="https://www.youtube.com/watch?v=..."
+                    className="pl-9"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsVideoDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddVideoLink}>Add Video</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
