@@ -12,7 +12,7 @@ export default async function VerifyPhonePage() {
         redirect("/sign-in");
     }
 
-    if ((session.user as any).phoneVerified) {
+    if ((session.user as any).phoneNumberVerified) {
         if ((session.user as any).hasProfile) {
             redirect("/");
         } else {

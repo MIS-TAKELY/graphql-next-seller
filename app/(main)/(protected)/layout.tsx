@@ -22,7 +22,7 @@ export default async function ProtectedLayout({
   }
 
   // Check if phone is verified first
-  if (!(session.user as any).phoneVerified) {
+  if (!(session.user as any).phoneNumberVerified) {
     redirect("/verify-phone");
   }
 

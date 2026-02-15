@@ -31,8 +31,12 @@ export default function SellerUnifiedAuth() {
     useEffect(() => {
         if (!isPending && session) {
             // Check if phone number is verified
-            if (!(session.user as any).phoneVerified) {
-                setStep("PHONE_NUMBER");
+            if (!(session.user as any).phoneNumberVerified) {
+                // Only set step to PHONE_NUMBER if not already in OTP step
+                // to prevent resetting state when switching tabs/visibility
+                if (step !== "PHONE_OTP") {
+                    setStep("PHONE_NUMBER");
+                }
             } else {
                 // If verified, redirect based on profile status
                 if ((session.user as any).hasProfile) {
@@ -42,7 +46,7 @@ export default function SellerUnifiedAuth() {
                 }
             }
         }
-    }, [session, isPending, router]);
+    }, [session, isPending, router, step]);
 
     // Timer for OTP
     useEffect(() => {
@@ -245,7 +249,7 @@ export default function SellerUnifiedAuth() {
             const data = await res.json();
             if (res.ok) {
                 toast.success("Phone verified successfully! Redirecting...");
-                // Refetch session to update phoneVerified status
+                // Refetch session to update phoneNumberVerified status
                 await refetch();
                 // Handled in existing useEffect, but refreshing router ensures server state matches
                 router.refresh();

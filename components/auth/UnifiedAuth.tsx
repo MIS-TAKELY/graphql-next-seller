@@ -31,8 +31,10 @@ export default function UnifiedAuth() {
     useEffect(() => {
         if (!isPending && session) {
             // Check verification first
-            if (!(session.user as any).phoneVerified) {
-                setStep("PHONE_NUMBER");
+            if (!(session.user as any).phoneNumberVerified) {
+                if (step !== "PHONE_OTP") {
+                    setStep("PHONE_NUMBER");
+                }
             } else if (!(session.user as any).hasProfile) {
                 // If verified but no profile, redirect to setup
                 // Middleware handles this mostly, but good for client-side transition
@@ -41,7 +43,7 @@ export default function UnifiedAuth() {
                 router.push("/");
             }
         }
-    }, [session, isPending, router]);
+    }, [session, isPending, router, step]);
 
     // Timer for OTP
     useEffect(() => {
@@ -252,7 +254,7 @@ export default function UnifiedAuth() {
             const data = await res.json();
             if (res.ok) {
                 toast.success("Phone verified successfully! Redirecting...");
-                // Refetch session to update phoneVerified status
+                // Refetch session to update phoneNumberVerified status
                 await refetch();
                 // Trigger server-side redirect check
                 router.refresh();
