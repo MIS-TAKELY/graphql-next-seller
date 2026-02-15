@@ -148,7 +148,7 @@ export const sellerProfileResolvers = {
                 businessRegNo: input.businessRegNo,
                 businessType: input.businessType,
                 phoneNumber: input.phone,
-                altPhone: input.altPhone,
+                altPhoneNumber: input.altPhone,
                 email: input.supportEmail,
                 pickupAddressId: address.id,
                 isActive: true,
@@ -201,6 +201,8 @@ export const sellerProfileResolvers = {
 
   // Optional: Keep backward compatibility or simplify field access
   SellerProfile: {
+    phone: (parent: { phoneNumber: string }) => parent.phoneNumber,
+    altPhone: (parent: { altPhoneNumber?: string | null }) => parent.altPhoneNumber,
     address: (
       parent: { pickupAddress?: any; pickupAddressId?: string },
       _: unknown,
