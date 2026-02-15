@@ -26,7 +26,7 @@ export const customerResolvers = {
                     email: true,
                     firstName: true,
                     lastName: true,
-                    phone: true,
+                    phoneNumber: true,
                     createdAt: true,
                   },
                 },
@@ -46,7 +46,7 @@ export const customerResolvers = {
             email: string;
             firstName: string | null;
             lastName: string | null;
-            phone: string | null;
+            phoneNumber: string | null;
             createdAt: Date;
             orders: number;
             totalSpent: number;
@@ -64,7 +64,7 @@ export const customerResolvers = {
               email: buyer.email,
               firstName: buyer.firstName,
               lastName: buyer.lastName,
-              phone: buyer.phone,
+              phoneNumber: buyer.phoneNumber,
               createdAt: buyer.createdAt,
               orders: 0,
               totalSpent: 0,
@@ -121,7 +121,7 @@ export const customerResolvers = {
             email: customer.email,
             firstName: customer.firstName,
             lastName: customer.lastName,
-            phone: customer.phone,
+            phone: customer.phoneNumber,
             totalOrders: customer.orders,
             totalSpent: customer.totalSpent,
             averageOrderValue:

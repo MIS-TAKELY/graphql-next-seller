@@ -69,7 +69,7 @@ export const auth = betterAuth({
     },
     user: {
         additionalFields: {
-            phoneVerified: {
+            phoneNumberVerified: {
                 type: "boolean",
                 required: false,
                 defaultValue: false,
@@ -94,7 +94,7 @@ export const auth = betterAuth({
                 type: "string",
                 required: false,
             },
-            phone: {
+            phoneNumber: {
                 type: "string",
                 required: false,
             },

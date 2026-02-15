@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
     // Check if phone number is already registered to another user
     const existingUser = await prisma.user.findUnique({
-      where: { phone },
+      where: { phoneNumber: phone },
       select: { id: true },
     });
 
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       where: { id: session.user.id },
       data: {
         otp,
-        phone,
+        phoneNumber: phone,
         otpExpiresAt: expiresAt,
       },
     });

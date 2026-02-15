@@ -134,7 +134,7 @@ export const returnResolvers = {
                     orderNumber: updatedReturn.order.orderNumber || updatedReturn.orderId,
                     buyerName: updatedReturn.user.name || `${updatedReturn.user.firstName || ""} ${updatedReturn.user.lastName || ""}`.trim() || "Customer",
                     buyerEmail: updatedReturn.user.email,
-                    buyerPhone: updatedReturn.user.phone,
+                    buyerPhone: updatedReturn.user.phoneNumber,
                     status: status,
                     reason: updatedReturn.reason,
                     rejectionReason: rejectionReason,

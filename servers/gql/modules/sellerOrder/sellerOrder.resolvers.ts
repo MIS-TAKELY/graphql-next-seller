@@ -403,7 +403,7 @@ export const sellerOrderResolver = {
                   id: true,
                   name: true,
                   email: true,
-                  phone: true
+                  phoneNumber: true
                 }
               },
               sellerOrders: true, // Fetch all SellerOrders for the parent Order
@@ -457,7 +457,7 @@ export const sellerOrderResolver = {
                       id: true,
                       name: true,
                       email: true,
-                      phone: true
+                      phoneNumber: true
                     }
                   },
                   sellerOrders: true,
@@ -490,7 +490,7 @@ export const sellerOrderResolver = {
                   id: true,
                   name: true,
                   email: true,
-                  phone: true
+                  phoneNumber: true
                 }
               },
             },
@@ -521,7 +521,7 @@ export const sellerOrderResolver = {
               orderNumber: updatedSellerOrder.order.orderNumber || updatedSellerOrder.buyerOrderId,
               buyerName: buyer.name || "Customer",
               buyerEmail: buyer.email,
-              buyerPhone: buyer.phone,
+              buyerPhone: buyer.phoneNumber,
               items: updatedSellerOrder.items.map((item: any) => ({
                 productName: item.variant?.product?.name || "Product",
                 quantity: item.quantity,
@@ -595,7 +595,7 @@ export const sellerOrderResolver = {
                   id: true,
                   name: true,
                   email: true,
-                  phone: true
+                  phoneNumber: true
                 }
               },
               shipments: true,
@@ -667,7 +667,7 @@ export const sellerOrderResolver = {
                     id: true,
                     name: true,
                     email: true,
-                    phone: true
+                    phoneNumber: true
                   }
                 },
                 shipments: true,
@@ -700,7 +700,7 @@ export const sellerOrderResolver = {
               orderNumber: updatedSellerOrder.order.orderNumber || updatedSellerOrder.buyerOrderId,
               buyerName: buyer.name || "Customer",
               buyerEmail: buyer.email,
-              buyerPhone: buyer.phone,
+              buyerPhone: buyer.phoneNumber,
               items: updatedSellerOrder.items.map((item: any) => ({
                 productName: item.variant?.product?.name || "Product",
                 quantity: item.quantity,
@@ -801,7 +801,7 @@ export const sellerOrderResolver = {
           orderNumber: updatedSellerOrder.order.orderNumber || updatedSellerOrder.buyerOrderId,
           buyerName: updatedSellerOrder.order.buyer.name || "Customer",
           buyerEmail: updatedSellerOrder.order.buyer.email,
-          buyerPhone: updatedSellerOrder.order.buyer.phone,
+          buyerPhone: updatedSellerOrder.order.buyer.phoneNumber,
           items: updatedSellerOrder.items.map((item: any) => ({
             productName: item.variant?.product?.name || "Product",
             quantity: item.quantity,
@@ -964,7 +964,7 @@ export const sellerOrderResolver = {
                   id: true,
                   name: true,
                   email: true,
-                  phone: true
+                  phoneNumber: true
                 }
               },
               sellerOrders: true,
@@ -1043,7 +1043,7 @@ export const sellerOrderResolver = {
                     id: true,
                     name: true,
                     email: true,
-                    phone: true
+                    phoneNumber: true
                   }
                 },
                 sellerOrders: true,
@@ -1079,7 +1079,7 @@ export const sellerOrderResolver = {
               console.log(`📧 Sending notification for order ${typedSO.id} to buyer:`, {
                 email: buyer.email,
                 name: buyer.name,
-                phone: buyer.phone,
+                phone: buyer.phoneNumber,
                 hasItems: !!typedSO.items?.length
               });
 
@@ -1087,7 +1087,7 @@ export const sellerOrderResolver = {
                 orderNumber: typedSO.order.orderNumber || typedSO.buyerOrderId,
                 buyerName: buyer.name || "Customer",
                 buyerEmail: buyer.email,
-                buyerPhone: buyer.phone,
+                buyerPhone: buyer.phoneNumber,
                 items: typedSO.items?.map((item: any) => ({
                   productName: item.variant?.product?.name || "Product",
                   quantity: item.quantity,
@@ -1318,7 +1318,7 @@ export const sellerOrderResolver = {
                   orderNumber: updatedDispute.order.orderNumber || updatedDispute.orderId,
                   buyerName: updatedDispute.order.buyer.name || "Customer",
                   buyerEmail: updatedDispute.order.buyer.email,
-                  buyerPhone: updatedDispute.order.buyer.phone,
+                  buyerPhone: updatedDispute.order.buyer.phoneNumber,
                   items: sellerOrder.items.map((item: any) => ({
                     productName: item.variant?.product?.name || "Product",
                     quantity: item.quantity,
@@ -1350,7 +1350,7 @@ export const sellerOrderResolver = {
                   orderNumber: updatedDispute.order.orderNumber || updatedDispute.orderId,
                   buyerName: updatedDispute.order.buyer.name || "Customer",
                   buyerEmail: updatedDispute.order.buyer.email,
-                  buyerPhone: updatedDispute.order.buyer.phone,
+                  buyerPhone: updatedDispute.order.buyer.phoneNumber,
                   status: "APPROVED",
                   reason: updatedDispute.reason,
                   items: sellerOrder.items.map((item: any) => ({
@@ -1372,7 +1372,7 @@ export const sellerOrderResolver = {
                 orderNumber: updatedDispute.order.orderNumber || updatedDispute.orderId,
                 buyerName: updatedDispute.order.buyer.name || "Customer",
                 buyerEmail: updatedDispute.order.buyer.email,
-                buyerPhone: updatedDispute.order.buyer.phone,
+                buyerPhone: updatedDispute.order.buyer.phoneNumber,
                 status: "REJECTED",
                 reason: updatedDispute.reason,
                 items: sellerOrder ? sellerOrder.items.map((item: any) => ({
@@ -1422,7 +1422,7 @@ export const sellerOrderResolver = {
             orderNumber: updatedReturn.order.orderNumber || updatedReturn.orderId,
             buyerName: updatedReturn.user.name || "Customer",
             buyerEmail: updatedReturn.user.email,
-            buyerPhone: updatedReturn.user.phone,
+            buyerPhone: updatedReturn.user.phoneNumber,
             status: updatedReturn.status,
             reason: updatedReturn.reason,
             items: updatedReturn.items.map(item => ({

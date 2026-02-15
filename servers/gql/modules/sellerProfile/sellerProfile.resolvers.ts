@@ -111,7 +111,7 @@ export const sellerProfileResolvers = {
                 state: addressInput.state || addressInput.city,
                 country: addressInput.country || "NP",
                 postalCode: addressInput.postalCode,
-                phone: addressInput.phone || input.phone,
+                phoneNumber: addressInput.phone || input.phone,
                 isDefault: true,
               },
             });
@@ -147,7 +147,7 @@ export const sellerProfileResolvers = {
                 businessName: input.businessName,
                 businessRegNo: input.businessRegNo,
                 businessType: input.businessType,
-                phone: input.phone,
+                phoneNumber: input.phone,
                 altPhone: input.altPhone,
                 email: input.supportEmail,
                 pickupAddressId: address.id,

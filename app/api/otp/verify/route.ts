@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         await prisma.user.update({
             where: { id: session.user.id },
             data: {
-                phoneVerified: true,
+                phoneNumberVerified: true,
                 otp: null,
                 otpExpiresAt: null
             },
