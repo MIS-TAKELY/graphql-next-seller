@@ -151,6 +151,7 @@ export const transformProductToFormData = (product: Product): FormData => {
     promotionalMedia,
 
     // Shipping
+    deliveryCharge: product.deliveryCharge?.toString() || "0",
     weight: firstVariant?.attributes?.weight?.toString() || "",
     length: firstVariant?.attributes?.length?.toString() || "",
     width: firstVariant?.attributes?.width?.toString() || "",

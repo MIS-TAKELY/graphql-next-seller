@@ -48,6 +48,7 @@ const buildOptimisticProduct = (
     brand: input.brand ?? "",
     categoryId: input.categoryId,
     category: options.category ?? null,
+    deliveryCharge: input.deliveryCharge || 0,
     images: (input.images ?? []).map((img, index) => ({
       id: `${productId}-image-${index}`,
       productId,
@@ -250,6 +251,7 @@ export const useProduct = (variables?: {
                   description: actualInput.description || readField("description", productRef),
                   brand: actualInput.brand || readField("brand", productRef),
                   status: actualInput.status || readField("status", productRef),
+                  deliveryCharge: actualInput.deliveryCharge !== undefined ? actualInput.deliveryCharge : readField("deliveryCharge", productRef),
                 };
 
                 return updatedProduct;
