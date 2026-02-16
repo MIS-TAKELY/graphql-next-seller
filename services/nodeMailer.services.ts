@@ -51,6 +51,21 @@ const TEMPLATES: Record<string, EmailTemplate> = {
       </div>
     `,
   },
+  VERIFICATION_OTP: {
+    subject: "Your Verification Code - Vanijay",
+    text: (ctx) => `Your verification code is: ${ctx.otp}`,
+    html: (ctx) => `
+      <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Verification Code</h2>
+        <p>Hello ${ctx.name || 'there'},</p>
+        <p>Your verification code is:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="display: inline-block; padding: 16px 32px; background-color: #f0f0f0; border-radius: 8px; font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #333;">${ctx.otp}</span>
+        </div>
+        <p style="color: #666; font-size: 0.9em;">This code will expire in 10 minutes. If you didn't request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  },
   PASSWORD_RESET: {
     subject: "Reset your password - Vanijay",
     text: (ctx) => `You requested a password reset. Use this link: ${ctx.url}`,

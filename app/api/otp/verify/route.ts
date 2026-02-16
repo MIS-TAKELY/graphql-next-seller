@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
+import { rateLimit } from "@/services/rateLimit.service";
 
 export async function POST(req: Request) {
     const session = await auth.api.getSession({
@@ -13,10 +14,19 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const allowed = await rateLimit(`rl:otp-verify:${session.user.id}`, 5, 300);
+    if (!allowed) {
+        return NextResponse.json({ error: "Too many verification attempts. Please wait before trying again." }, { status: 429 });
+    }
+
     try {
         const { otp } = await req.json();
         if (!otp) {
             return NextResponse.json({ error: "OTP is required" }, { status: 400 });
+        }
+
+        if (!/^\d{6}$/.test(otp)) {
+            return NextResponse.json({ error: "OTP must be a 6-digit number" }, { status: 400 });
         }
 
         const user = await prisma.user.findUnique({

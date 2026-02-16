@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/services/rateLimit.service";
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({
@@ -11,6 +12,14 @@ export async function POST(req: Request) {
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const allowed = await rateLimit(`rl:otp-send:${session.user.id}`, 3, 300);
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many OTP requests. Please wait before trying again." },
+      { status: 429 }
+    );
   }
 
   try {
@@ -22,9 +31,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate phone number format (E.164 format)
-    const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-    if (!phoneRegex.test(phone)) {
+    const phoneRegex = /^\+?[1-9]\d{7,14}$/;
+    if (!phoneRegex.test(phone.replace(/\s|-/g, ""))) {
       return NextResponse.json(
         {
           error:

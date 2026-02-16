@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { signIn, signUp, useSession, signOut, sendVerificationEmail } from "@/lib/auth-client";
+import { signIn, signUp, useSession, signOut, sendVerificationEmail, authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { CheckCircle2, Mail, Phone, Loader2, Eye, EyeOff } from "lucide-react";
 // import Logo from "../navbar/Logo"; // Seller app might not have this, omitting or using text
 
-type AuthStep = "SIGN_IN" | "SIGN_UP" | "PHONE_OTP" | "PHONE_NUMBER" | "EMAIL_SENT";
+type AuthStep = "SIGN_IN" | "SIGN_UP" | "PHONE_OTP" | "PHONE_NUMBER" | "EMAIL_SENT" | "FORGOT_PASSWORD_INPUT" | "FORGOT_PASSWORD_OTP" | "FORGOT_PASSWORD_RESET";
 
 export default function UnifiedAuth() {
     const { data: session, isPending, refetch } = useSession();
@@ -25,6 +25,11 @@ export default function UnifiedAuth() {
     const [loading, setLoading] = useState(false);
     const [timer, setTimer] = useState(120);
     const [canResend, setCanResend] = useState(false);
+    const [forgotPasswordIdentifier, setForgotPasswordIdentifier] = useState("");
+    const [forgotPasswordOtp, setForgotPasswordOtp] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [isEmailReset, setIsEmailReset] = useState(false);
     const router = useRouter();
 
     // Handle step transitions based on session state
@@ -48,7 +53,7 @@ export default function UnifiedAuth() {
     // Timer for OTP
     useEffect(() => {
         let interval: NodeJS.Timeout;
-        if (step === "PHONE_OTP" && timer > 0) {
+        if ((step === "PHONE_OTP" || step === "FORGOT_PASSWORD_OTP") && timer > 0) {
             interval = setInterval(() => {
                 setTimer((prev) => prev - 1);
             }, 1000);
@@ -119,6 +124,18 @@ export default function UnifiedAuth() {
 
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (password.length < 8) {
+            toast.error("Password must be at least 8 characters");
+            return;
+        }
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            toast.error("Please enter a valid email address");
+            return;
+        }
+
         setLoading(true);
         try {
             const nameParts = name.trim().split(/\s+/);
@@ -336,6 +353,15 @@ export default function UnifiedAuth() {
                         </button>
                     </div>
                 </div>
+                <div className="flex justify-end">
+                    <button
+                        type="button"
+                        onClick={() => setStep("FORGOT_PASSWORD_INPUT")}
+                        className="text-xs text-blue-600 hover:underline"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                     {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Sign in
@@ -454,6 +480,118 @@ export default function UnifiedAuth() {
         </div>
     );
 
+    const handleForgotPasswordSendOtp = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+
+        const isEmail = forgotPasswordIdentifier.includes("@");
+
+        if (isEmail) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(forgotPasswordIdentifier)) {
+                toast.error("Please enter a valid email address");
+                return;
+            }
+        } else {
+            const phoneRegex = /^\+?[1-9]\d{1,14}$/;
+            const cleanPhone = forgotPasswordIdentifier.replace(/\s|-/g, "");
+            if (!phoneRegex.test(cleanPhone)) {
+                toast.error("Please enter a valid phone number (e.g., 9812345678 or +9779812345678)");
+                return;
+            }
+        }
+
+        setLoading(true);
+        try {
+            const { data, error } = await (authClient as any).phonePassword.sendForgotPasswordOtp({
+                identifier: forgotPasswordIdentifier,
+            });
+
+            if (!error) {
+                toast.success("OTP sent successfully");
+                setIsEmailReset(data.isEmail);
+                setStep("FORGOT_PASSWORD_OTP");
+                setTimer(120);
+                setCanResend(false);
+            } else {
+                const errorMessage = error.message || "Failed to send OTP";
+                if (errorMessage.toLowerCase().includes("social login")) {
+                    toast.error("This account uses social login. Please use the Google or Facebook sign in button.");
+                } else if (errorMessage.toLowerCase().includes("not found") || errorMessage.toLowerCase().includes("no account")) {
+                    toast.error("No account found with this email or phone number.");
+                } else {
+                    toast.error(errorMessage);
+                }
+            }
+        } catch (err) {
+            toast.error("An error occurred. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleForgotPasswordVerifyOtp = async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        if (!forgotPasswordOtp || forgotPasswordOtp.length !== 6) {
+            toast.error("Please enter a valid 6-digit code");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await (authClient as any).phonePassword.verifyForgotPasswordOtp({
+                identifier: forgotPasswordIdentifier,
+                otp: forgotPasswordOtp,
+            });
+
+            if (!error) {
+                setStep("FORGOT_PASSWORD_RESET");
+            } else {
+                toast.error(error.message || "Invalid OTP");
+            }
+        } catch (err) {
+            toast.error("An error occurred during verification");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (password.length < 8) {
+            toast.error("Password must be at least 8 characters");
+            return;
+        }
+        if (password !== confirmPassword) {
+            toast.error("Passwords do not match");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const { error } = await (authClient as any).phonePassword.resetPasswordWithOtp({
+                identifier: forgotPasswordIdentifier,
+                otp: forgotPasswordOtp,
+                password,
+            });
+
+            if (!error) {
+                toast.success("Password reset successfully. Please sign in.");
+                setPassword("");
+                setConfirmPassword("");
+                setForgotPasswordOtp("");
+                setForgotPasswordIdentifier("");
+                setStep("SIGN_IN");
+            } else {
+                toast.error(error.message || "Failed to reset password");
+            }
+        } catch (err) {
+            toast.error("An error occurred");
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const renderPhoneNumber = () => (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
             <div className="text-center">
@@ -500,7 +638,7 @@ export default function UnifiedAuth() {
             <form onSubmit={verifyOtp} className="space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="otp">6-Digit Code</Label>
-                    <Input id="otp" type="text" required maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value)} className="text-center text-2xl tracking-[0.5em]" placeholder="000000" />
+                    <Input id="otp" type="text" required maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} className="text-center text-2xl tracking-[0.5em]" placeholder="000000" />
                 </div>
                 <div className="space-y-4">
                     <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white" disabled={loading || (timer === 0 && !canResend)}>
@@ -518,6 +656,85 @@ export default function UnifiedAuth() {
         </div>
     );
 
+    const renderForgotPasswordInput = () => (
+        <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+            <div className="text-left">
+                <h2 className="text-2xl font-bold tracking-tight">Forgot Password</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Enter your email or phone to receive an OTP.</p>
+            </div>
+            <form onSubmit={handleForgotPasswordSendOtp} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="forgot_identifier">Email or Phone</Label>
+                    <Input id="forgot_identifier" type="text" required value={forgotPasswordIdentifier} onChange={(e) => setForgotPasswordIdentifier(e.target.value)} placeholder="name@example.com or phone" />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Send OTP
+                </Button>
+                <div className="text-center">
+                    <button type="button" onClick={() => setStep("SIGN_IN")} className="text-sm text-muted-foreground hover:text-primary">Back to Sign In</button>
+                </div>
+            </form>
+        </div>
+    );
+
+    const renderForgotPasswordOtp = () => (
+        <div className="space-y-6 animate-in fade-in scale-95 duration-500">
+            <div className="text-center">
+                <h2 className="text-2xl font-bold">Verification</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Sent to {forgotPasswordIdentifier} via {isEmailReset ? "Email" : "WhatsApp"}</p>
+            </div>
+            <form onSubmit={handleForgotPasswordVerifyOtp} className="space-y-4">
+                <div className="space-y-2">
+                    <Input id="forgot_otp" type="text" required maxLength={6} value={forgotPasswordOtp} onChange={(e) => setForgotPasswordOtp(e.target.value.replace(/\D/g, ""))} className="text-center text-2xl tracking-[0.5em]" placeholder="000000" />
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Next
+                </Button>
+                {timer > 0 ? (
+                    <p className="text-center text-sm text-muted-foreground">Resend in <span className="font-medium text-primary">{formatTime(timer)}</span></p>
+                ) : (
+                    <button type="button" onClick={() => handleForgotPasswordSendOtp()} className="w-full text-sm font-medium text-primary hover:underline">Resend OTP</button>
+                )}
+                <Button variant="ghost" className="w-full" onClick={() => setStep("FORGOT_PASSWORD_INPUT")}>Change Identifier</Button>
+            </form>
+        </div>
+    );
+
+    const renderForgotPasswordReset = () => (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-left">
+                <h2 className="text-2xl font-bold tracking-tight">New Password</h2>
+                <p className="mt-2 text-sm text-muted-foreground">Create a strong password for your account.</p>
+            </div>
+            <form onSubmit={handleResetPassword} className="space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="new_password">New Password</Label>
+                    <div className="relative">
+                        <Input id="new_password" type={showPassword ? "text" : "password"} required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" className="pr-10" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="confirm_password">Confirm New Password</Label>
+                    <div className="relative">
+                        <Input id="confirm_password" type={showConfirmPassword ? "text" : "password"} required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="pr-10" />
+                        <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                            {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                    </div>
+                </div>
+                <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    Reset Password
+                </Button>
+            </form>
+        </div>
+    );
+
     return (
         <div className="w-full max-w-md mx-auto overflow-hidden">
             <div className="bg-card/80 border border-border/50 rounded-xl shadow-2xl backdrop-blur-md p-8">
@@ -526,6 +743,9 @@ export default function UnifiedAuth() {
                 {step === "EMAIL_SENT" && renderEmailSent()}
                 {step === "PHONE_NUMBER" && renderPhoneNumber()}
                 {step === "PHONE_OTP" && renderPhoneOtp()}
+                {step === "FORGOT_PASSWORD_INPUT" && renderForgotPasswordInput()}
+                {step === "FORGOT_PASSWORD_OTP" && renderForgotPasswordOtp()}
+                {step === "FORGOT_PASSWORD_RESET" && renderForgotPasswordReset()}
             </div>
         </div>
     );

@@ -31,6 +31,8 @@ model User {
   phoneNumberVerified       Boolean                     @default(false) @map("phoneVerified")
   otp                       String?
   otpExpiresAt              DateTime?
+  emailOtp                  String?
+  emailOtpExpiresAt         DateTime?
   gender                    Gender?
   dob                       DateTime?
   createdAt                 DateTime                    @default(now())

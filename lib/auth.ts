@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db/prisma";
-import { username, phoneNumber } from "better-auth/plugins";
+import { username, phoneNumber, emailOTP } from "better-auth/plugins";
 import { phonePassword } from "./auth-plugins/phone-password";
 import { senMail } from "@/services/nodeMailer.services";
 import { sendWhatsAppOTP } from "@/lib/whatsapp";
@@ -15,7 +15,16 @@ export const auth = betterAuth({
         username(),
         phoneNumber({
             sendOTP: async ({ phoneNumber, code }) => {
+                const phoneRegex = /^\+?[1-9]\d{7,14}$/;
+                if (!phoneRegex.test(phoneNumber.replace(/\s|-/g, ""))) {
+                    throw new Error("Invalid phone number format");
+                }
                 await sendWhatsAppOTP(phoneNumber, code);
+            },
+        }),
+        emailOTP({
+            sendVerificationOTP: async ({ email, otp, type }) => {
+                await senMail(email, "VERIFICATION_OTP", { otp, name: "Seller" });
             },
         }),
         phonePassword(),
@@ -27,13 +36,31 @@ export const auth = betterAuth({
     databaseHooks: {
         user: {
             create: {
+                before: async (user) => {
+                    if (!user.name && user.email) {
+                        user.name = user.email.split("@")[0];
+                    }
+                    if (!user.username || (typeof user.username === 'string' && user.username.trim() === "")) {
+                        const randomId = Math.random().toString(36).substring(2, 7);
+                        const emailPrefix = user.email ? user.email.split("@")[0] : "seller";
+                        user.username = (emailPrefix + "_" + randomId).toLowerCase().replace(/[^a-z0-9_]/g, "");
+                    }
+                    if (user.phoneNumber) {
+                        user.phoneNumberVerified = true;
+                    }
+                    return { data: user };
+                },
                 after: async (user) => {
-                    await prisma.userRole.create({
-                        data: {
-                            userId: user.id,
-                            role: "SELLER",
-                        },
-                    });
+                    try {
+                        await prisma.userRole.create({
+                            data: {
+                                userId: user.id,
+                                role: "SELLER",
+                            },
+                        });
+                    } catch (err) {
+                        console.error("BETTER-AUTH: Error creating SELLER role:", err);
+                    }
                 },
             },
         },
@@ -66,6 +93,15 @@ export const auth = betterAuth({
     emailAndPassword: {
         enabled: true,
         requireEmailVerification: true,
+        resetPasswordTokenExpiresIn: 600,
+        sendResetPassword: async ({ user, url }: { user: AuthUser; url: string }) => {
+            try {
+                const name = user.firstName || user.name || user.email.split("@")[0];
+                await senMail(user.email, "PASSWORD_RESET", { url, name });
+            } catch (err) {
+                console.error("BETTER-AUTH: Error in sendResetPassword hook:", err);
+            }
+        },
     },
     user: {
         additionalFields: {
@@ -79,6 +115,14 @@ export const auth = betterAuth({
                 required: false,
             },
             otpExpiresAt: {
+                type: "date",
+                required: false,
+            },
+            emailOtp: {
+                type: "string",
+                required: false,
+            },
+            emailOtpExpiresAt: {
                 type: "date",
                 required: false,
             },
