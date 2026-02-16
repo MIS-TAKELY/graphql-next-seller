@@ -168,7 +168,7 @@ const generateOrderStatusEmail = (context: OrderEmailContext): string => {
 };
 
 // Generate WhatsApp message for order status updates
-const generateWhatsAppMessage = (orderDetails: OrderDetails): string => {
+export const generateWhatsAppMessage = (orderDetails: OrderDetails): string => {
   const statusEmojis: Record<string, string> = {
     CONFIRMED: "✅",
     PROCESSING: "📦",
@@ -188,7 +188,12 @@ const generateWhatsAppMessage = (orderDetails: OrderDetails): string => {
     message += `⚠️ *Cancellation Reason:* ${orderDetails.cancellationReason}\n\n`;
   }
 
-  if (orderDetails.trackingNumber && orderDetails.carrier) {
+  if (orderDetails.status === "SHIPPED" && orderDetails.trackingNumber && orderDetails.carrier) {
+    message += `📍 *Tracking Information*\n`;
+    message += `*Carrier:* ${orderDetails.carrier}\n`;
+    message += `*Tracking ID:* ${orderDetails.trackingNumber}\n\n`;
+    message += `You can track your package on the carrier's website.\n\n`;
+  } else if (orderDetails.trackingNumber && orderDetails.carrier) {
     message += `📍 *Tracking Information*\n`;
     message += `Carrier: ${orderDetails.carrier}\n`;
     message += `Tracking: ${orderDetails.trackingNumber}\n\n`;
@@ -438,7 +443,12 @@ export const sendOrderStatusNotifications = async (
 
   // Send WhatsApp notification (optional)
   try {
-    await sendOrderWhatsAppNotification(orderDetails);
+    // Skip WhatsApp for PROCESSING status as per user request
+    if (orderDetails.status === "PROCESSING") {
+      console.log(`ℹ️ Skipping WhatsApp notification for PROCESSING status for order #${orderDetails.orderNumber}`);
+    } else {
+      await sendOrderWhatsAppNotification(orderDetails);
+    }
   } catch (error) {
     console.error("Failed to send WhatsApp notification:", error);
     // WhatsApp errors are logged but don't fail the entire operation

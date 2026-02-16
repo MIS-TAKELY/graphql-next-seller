@@ -1210,8 +1210,26 @@ export const sellerOrderResolver = {
             seller: true,
             order: {
               include: {
-                buyer: { select: { id: true } },
+                buyer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phoneNumber: true
+                  }
+                },
                 shipments: true,
+                items: {
+                  include: {
+                    variant: {
+                      include: {
+                        product: {
+                          select: { name: true }
+                        }
+                      }
+                    }
+                  }
+                }
               },
             },
           },
@@ -1236,6 +1254,32 @@ export const sellerOrderResolver = {
               previousStatus: previousOrder?.status as SellerOrderStatus,
             }
           );
+
+          // Send email and WhatsApp notifications to buyer for mass shipment
+          try {
+            const buyer = typedSO.order?.buyer;
+            if (typedSO.order && buyer) {
+              await sendOrderStatusNotifications({
+                orderNumber: typedSO.order.orderNumber || typedSO.buyerOrderId,
+                buyerName: "Customer", // Fallback if name is missing
+                buyerEmail: "buyer@example.com", // Fallback
+                ... (buyer.name ? { buyerName: buyer.name } : {}),
+                ... (buyer.email ? { buyerEmail: buyer.email } : {}),
+                buyerPhone: buyer.phoneNumber,
+                items: typedSO.order.items?.map((item: any) => ({
+                  productName: item.variant?.product?.name || "Product",
+                  quantity: item.quantity,
+                  price: item.totalPrice.toNumber(),
+                })) || [],
+                total: typedSO.total.toNumber(),
+                status: "SHIPPED",
+                trackingNumber,
+                carrier,
+              });
+            }
+          } catch (notificationError) {
+            console.error(`Failed to send mass shipment notification for order ${typedSO.id}:`, notificationError);
+          }
         }
 
         return results.map((o: any) => ({
