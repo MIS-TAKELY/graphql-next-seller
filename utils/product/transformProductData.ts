@@ -156,7 +156,7 @@ export const transformProductToFormData = (product: Product): FormData => {
     length: firstVariant?.attributes?.length?.toString() || "",
     width: firstVariant?.attributes?.width?.toString() || "",
     height: firstVariant?.attributes?.height?.toString() || "",
-    isFragile: product.isFragile || false,
+    isFragile: firstVariant?.attributes?.isFragile || false,
     shippingMethod: firstVariant?.attributes?.shippingClass || "",
     carrier: deliveryOption?.carrier || "",
     estimatedDelivery: deliveryOption?.estimatedDelivery || "",

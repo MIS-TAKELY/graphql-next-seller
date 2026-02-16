@@ -65,6 +65,7 @@ export const GET_PRODUCT = gql`
         }
       }
       brand
+      deliveryCharge
       specificationDisplayFormat
       specificationTable
       variants {

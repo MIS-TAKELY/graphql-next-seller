@@ -129,7 +129,14 @@ export const buildProductInput = (
       price: parseFloat(v.price) || 0,
       mrp: parseFloat(v.mrp) || parseFloat(v.price) || 0,
       stock: parseInt(String(v.stock), 10) || 0,
-      attributes: v.attributes,
+      attributes: {
+        ...v.attributes,
+        weight: formData.weight,
+        length: formData.length,
+        width: formData.width,
+        height: formData.height,
+        isFragile: formData.isFragile,
+      },
       isDefault: v.isDefault,
       specificationTable: v.specificationTable,
       // Pass global specs to variants
@@ -150,7 +157,13 @@ export const buildProductInput = (
         price: parseFloat(formData.price) || 0,
         mrp: parseFloat(formData.mrp) || parseFloat(formData.price) || 0,
         stock: parseInt(String(formData.stock), 10) || 0,
-        attributes: {}, // Empty for simple
+        attributes: {
+          weight: formData.weight,
+          length: formData.length,
+          width: formData.width,
+          height: formData.height,
+          isFragile: formData.isFragile,
+        }, // Saved in attributes
         isDefault: true,
         specificationTable: formData.specificationTable,
         specifications: Array.from(
