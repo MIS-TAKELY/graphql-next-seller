@@ -14,6 +14,7 @@ import { OrderFilters, SellerOrder, OrderStatus } from '@/types/pages/order.type
 import { toast } from 'sonner';
 import { OrderTable } from './OrderTable';
 import { CreateShipmentDialog } from './CreateShipmentDialog';
+import { CancelOrderDialog } from './CancelOrderDialog';
 import { useOrder } from '@/hooks/order/useOrder';
 
 interface OrderStatusTabProps {
@@ -41,7 +42,7 @@ export function OrderStatusTab({
   selectedOrders,
   onSelectionChange,
 }: OrderStatusTabProps) {
-  const { confirmSingleOrder, updateOrderStatus } = useOrder();
+  const { confirmSingleOrder, updateOrderStatus, cancelOrder, refetch } = useOrder();
 
   const getTitle = () => {
     switch (tabValue) {
@@ -79,64 +80,85 @@ export function OrderStatusTab({
     switch (tabValue) {
       case 'new':
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                await confirmSingleOrder(order.id);
-                // Call the callback after successful confirmation
-                if (onOrderConfirmed) {
-                  setTimeout(() => {
-                    onOrderConfirmed(order.id);
-                  }, 100);
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await confirmSingleOrder(order.id);
+                  // Call the callback after successful confirmation
+                  if (onOrderConfirmed) {
+                    setTimeout(() => {
+                      onOrderConfirmed(order.id);
+                    }, 100);
+                  }
+                } catch (error) {
+                  // Error handling is managed by the hook
+                  console.error('Failed to confirm order:', error);
                 }
-              } catch (error) {
-                // Error handling is managed by the hook
-                console.error('Failed to confirm order:', error);
-              }
-            }}
-            className="text-xs"
-          >
-            Confirm Order
-          </Button>
+              }}
+              className="text-xs"
+            >
+              Confirm Order
+            </Button>
+            <CancelOrderDialog order={order} onCancelClick={cancelOrder} onSuccess={() => refetch()}>
+              <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+                Cancel
+              </Button>
+            </CancelOrderDialog>
+          </div>
         );
       case 'confirmed':
         return (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              try {
-                await updateOrderStatus(order.id, OrderStatus.PROCESSING);
-                // Call the callback after successful status update
-                if (onProcessingStarted) {
-                  setTimeout(() => {
-                    onProcessingStarted(order.id);
-                  }, 100);
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try {
+                  await updateOrderStatus(order.id, OrderStatus.PROCESSING);
+                  // Call the callback after successful status update
+                  if (onProcessingStarted) {
+                    setTimeout(() => {
+                      onProcessingStarted(order.id);
+                    }, 100);
+                  }
+                } catch (error) {
+                  // Error handling is managed by the hook
+                  console.error('Failed to start processing:', error);
                 }
-              } catch (error) {
-                // Error handling is managed by the hook
-                console.error('Failed to start processing:', error);
-              }
-            }}
-            className="text-xs"
-          >
-            Start Processing
-          </Button>
+              }}
+              className="text-xs"
+            >
+              Start Processing
+            </Button>
+            <CancelOrderDialog order={order} onCancelClick={cancelOrder} onSuccess={() => refetch()}>
+              <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+                Cancel
+              </Button>
+            </CancelOrderDialog>
+          </div>
         );
       case 'processing':
         return (
-          <CreateShipmentDialog
-            order={order}
-            onSuccess={(orderId) => {
-              if (onShipmentSuccess) {
-                setTimeout(() => {
-                  onShipmentSuccess(orderId);
-                }, 100);
-              }
-            }}
-          />
+          <div className="flex items-center gap-2">
+            <CreateShipmentDialog
+              order={order}
+              onSuccess={(orderId) => {
+                if (onShipmentSuccess) {
+                  setTimeout(() => {
+                    onShipmentSuccess(orderId);
+                  }, 100);
+                }
+              }}
+            />
+            <CancelOrderDialog order={order} onCancelClick={cancelOrder} onSuccess={() => refetch()}>
+              <Button variant="ghost" size="sm" className="text-xs text-destructive hover:text-destructive hover:bg-destructive/10">
+                Cancel
+              </Button>
+            </CancelOrderDialog>
+          </div>
         );
       case 'shipped':
         return (

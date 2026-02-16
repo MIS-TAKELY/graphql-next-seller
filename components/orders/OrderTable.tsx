@@ -86,16 +86,6 @@ export function OrderTable({
     }
   };
 
-  const handleCancelOrder = async (orderId: string) => {
-    const reason = window.prompt("Enter cancellation reason (optional):");
-    if (reason === null) return; // User cancelled prompt
-
-    try {
-      await cancelOrder(orderId, reason);
-    } catch (error) {
-      // Error handled by hook
-    }
-  };
 
   const formatDate = (dateString: string | Date) => {
     const dateValue = typeof dateString === 'string' ? dateString : dateString.toISOString();
