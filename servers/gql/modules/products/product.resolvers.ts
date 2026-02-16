@@ -482,6 +482,7 @@ export const productResolvers = {
 
                 specificationTable: input.specificationTable || null,
                 specificationDisplayFormat: input.specificationDisplayFormat || "bullet",
+                deliveryCharge: input.deliveryCharge || 0,
 
                 // A. Create Variants (One-to-Many)
                 variants: {
@@ -722,6 +723,8 @@ export const productResolvers = {
           productData.specificationTable = input.specificationTable;
         if (input.specificationDisplayFormat !== undefined)
           productData.specificationDisplayFormat = input.specificationDisplayFormat;
+        if (input.deliveryCharge !== undefined)
+          productData.deliveryCharge = input.deliveryCharge;
 
         // 2.1 Embedding Update (if relevant fields changed)
         let updatedEmbedding: number[] | undefined;

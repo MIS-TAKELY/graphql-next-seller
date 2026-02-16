@@ -117,6 +117,7 @@ export function ProductForm({
           isDefault: true,
         },
       ],
+      deliveryCharge: "0",
 
       returnType: ReturnType.NO_RETURN,
       returnDuration: "",

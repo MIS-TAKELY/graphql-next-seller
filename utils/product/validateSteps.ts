@@ -221,6 +221,8 @@ export const buildProductInput = (
         }))
         : undefined,
 
+    deliveryCharge: parseFloat(formData.deliveryCharge) || 0,
+
     warranty:
       formData.warrantyType !== "NO_WARRANTY"
         ? [

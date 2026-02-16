@@ -111,6 +111,7 @@ export interface Product extends BaseEntity {
   deliveryOptions?: DeliveryOption[];
   warranty?: Warranty[];
   returnPolicy?: ReturnPolicy[];
+  deliveryCharge: number;
   features?: string[];
   specificationTable?: any;
   specificationDisplayFormat?: "bullet" | "table" | "custom_table";

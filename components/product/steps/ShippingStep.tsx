@@ -20,7 +20,7 @@ export const ShippingStep = React.memo(({ formData, errors, updateFormData }: Sh
   // Helper to manage delivery options array
   const addDeliveryOption = () => {
     updateFormData("deliveryOptions", [
-      ...formData.deliveryOptions, 
+      ...formData.deliveryOptions,
       { title: "", description: "" }
     ]);
   };
@@ -39,7 +39,7 @@ export const ShippingStep = React.memo(({ formData, errors, updateFormData }: Sh
 
   return (
     <div className="space-y-6">
-      
+
       {/* 1. Physical Dimensions */}
       <div className="p-4 border rounded-lg bg-background">
         <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
@@ -47,10 +47,10 @@ export const ShippingStep = React.memo(({ formData, errors, updateFormData }: Sh
         </h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <FormField label="Weight (kg)" error={errors.weight}>
-            <ValidatedInput 
-              type="number" step="0.1" 
-              value={formData.weight} 
-              onChange={(e) => updateFormData("weight", e.target.value)} 
+            <ValidatedInput
+              type="number" step="0.1"
+              value={formData.weight}
+              onChange={(e) => updateFormData("weight", e.target.value)}
             />
           </FormField>
           <FormField label="Length (cm)">
@@ -69,6 +69,19 @@ export const ShippingStep = React.memo(({ formData, errors, updateFormData }: Sh
             <span className="text-sm">Fragile (Special handling required)</span>
           </label>
         </div>
+        <div className="mt-4 pt-4 border-t">
+          <FormField label="Delivery Charge (NPR)" error={errors.deliveryCharge}>
+            <ValidatedInput
+              type="number"
+              placeholder="0 (Free Delivery)"
+              value={formData.deliveryCharge}
+              onChange={(e) => updateFormData("deliveryCharge", e.target.value)}
+            />
+          </FormField>
+          <p className="text-xs text-muted-foreground mt-1">
+            Setting this to 0 will mark the product as "Free Delivery".
+          </p>
+        </div>
       </div>
 
       {/* 2. Delivery Options (One-to-Many) */}
@@ -80,15 +93,15 @@ export const ShippingStep = React.memo(({ formData, errors, updateFormData }: Sh
           {formData.deliveryOptions.map((option, idx) => (
             <div key={idx} className="flex gap-3 items-start">
               <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                <ValidatedInput 
-                  placeholder="Title (e.g. Express)" 
-                  value={option.title} 
-                  onChange={(e) => updateDeliveryOption(idx, 'title', e.target.value)} 
+                <ValidatedInput
+                  placeholder="Title (e.g. Express)"
+                  value={option.title}
+                  onChange={(e) => updateDeliveryOption(idx, 'title', e.target.value)}
                 />
-                <ValidatedInput 
-                  placeholder="Desc (e.g. 1-2 days)" 
-                  value={option.description || ""} 
-                  onChange={(e) => updateDeliveryOption(idx, 'description', e.target.value)} 
+                <ValidatedInput
+                  placeholder="Desc (e.g. 1-2 days)"
+                  value={option.description || ""}
+                  onChange={(e) => updateDeliveryOption(idx, 'description', e.target.value)}
                 />
               </div>
               <Button variant="ghost" size="icon" onClick={() => removeDeliveryOption(idx)}>
@@ -117,31 +130,31 @@ export const ShippingStep = React.memo(({ formData, errors, updateFormData }: Sh
           </FormField>
           {formData.warrantyType !== "NO_WARRANTY" && (
             <>
-               <FormField label="Duration">
-                 <div className="flex gap-2">
-                   <ValidatedInput 
-                      type="number" 
-                      value={formData.warrantyDuration} 
-                      onChange={(e) => updateFormData("warrantyDuration", e.target.value)} 
-                      className="w-20"
-                    />
-                   <ValidatedSelect 
-                      value={formData.warrantyUnit} 
-                      onValueChange={(v) => updateFormData("warrantyUnit", v)}
-                    >
-                      <SelectItem value="days">Days</SelectItem>
-                      <SelectItem value="months">Months</SelectItem>
-                      <SelectItem value="years">Years</SelectItem>
-                   </ValidatedSelect>
-                 </div>
-               </FormField>
-               <FormField label="Description">
-                  <ValidatedInput 
-                    placeholder="e.g. Covers motor only" 
-                    value={formData.warrantyDescription}
-                    onChange={(e) => updateFormData("warrantyDescription", e.target.value)}
+              <FormField label="Duration">
+                <div className="flex gap-2">
+                  <ValidatedInput
+                    type="number"
+                    value={formData.warrantyDuration}
+                    onChange={(e) => updateFormData("warrantyDuration", e.target.value)}
+                    className="w-20"
                   />
-               </FormField>
+                  <ValidatedSelect
+                    value={formData.warrantyUnit}
+                    onValueChange={(v) => updateFormData("warrantyUnit", v)}
+                  >
+                    <SelectItem value="days">Days</SelectItem>
+                    <SelectItem value="months">Months</SelectItem>
+                    <SelectItem value="years">Years</SelectItem>
+                  </ValidatedSelect>
+                </div>
+              </FormField>
+              <FormField label="Description">
+                <ValidatedInput
+                  placeholder="e.g. Covers motor only"
+                  value={formData.warrantyDescription}
+                  onChange={(e) => updateFormData("warrantyDescription", e.target.value)}
+                />
+              </FormField>
             </>
           )}
         </div>
@@ -149,37 +162,37 @@ export const ShippingStep = React.memo(({ formData, errors, updateFormData }: Sh
 
       {/* 4. Return Policy (Schema Enum) */}
       <div className="p-4 border rounded-lg bg-background">
-         <h3 className="text-lg font-medium mb-4">Return Policy</h3>
-         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <FormField label="Type">
-              <ValidatedSelect value={formData.returnType} onValueChange={(v) => updateFormData("returnType", v)}>
-                <SelectItem value="NO_RETURN">No Returns</SelectItem>
-                <SelectItem value="REPLACEMENT">Replacement Only</SelectItem>
-                <SelectItem value="REFUND">Refund Only</SelectItem>
-                <SelectItem value="REPLACEMENT_OR_REFUND">Replacement or Refund</SelectItem>
-              </ValidatedSelect>
+        <h3 className="text-lg font-medium mb-4">Return Policy</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <FormField label="Type">
+            <ValidatedSelect value={formData.returnType} onValueChange={(v) => updateFormData("returnType", v)}>
+              <SelectItem value="NO_RETURN">No Returns</SelectItem>
+              <SelectItem value="REPLACEMENT">Replacement Only</SelectItem>
+              <SelectItem value="REFUND">Refund Only</SelectItem>
+              <SelectItem value="REPLACEMENT_OR_REFUND">Replacement or Refund</SelectItem>
+            </ValidatedSelect>
+          </FormField>
+          {formData.returnType !== "NO_RETURN" && (
+            <FormField label="Return Period (Days)">
+              <ValidatedInput
+                type="number"
+                value={formData.returnDuration}
+                onChange={(e) => updateFormData("returnDuration", e.target.value)}
+              />
             </FormField>
-            {formData.returnType !== "NO_RETURN" && (
-               <FormField label="Return Period (Days)">
-                 <ValidatedInput 
-                   type="number" 
-                   value={formData.returnDuration} 
-                   onChange={(e) => updateFormData("returnDuration", e.target.value)} 
-                 />
-               </FormField>
-            )}
-         </div>
-         {formData.returnType !== "NO_RETURN" && (
-            <div className="mt-4">
-              <FormField label="Conditions">
-                <ValidatedTextarea 
-                  placeholder="e.g. Item must be unused and in original packaging." 
-                  value={formData.returnConditions}
-                  onChange={(e) => updateFormData("returnConditions", e.target.value)}
-                />
-              </FormField>
-            </div>
-         )}
+          )}
+        </div>
+        {formData.returnType !== "NO_RETURN" && (
+          <div className="mt-4">
+            <FormField label="Conditions">
+              <ValidatedTextarea
+                placeholder="e.g. Item must be unused and in original packaging."
+                value={formData.returnConditions}
+                onChange={(e) => updateFormData("returnConditions", e.target.value)}
+              />
+            </FormField>
+          </div>
+        )}
       </div>
 
     </div>

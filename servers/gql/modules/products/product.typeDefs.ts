@@ -102,6 +102,7 @@ export const productTypeDefs = gql`
     brand: String
     specificationTable: JSON
     specificationDisplayFormat: String
+    deliveryCharge: Float
 
     variants: [ProductVariant!]!
     images: [ProductImage!]
@@ -169,6 +170,7 @@ export const productTypeDefs = gql`
     status: ProductStatus
     specificationTable: JSON
     specificationDisplayFormat: String
+    deliveryCharge: Float
 
     # 👇 FIXED HERE: Added [] brackets to indicate an Array
     variants: [CreateProductVariantInput!]!
@@ -189,6 +191,7 @@ export const productTypeDefs = gql`
     status: ProductStatus
     specificationTable: JSON
     specificationDisplayFormat: String
+    deliveryCharge: Float
 
     # 👇 FIXED HERE: Added [] brackets to indicate an Array
     variants: [UpdateProductVariantInput!]!

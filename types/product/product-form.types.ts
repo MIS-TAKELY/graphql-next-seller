@@ -110,6 +110,7 @@ export interface FormData {
   noInternationalShipping?: boolean;
   restrictedStates?: string[];
   deliveryOptions: DeliveryOptionData[];
+  deliveryCharge: string;
 
   // Policies
   returnType: ReturnType;

@@ -70,6 +70,7 @@ export interface ICreateProductInput {
     unit?: string;
     conditions?: string;
   }>;
+  deliveryCharge?: number;
 }
 
 // API Response Types
@@ -120,4 +121,3 @@ import type { Category } from "../category/category.types";
 export interface GetProductCategoriesResponse {
   categories: Category[];
 }
-
