@@ -140,7 +140,8 @@ export const returnResolvers = {
                     rejectionReason: rejectionReason,
                     items: updatedReturn.items.map(item => ({
                         productName: item.orderItem.variant.product.name,
-                        quantity: item.quantity
+                        quantity: item.quantity,
+                        price: item.orderItem.totalPrice.toNumber()
                     }))
                 }).catch(err => console.error("Error sending return notifications:", err));
             }

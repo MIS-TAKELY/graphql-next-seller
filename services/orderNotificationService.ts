@@ -15,6 +15,7 @@ interface OrderDetails {
   status: string;
   trackingNumber?: string;
   carrier?: string;
+  cancellationReason?: string;
 }
 
 interface ReturnDetails {
@@ -26,6 +27,7 @@ interface ReturnDetails {
   items: Array<{
     productName: string;
     quantity: number;
+    price: number; // Added price here as it might be needed
   }>;
   status: string;
   reason: string;
@@ -42,6 +44,7 @@ interface OrderEmailContext {
   trackingNumber?: string;
   carrier?: string;
   orderUrl: string;
+  cancellationReason?: string;
 }
 
 // Generate email HTML for order status updates
@@ -103,6 +106,13 @@ const generateOrderStatusEmail = (context: OrderEmailContext): string => {
   `
       : "";
 
+  const cancellationInfo = context.cancellationReason ? `
+    <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #fecaca;">
+      <h3 style="margin: 0 0 8px 0; color: #991b1b; font-size: 16px;">Cancellation Reason</h3>
+      <p style="margin: 4px 0; color: #b91c1c;">${context.cancellationReason}</p>
+    </div>
+  ` : "";
+
   return `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
       <div style="background: linear-gradient(135deg, ${statusInfo.color} 0%, ${statusInfo.color}dd 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
@@ -120,6 +130,7 @@ const generateOrderStatusEmail = (context: OrderEmailContext): string => {
         </div>
 
         ${trackingInfo}
+        ${cancellationInfo}
         
         <h3 style="color: #374151; font-size: 18px; margin: 24px 0 12px 0;">Order Details</h3>
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
@@ -164,6 +175,7 @@ const generateWhatsAppMessage = (orderDetails: OrderDetails): string => {
     SHIPPED: "🚚",
     DELIVERED: "🎉",
     CANCELLED: "❌",
+    RETURNED: "↩️",
   };
 
   const emoji = statusEmojis[orderDetails.status] || "📋";
@@ -171,6 +183,10 @@ const generateWhatsAppMessage = (orderDetails: OrderDetails): string => {
   let message = `${emoji} *Order ${orderDetails.status}*\n\n`;
   message += `Hello ${orderDetails.buyerName},\n\n`;
   message += `Your order #${orderDetails.orderNumber} has been updated to *${orderDetails.status}*.\n\n`;
+
+  if (orderDetails.cancellationReason) {
+    message += `⚠️ *Cancellation Reason:* ${orderDetails.cancellationReason}\n\n`;
+  }
 
   if (orderDetails.trackingNumber && orderDetails.carrier) {
     message += `📍 *Tracking Information*\n`;
@@ -342,6 +358,7 @@ export const sendOrderEmailNotification = async (
       trackingNumber: orderDetails.trackingNumber,
       carrier: orderDetails.carrier,
       orderUrl,
+      cancellationReason: orderDetails.cancellationReason,
     };
 
     const emailHtml = generateOrderStatusEmail(context);

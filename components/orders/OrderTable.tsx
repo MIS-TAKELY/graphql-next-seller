@@ -26,6 +26,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { CreateShipmentDialog } from './CreateShipmentDialog';
+import { CancelOrderDialog } from './CancelOrderDialog';
 import { SellerOrder, OrderFilters, OrderStatus } from '@/types/pages/order.types';
 import Image from 'next/image';
 import { Package } from 'lucide-react';
@@ -265,12 +266,17 @@ export function OrderTable({
                           </DropdownMenuItem>
                         )}
                         {(order.status === OrderStatus.PENDING || order.status === OrderStatus.CONFIRMED || order.status === OrderStatus.PROCESSING) && (
-                          <DropdownMenuItem
-                            onClick={() => handleCancelOrder(order.id)}
-                            className="text-xs text-destructive"
+                          <CancelOrderDialog
+                            order={order}
+                            onCancelClick={cancelOrder}
                           >
-                            Cancel Order
-                          </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={(e) => e.preventDefault()}
+                              className="text-xs text-destructive"
+                            >
+                              Cancel Order
+                            </DropdownMenuItem>
+                          </CancelOrderDialog>
                         )}
                         {order.status === OrderStatus.CONFIRMED && (
                           <DropdownMenuItem

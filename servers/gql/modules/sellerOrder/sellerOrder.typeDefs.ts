@@ -47,6 +47,7 @@ export const sellerOrderTypeDefs = gql`
     sellerId: String!
     buyerOrderId: String!
     status: OrderStatus!
+    cancellationReason: String
     subtotal: Decimal!
     tax: Decimal!
     shippingFee: Decimal!

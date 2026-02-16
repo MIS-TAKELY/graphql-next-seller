@@ -777,6 +777,7 @@ export const sellerOrderResolver = {
         where: { id: sellerOrderId },
         data: {
           status: "CANCELLED",
+          cancellationReason: reason,
           updatedAt: new Date(),
         },
         include: {
@@ -808,7 +809,8 @@ export const sellerOrderResolver = {
             price: item.totalPrice.toNumber(),
           })),
           total: updatedSellerOrder.total.toNumber(),
-          status: "CANCELLED",
+          status: "CANCELLED", // Explicitly set status to CANCELLED
+          cancellationReason: reason,
         }).catch(err => console.error("Error sending cancellation notification:", err));
       }
 
@@ -1355,7 +1357,8 @@ export const sellerOrderResolver = {
                   reason: updatedDispute.reason,
                   items: sellerOrder.items.map((item: any) => ({
                     productName: item.variant?.product?.name || "Product",
-                    quantity: item.quantity
+                    quantity: item.quantity,
+                    price: item.totalPrice.toNumber(),
                   }))
                 }).catch(err => console.error("Error sending dispute return notification:", err));
               }
@@ -1377,7 +1380,8 @@ export const sellerOrderResolver = {
                 reason: updatedDispute.reason,
                 items: sellerOrder ? sellerOrder.items.map((item: any) => ({
                   productName: item.variant?.product?.name || "Product",
-                  quantity: item.quantity
+                  quantity: item.quantity,
+                  price: item.totalPrice.toNumber(),
                 })) : []
               }).catch(err => console.error("Error sending dispute rejection notification:", err));
             } else {
@@ -1427,7 +1431,8 @@ export const sellerOrderResolver = {
             reason: updatedReturn.reason,
             items: updatedReturn.items.map(item => ({
               productName: item.orderItem.variant.product.name,
-              quantity: item.quantity
+              quantity: item.quantity,
+              price: item.orderItem.totalPrice.toNumber()
             }))
           }).catch(err => console.error("Error sending return notification:", err));
         }
