@@ -163,7 +163,7 @@ export const phonePassword = () => {
                             emailOtpExpiresAt: expiresAt
                         }
                     });
-                    await senMail(user.email, "VERIFICATION_OTP", { otp, name: user.name || "Seller" });
+                    await senMail(user.email, "PASSWORD_RESET_OTP", { otp, name: user.name || "Seller" });
                 } else {
                     await ctx.context.adapter.update({
                         model: "user",

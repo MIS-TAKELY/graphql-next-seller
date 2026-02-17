@@ -80,6 +80,23 @@ const TEMPLATES: Record<string, EmailTemplate> = {
       </div>
     `,
   },
+  PASSWORD_RESET_OTP: {
+    subject: "Your Password Reset Code - Vanijay",
+    text: (ctx) => `Your password reset code is: ${ctx.otp}`,
+    html: (ctx) => `
+      <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Password Reset Code</h2>
+        <p>Hello ${ctx.name || 'there'},</p>
+        <p>You recently requested to reset your password for your Vanijay account. Your 6-digit verification code is:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <span style="display: inline-block; padding: 12px 24px; background-color: #f8f9fa; color: #333; font-size: 28px; letter-spacing: 5px; font-weight: bold; border-radius: 5px; border: 1px solid #ddd;">${ctx.otp}</span>
+        </div>
+        <p style="color: #666; font-size: 0.9em;">This code will expire in 10 minutes. If you didn't request a password reset, please ignore this email.</p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="color: #999; font-size: 0.8em; text-align: center;">Securely powered by Vanijay</p>
+      </div>
+    `,
+  },
 };
 
 export const senMail = async (
@@ -112,4 +129,3 @@ export const senMail = async (
     throw error;
   }
 };
- 

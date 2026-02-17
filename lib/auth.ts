@@ -94,14 +94,10 @@ export const auth = betterAuth({
         enabled: true,
         requireEmailVerification: true,
         resetPasswordTokenExpiresIn: 600,
-        sendResetPassword: async ({ user, url }: { user: AuthUser; url: string }) => {
-            try {
-                const name = user.firstName || user.name || user.email.split("@")[0];
-                await senMail(user.email, "PASSWORD_RESET", { url, name });
-            } catch (err) {
-                console.error("BETTER-AUTH: Error in sendResetPassword hook:", err);
-            }
-        },
+        // Link-based reset disabled in favor of OTP-based custom plugin
+        // sendResetPassword: async ({ user, url }: { user: AuthUser; url: string }) => {
+        //     ...
+        // },
     },
     user: {
         additionalFields: {
