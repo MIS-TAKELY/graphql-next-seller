@@ -143,9 +143,14 @@ export function OrderDetailsDialog({
               </h4>
               <div className="bg-muted/30 rounded-lg p-4 space-y-2 border">
                 <p className="font-medium">
-                  {order.order.buyer
-                    ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}`
-                    : 'Anonymous'}
+                  {(() => {
+                    const buyer = order.order.buyer;
+                    if (!buyer) return "Anonymous";
+                    if (buyer.firstName || buyer.lastName) {
+                      return `${buyer.firstName ?? ""} ${buyer.lastName ?? ""}`.trim();
+                    }
+                    return buyer.name || "Anonymous";
+                  })()}
                 </p>
                 <p className="text-sm text-muted-foreground">{order.order.buyer?.email}</p>
                 <p className="text-sm text-muted-foreground">{order.order.buyer?.phone}</p>

@@ -43,6 +43,7 @@ export interface AddressSnapshot {
 export interface Buyer {
   id: string;
   email: string;
+  name?: string;
   firstName: string;
   lastName: string;
   phone?: string;

@@ -24,6 +24,7 @@ export const GET_SELLER_ORDER = gql`
           buyer {
             id
             email
+            name
             firstName
             lastName
             phone

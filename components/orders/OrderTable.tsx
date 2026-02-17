@@ -156,7 +156,14 @@ export function OrderTable({
               <TableCell>
                 <div className="min-w-0">
                   <div className="font-medium text-xs sm:text-sm truncate">
-                    {order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Unknown Customer'}
+                    {(() => {
+                      const buyer = order.order.buyer;
+                      if (!buyer) return "Unknown Customer";
+                      if (buyer.firstName || buyer.lastName) {
+                        return `${buyer.firstName ?? ""} ${buyer.lastName ?? ""}`.trim();
+                      }
+                      return buyer.name || "Unknown Customer";
+                    })()}
                   </div>
                   <div className="text-xs text-muted-foreground truncate">
                     {order.order.buyer?.email ?? 'N/A'}

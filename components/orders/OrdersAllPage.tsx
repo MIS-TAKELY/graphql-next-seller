@@ -155,7 +155,13 @@ export function OrdersAllPage({ orders: initialOrders }: OrdersAllPageProps) {
 
   // Filter orders based on current tab and search
   const filteredOrders = currentOrders.filter((order: SellerOrder) => {
-    const customerName = order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Unknown Customer';
+    const buyer = order.order.buyer;
+    const customerName = buyer
+      ? (buyer.firstName || buyer.lastName
+        ? `${buyer.firstName ?? ""} ${buyer.lastName ?? ""}`.trim()
+        : buyer.name || "Unknown Customer")
+      : "Unknown Customer";
+
     const matchesSearch =
       customerName.toLowerCase().includes(orderFilters.search.toLowerCase()) ||
       order.order.orderNumber
