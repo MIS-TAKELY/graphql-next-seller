@@ -56,11 +56,16 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                                 <p className="text-base font-mono font-bold leading-none">#{order.order.orderNumber}</p>
                                 <p className="text-[10px] text-gray-700 font-bold">{new Date(order.createdAt).toLocaleDateString()}</p>
                             </div>
-                            {order.order.shipments?.[0] && (
+                            {order.order.shipments && order.order.shipments.length > 0 ? (
                                 <div className="space-y-1 border-l-2 border-gray-100 pl-3">
                                     <p className="text-[9px] font-black text-gray-500 uppercase leading-none">Shipping</p>
                                     <p className="text-[10px] text-gray-900 leading-none"><span className="font-bold">Carrier:</span> {order.order.shipments[0].carrier || 'N/A'}</p>
                                     <p className="text-[10px] text-gray-900 leading-none truncate"><span className="font-bold">Trk:</span> {order.order.shipments[0].trackingNumber || 'N/A'}</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-1 border-l-2 border-gray-100 pl-3 opacity-50">
+                                    <p className="text-[9px] font-black text-gray-500 uppercase leading-none">Shipping</p>
+                                    <p className="text-[8px] italic">Not yet shipped</p>
                                 </div>
                             )}
                         </div>

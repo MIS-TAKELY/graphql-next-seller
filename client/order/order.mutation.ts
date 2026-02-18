@@ -16,6 +16,7 @@ export const CREATE_SHIPMENT = gql`
     createShipment(orderId: $orderId, trackingNumber: $trackingNumber, carrier: $carrier) {
       id
       trackingNumber
+      carrier
       status
     }
   }

@@ -88,6 +88,7 @@ export default async function OrdersClient() {
         ...payment,
         amount: payment.amount ? Number(payment.amount) : 0,
       })) || [],
+      shipments: order.order.shipments || [],
     } : null,
   }));
 

@@ -207,6 +207,39 @@ export function OrderDetailsDialog({
                 )}
               </div>
             </div>
+
+            <div className="space-y-3">
+              <h4 className="font-semibold flex items-center gap-2 text-sm text-muted-foreground uppercase tracking-wider">
+                <Package className="h-4 w-4" /> Shipment Details
+              </h4>
+              <div className="bg-muted/30 rounded-lg p-4 space-y-2 border text-sm">
+                {order.order.shipments?.[0] ? (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Carrier:</span>
+                      <span className="font-medium">{order.order.shipments[0].carrier}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Tracking #:</span>
+                      <span className="font-mono font-bold text-primary">{order.order.shipments[0].trackingNumber}</span>
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge variant="secondary" className="text-[10px] h-4 uppercase">
+                        {order.order.shipments[0].status}
+                      </Badge>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-2 text-center">
+                    <p className="italic text-muted-foreground">No shipment information yet</p>
+                    {order.status === OrderStatus.PROCESSING && (
+                      <p className="text-[10px] text-muted-foreground mt-1">Ready to create shipment</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           <Separator />

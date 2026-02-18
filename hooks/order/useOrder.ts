@@ -221,31 +221,35 @@ export const useOrder = () => {
         update: (cache, { data }) => {
           const newShipment = data?.createShipment;
           if (newShipment) {
-            cache.modify({
-              fields: {
-                getSellerOrders(
-                  existing: any = { sellerOrders: [] }
-                ) {
-                  if (!existing || !existing.sellerOrders) {
-                    return { sellerOrders: [] };
-                  }
-                  return {
-                    ...existing,
-                    sellerOrders: existing.sellerOrders.map((o: SellerOrder) =>
-                      o.buyerOrderId === orderId
-                        ? {
-                          ...o,
-                          order: {
-                            ...o.order,
-                            shipments: [...(o.order.shipments || []), newShipment],
-                          },
-                        }
-                        : o
-                    ),
-                  };
-                },
-              },
+            // Find the seller order that matches this buyerOrderId
+            const existingOrders = cache.readQuery<GetSellerOrdersResponse>({
+              query: GET_SELLER_ORDER,
             });
+
+            if (existingOrders?.getSellerOrders?.sellerOrders) {
+              const updatedSellerOrders = existingOrders.getSellerOrders.sellerOrders.map((so) => {
+                if (so.buyerOrderId === orderId) {
+                  return {
+                    ...so,
+                    order: {
+                      ...so.order,
+                      shipments: [...(so.order.shipments || []), newShipment],
+                    },
+                  };
+                }
+                return so;
+              });
+
+              cache.writeQuery({
+                query: GET_SELLER_ORDER,
+                data: {
+                  getSellerOrders: {
+                    ...existingOrders.getSellerOrders,
+                    sellerOrders: updatedSellerOrders,
+                  },
+                },
+              });
+            }
           }
         },
       });
