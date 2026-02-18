@@ -76,7 +76,7 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             )}
                         </div>
                     </div>
-                    <div className="flex flex-col items-end gap-1">
+                    <div className="flex flex-col items-end gap-1 pr-4">
                         <QRCodeSVG value={order.order.orderNumber} size={65} level="M" />
                         <div className="transform scale-90 origin-right">
                             <Barcode value={order.order.orderNumber} height={20} fontSize={8} width={1.1} />
@@ -146,16 +146,18 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                             {order.items.map((item) => (
                                 <tr key={item.id} className="text-[11px] leading-snug">
                                     <td className="py-2.5 pr-4">
-                                        <p className="font-black text-black text-[12px]">{item.variant.product.name}</p>
-                                        <div className="flex gap-2 mt-0.5">
-                                            <p className="text-[9px] text-gray-600 font-mono font-bold px-1 bg-gray-50 rounded border border-gray-100">SKU: {item.variant.sku}</p>
-                                            {item.variant.attributes && Object.entries(item.variant.attributes).map(([k, v]) => (
-                                                <span key={k} className="text-[8px] text-gray-500 uppercase font-black">{k}: {v}</span>
-                                            ))}
+                                        <p className="font-black text-black text-[13px] uppercase tracking-tight">{item.variant.product.name}</p>
+                                        <div className="flex flex-col gap-0.5 mt-1">
+                                            {item.variant.attributes && Object.entries(item.variant.attributes).length > 0 && (
+                                                <p className="text-[9px] text-gray-700 font-bold uppercase">
+                                                    Var: {Object.entries(item.variant.attributes).map(([k, v]) => `${k}:${v}`).join(' | ')}
+                                                </p>
+                                            )}
+                                            <p className="text-[9px] text-gray-500 font-mono font-bold">SKU: {item.variant.sku}</p>
                                         </div>
                                     </td>
-                                    <td className="py-2.5 text-center align-top font-bold text-gray-800">{item.quantity}</td>
-                                    <td className="py-2.5 text-right align-top font-black text-black">{formatPrice(item.totalPrice)}</td>
+                                    <td className="py-2.5 text-center align-top font-black text-gray-800 text-[12px]">{item.quantity}</td>
+                                    <td className="py-2.5 text-right align-top font-black text-black text-[12px]">{formatPrice(item.totalPrice)}</td>
                                 </tr>
                             ))}
                         </tbody>
