@@ -101,14 +101,23 @@ export const OrderReceipt = forwardRef<HTMLDivElement, OrderReceiptProps>(
                     <div className="pl-2 border-l border-gray-100">
                         <h3 className="text-[8px] font-black text-gray-500 uppercase mb-0.5">Ship To</h3>
                         <div className="text-[9px] space-y-0 leading-tight">
-                            <p className="font-bold text-black"> {order.order.buyer ? `${order.order.buyer.firstName} ${order.order.buyer.lastName}` : 'Customer'}</p>
+                            <p className="font-bold text-black">
+                                {order.order.buyer
+                                    ? [order.order.buyer.firstName, order.order.buyer.lastName].filter(Boolean).join(' ')
+                                    : 'Customer'}
+                            </p>
                             {shippingAddress ? (
                                 <>
                                     <p className="text-gray-600">{shippingAddress.line1}, {shippingAddress.city}</p>
-                                    <p className="text-gray-600">Ph: {shippingAddress.phone}</p>
+                                    <p className="text-gray-600">
+                                        Ph: {shippingAddress.phone || order.order.buyer?.phone || 'N/A'}
+                                    </p>
                                 </>
                             ) : (
-                                <p className="italic text-gray-400">Address N/A</p>
+                                <>
+                                    <p className="italic text-gray-400">Address N/A</p>
+                                    <p className="text-gray-600">Ph: {order.order.buyer?.phone || 'N/A'}</p>
+                                </>
                             )}
                         </div>
                     </div>
