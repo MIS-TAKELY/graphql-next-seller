@@ -197,21 +197,6 @@ export function OrderTable({
                     <span className="truncate max-w-[150px] font-medium leading-tight">
                       {order.items[0]?.variant?.product?.name || 'Unknown Product'}
                     </span>
-                    {order.items[0]?.variant?.attributes && (
-                      <div className="flex flex-wrap gap-1 mt-0.5">
-                        {Object.entries(order.items[0].variant.attributes).map(([key, value]) => {
-                          if (key === 'comparePrice') return null;
-                          return (
-                            <span key={key} className="text-[10px] text-muted-foreground capitalize">
-                              {key}: {value}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <span className="text-[10px] text-muted-foreground mt-0.5">
-                      {order.items.length} {order.items.length === 1 ? 'item' : 'items'}
-                    </span>
                   </div>
                 </div>
               </TableCell>
