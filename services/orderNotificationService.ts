@@ -137,6 +137,7 @@ export const generateWhatsAppMessage = (orderDetails: OrderDetails): string => {
   });
 
   message += `\n*Total: रू ${orderDetails.total.toFixed(2)}*\n\n`;
+  message += `Track your order at: https://www.vanijay.com/account/orders\n\n`;
   message += `Thank you for shopping with Vanijay! 🛍️`;
 
   return message;

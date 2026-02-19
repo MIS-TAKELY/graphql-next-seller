@@ -34,7 +34,7 @@ type EmailTemplate = {
 };
 
 const getEmailLayout = (content: string, subject: string) => {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://www.vanijay.com";
+  const appUrl = "https://www.vanijay.com";
   const logoUrl = `${appUrl}/final_blue_text_logo_500by500.png`;
 
   return `
@@ -188,7 +188,7 @@ const TEMPLATES: Record<string, EmailTemplate> = {
         </table>
 
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.vanijay.com'}/account/orders" class="btn" style="background-color: ${ctx.color || '#007bff'} !important;">Track Your Order</a>
+          <a href="https://www.vanijay.com/account/orders" class="btn" style="background-color: ${ctx.color || '#007bff'} !important;">Track Your Order</a>
         </div>
     `, ctx.title || "Order Update"),
   },
@@ -207,7 +207,7 @@ const TEMPLATES: Record<string, EmailTemplate> = {
         </div>
         
         <div style="text-align: center; margin-top: 30px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://www.vanijay.com'}/account/orders" class="btn" style="background-color: ${ctx.color || '#6f42c1'} !important;">View Return Status</a>
+          <a href="https://www.vanijay.com/account/orders" class="btn" style="background-color: ${ctx.color || '#6f42c1'} !important;">View Return Status</a>
         </div>
     `, "Return Request Update"),
   },
