@@ -59,6 +59,7 @@ const getEmailLayout = (content: string, subject: string) => {
         .legal { font-size: 11px; color: #adb5bd; margin-top: 20px; }
         .btn { display: inline-block; padding: 12px 24px; background-color: #007bff !important; color: #ffffff !important; text-decoration: none !important; border-radius: 5px; font-weight: 600; margin: 20px 0; }
         .otp-code { display: inline-block; padding: 15px 30px; background-color: #f8f9fa; color: #333; font-size: 32px; letter-spacing: 8px; font-weight: bold; border-radius: 8px; border: 1px solid #ddd; margin: 20px 0; }
+        .info-box { background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #007bff; }
       </style>
     </head>
     <body>
@@ -155,8 +156,8 @@ const TEMPLATES: Record<string, EmailTemplate> = {
         <p>Hello ${ctx.buyerName || 'there'},</p>
         <p>${ctx.message}</p>
         <div class="info-box" style="border-left-color: ${ctx.color || '#007bff'};">
-          <p style="margin: 5px 0;"><strong>Order Number:</strong> #${ctx.orderNumber}</p>
-          ${ctx.trackingNumber ? `<p style="margin: 5px 0;"><strong>Tracking Number:</strong> ${ctx.trackingNumber}</p>` : ''}
+          <p style="margin: 5px 0;"><strong>Order Number:</strong> ‼️${ctx.orderNumber}</p>
+          ${ctx.trackingNumber ? `<p style="margin: 5px 0;"><strong>Tracking ID:</strong> ${ctx.trackingNumber}</p>` : ''}
           ${ctx.carrier ? `<p style="margin: 5px 0;"><strong>Carrier:</strong> ${ctx.carrier}</p>` : ''}
           ${ctx.cancellationReason ? `<p style="margin: 15px 0 5px 0; color: #dc3545;"><strong>Cancellation Reason:</strong> ${ctx.cancellationReason}</p>` : ''}
         </div>
