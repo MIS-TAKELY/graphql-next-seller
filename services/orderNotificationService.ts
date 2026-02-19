@@ -47,124 +47,56 @@ interface OrderEmailContext {
   cancellationReason?: string;
 }
 
-// Generate email HTML for order status updates
-const generateOrderStatusEmail = (context: OrderEmailContext): string => {
-  const statusMessages: Record<string, { title: string; message: string; color: string }> = {
-    CONFIRMED: {
-      title: "Order Confirmed! 🎉",
-      message: "Great news! Your order has been confirmed by the seller and will be processed soon.",
-      color: "#10b981",
-    },
-    PROCESSING: {
-      title: "Order Processing 📦",
-      message: "Your order is now being prepared for shipment.",
-      color: "#3b82f6",
-    },
-    SHIPPED: {
-      title: "Order Shipped! 🚚",
-      message: "Your order is on its way!",
-      color: "#8b5cf6",
-    },
-    DELIVERED: {
-      title: "Order Delivered! ✅",
-      message: "Your order has been successfully delivered. We hope you enjoy your purchase!",
-      color: "#059669",
-    },
-    CANCELLED: {
-      title: "Order Cancelled ❌",
-      message: "Your order has been cancelled by the seller.",
-      color: "#ef4444",
-    },
-  };
+// Email status definitions
+const orderStatusInfo: Record<string, { title: string; message: string; color: string }> = {
+  CONFIRMED: {
+    title: "Order Confirmed! 🎉",
+    message: "Great news! Your order has been confirmed by the seller and will be processed soon.",
+    color: "#10b981",
+  },
+  PROCESSING: {
+    title: "Order Processing 📦",
+    message: "Your order is now being prepared for shipment.",
+    color: "#3b82f6",
+  },
+  SHIPPED: {
+    title: "Order Shipped! 🚚",
+    message: "Your order is on its way!",
+    color: "#8b5cf6",
+  },
+  DELIVERED: {
+    title: "Order Delivered! ✅",
+    message: "Your order has been successfully delivered. We hope you enjoy your purchase!",
+    color: "#059669",
+  },
+  CANCELLED: {
+    title: "Order Cancelled ❌",
+    message: "Your order has been cancelled by the seller.",
+    color: "#ef4444",
+  },
+};
 
-  const statusInfo = statusMessages[context.status] || {
-    title: "Order Update",
-    message: `Your order status has been updated to ${context.status}`,
+const returnStatusInfo: Record<string, { title: string; message: string; color: string }> = {
+  APPROVED: {
+    title: "Return Request Approved! ✅",
+    message: "Your return request has been approved. Please prepare the items for pickup or shipment as per the instructions.",
+    color: "#10b981",
+  },
+  REJECTED: {
+    title: "Return Request Rejected ❌",
+    message: "Your return request has been rejected by the seller.",
+    color: "#ef4444",
+  },
+  CANCELLED: {
+    title: "Return Request Cancelled 🚫",
+    message: "Your return request has been cancelled.",
     color: "#6b7280",
-  };
-
-  const itemsList = context.items
-    .map(
-      (item) => `
-    <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.productName}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right;">रू ${item.price.toFixed(2)}</td>
-    </tr>
-  `
-    )
-    .join("");
-
-  const trackingInfo =
-    context.trackingNumber && context.carrier
-      ? `
-    <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
-      <h3 style="margin: 0 0 8px 0; color: #374151; font-size: 16px;">Tracking Information</h3>
-      <p style="margin: 4px 0; color: #6b7280;"><strong>Carrier:</strong> ${context.carrier}</p>
-      <p style="margin: 4px 0; color: #6b7280;"><strong>Tracking Number:</strong> ${context.trackingNumber}</p>
-    </div>
-  `
-      : "";
-
-  const cancellationInfo = context.cancellationReason ? `
-    <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #fecaca;">
-      <h3 style="margin: 0 0 8px 0; color: #991b1b; font-size: 16px;">Cancellation Reason</h3>
-      <p style="margin: 4px 0; color: #b91c1c;">${context.cancellationReason}</p>
-    </div>
-  ` : "";
-
-  return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, ${statusInfo.color} 0%, ${statusInfo.color}dd 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-        <h1 style="margin: 0; font-size: 28px; font-weight: bold;">${statusInfo.title}</h1>
-      </div>
-      
-      <div style="background-color: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">Hello ${context.buyerName},</p>
-        
-        <p style="font-size: 16px; color: #6b7280; margin-bottom: 24px;">${statusInfo.message}</p>
-        
-        <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-          <p style="margin: 0; color: #6b7280; font-size: 14px;">Order Number</p>
-          <p style="margin: 4px 0 0 0; color: #111827; font-size: 18px; font-weight: 600;">#${context.orderNumber}</p>
-        </div>
-
-        ${trackingInfo}
-        ${cancellationInfo}
-        
-        <h3 style="color: #374151; font-size: 18px; margin: 24px 0 12px 0;">Order Details</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background-color: #f9fafb;">
-              <th style="padding: 12px; text-align: left; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Product</th>
-              <th style="padding: 12px; text-align: center; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Qty</th>
-              <th style="padding: 12px; text-align: right; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsList}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colspan="2" style="padding: 16px 12px 12px 12px; text-align: right; font-weight: 600; color: #374151;">Total:</td>
-              <td style="padding: 16px 12px 12px 12px; text-align: right; font-weight: 700; color: #111827; font-size: 18px;">रू ${context.total}</td>
-            </tr>
-          </tfoot>
-        </table>
-        
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${context.orderUrl}" style="display: inline-block; padding: 14px 32px; background-color: ${statusInfo.color}; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">View Order Details</a>
-        </div>
-        
-        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-        
-        <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 0;">
-          Thank you for shopping with Vanijay!<br/>
-          If you have any questions, please contact our support team.
-        </p>
-      </div>
-    </div>
-  `;
+  },
+  ACCEPTED: {
+    title: "Return Accepted! 🎉",
+    message: "We have received and accepted your return. Your refund will be processed according to our policy.",
+    color: "#059669",
+  },
 };
 
 // Generate WhatsApp message for order status updates
@@ -210,109 +142,6 @@ export const generateWhatsAppMessage = (orderDetails: OrderDetails): string => {
   return message;
 };
 
-// Generate email HTML for return status updates
-const generateReturnStatusEmail = (details: ReturnDetails): string => {
-  const statusMessages: Record<string, { title: string; message: string; color: string }> = {
-    APPROVED: {
-      title: "Return Request Approved! ✅",
-      message: "Your return request has been approved. Please prepare the items for pickup or shipment as per the instructions.",
-      color: "#10b981",
-    },
-    REJECTED: {
-      title: "Return Request Rejected ❌",
-      message: `Your return request for order #${details.orderNumber} has been rejected by the seller.`,
-      color: "#ef4444",
-    },
-    CANCELLED: {
-      title: "Return Request Cancelled 🚫",
-      message: "Your return request has been cancelled.",
-      color: "#6b7280",
-    },
-    ACCEPTED: {
-      title: "Return Accepted! 🎉",
-      message: "We have received and accepted your return. Your refund will be processed according to our policy.",
-      color: "#059669",
-    },
-  };
-
-  const statusInfo = statusMessages[details.status] || {
-    title: "Return Update",
-    message: `Your return request status has been updated to ${details.status}`,
-    color: "#6b7280",
-  };
-
-  const itemsList = details.items
-    .map(
-      (item) => `
-    <tr>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb;">${item.productName}</td>
-      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-    </tr>
-  `
-    )
-    .join("");
-
-  const rejectionInfo = details.rejectionReason ? `
-    <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 20px 0; border: 1px solid #fecaca;">
-      <h3 style="margin: 0 0 8px 0; color: #991b1b; font-size: 16px;">Rejection Reason</h3>
-      <p style="margin: 4px 0; color: #b91c1c;">${details.rejectionReason}</p>
-    </div>
-  ` : "";
-
-  return `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, ${statusInfo.color} 0%, ${statusInfo.color}dd 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center;">
-        <h1 style="margin: 0; font-size: 28px; font-weight: bold;">${statusInfo.title}</h1>
-      </div>
-      
-      <div style="background-color: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
-        <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">Hello ${details.buyerName},</p>
-        
-        <p style="font-size: 16px; color: #6b7280; margin-bottom: 24px;">${statusInfo.message}</p>
-        
-        <div style="background-color: #f9fafb; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-           <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-            <div>
-              <p style="margin: 0; color: #6b7280; font-size: 12px;">Order Number</p>
-              <p style="margin: 2px 0 0 0; color: #111827; font-size: 16px; font-weight: 600;">#${details.orderNumber}</p>
-            </div>
-            <div style="text-align: right;">
-              <p style="margin: 0; color: #6b7280; font-size: 12px;">Return Request ID</p>
-              <p style="margin: 2px 0 0 0; color: #111827; font-size: 14px;">#${details.returnNumber}</p>
-            </div>
-          </div>
-        </div>
-
-        ${rejectionInfo}
-        
-        <h3 style="color: #374151; font-size: 18px; margin: 24px 0 12px 0;">Returned Items</h3>
-        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-          <thead>
-            <tr style="background-color: #f9fafb;">
-              <th style="padding: 12px; text-align: left; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Product</th>
-              <th style="padding: 12px; text-align: center; color: #6b7280; font-weight: 600; border-bottom: 2px solid #e5e7eb;">Qty</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsList}
-          </tbody>
-        </table>
-        
-        <div style="background-color: #f3f4f6; padding: 16px; border-radius: 8px; margin-bottom: 24px;">
-          <h4 style="margin: 0 0 8px 0; color: #374151; font-size: 14px;">Original Return Reason</h4>
-          <p style="margin: 0; color: #6b7280; font-size: 14px;">${details.reason}</p>
-        </div>
-
-        <hr style="border: 0; border-top: 1px solid #e5e7eb; margin: 24px 0;" />
-        
-        <p style="color: #9ca3af; font-size: 14px; text-align: center; margin: 0;">
-          Thank you for shopping with Vanijay!<br/>
-          If you have any questions, please contact our support team.
-        </p>
-      </div>
-    </div>
-  `;
-};
 
 // Generate WhatsApp message for return status updates
 const generateReturnWhatsAppMessage = (details: ReturnDetails): string => {
@@ -344,56 +173,26 @@ const generateReturnWhatsAppMessage = (details: ReturnDetails): string => {
   return message;
 };
 
-/**
- * Send order status notification via email
- */
+// Send order status notification via email
 export const sendOrderEmailNotification = async (
   orderDetails: OrderDetails
 ): Promise<void> => {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const orderUrl = `${appUrl}/orders/${orderDetails.orderNumber}`;
+    const statusInfo = orderStatusInfo[orderDetails.status] || {
+      title: "Order Update",
+      message: `Your order status has been updated to ${orderDetails.status}`,
+      color: "#6b7280",
+    };
 
-    const context: OrderEmailContext = {
+    await senMail(orderDetails.buyerEmail, "ORDER_STATUS_UPDATE" as any, {
+      ...statusInfo,
       buyerName: orderDetails.buyerName,
       orderNumber: orderDetails.orderNumber,
-      status: orderDetails.status,
       items: orderDetails.items,
-      total: orderDetails.total.toFixed(2),
+      total: orderDetails.total,
       trackingNumber: orderDetails.trackingNumber,
       carrier: orderDetails.carrier,
-      orderUrl,
       cancellationReason: orderDetails.cancellationReason,
-    };
-
-    const emailHtml = generateOrderStatusEmail(context);
-    const statusTitles: Record<string, string> = {
-      CONFIRMED: "Order Confirmed",
-      PROCESSING: "Order Processing",
-      SHIPPED: "Order Shipped",
-      DELIVERED: "Order Delivered",
-      CANCELLED: "Order Cancelled",
-    };
-
-    const subject = `${statusTitles[orderDetails.status] || "Order Update"} - #${orderDetails.orderNumber}`;
-
-    // Using the existing nodemailer transporter
-    const nodemailer = require("nodemailer");
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: '"Vanijay" <mailitttome@gmail.com>',
-      to: orderDetails.buyerEmail,
-      subject,
-      html: emailHtml,
     });
 
     console.log(`✅ Order notification email sent to ${orderDetails.buyerEmail} for order #${orderDetails.orderNumber}`);
@@ -468,27 +267,21 @@ export const sendReturnNotifications = async (
 ): Promise<void> => {
   const errors: Error[] = [];
 
-  // Send email notification
+  // Send return status notification via email
   try {
-    const emailHtml = generateReturnStatusEmail(details);
-    const subject = `Return Request ${details.status} - Order #${details.orderNumber}`;
+    const info = returnStatusInfo[details.status] || {
+      title: "Return Update",
+      message: `Your return request status has been updated to ${details.status}`,
+      color: "#6b7280",
+    };
 
-    const nodemailer = require("nodemailer");
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 587,
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: '"Vanijay" <mailitttome@gmail.com>',
-      to: details.buyerEmail,
-      subject,
-      html: emailHtml,
+    await senMail(details.buyerEmail, "RETURN_STATUS_UPDATE" as any, {
+      ...info,
+      buyerName: details.buyerName,
+      orderNumber: details.orderNumber,
+      returnNumber: details.returnNumber,
+      status: details.status,
+      rejectionReason: details.rejectionReason,
     });
 
     console.log(`✅ Return notification email sent to ${details.buyerEmail} for return #${details.returnNumber}`);
