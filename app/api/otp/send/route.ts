@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         otpExpiresAt: expiresAt,
       },
     });
-    const message = `Your verification code is: ${otp}`;
+    const message = `Your verification code is: ${otp}. ⚠️ Do not share this code with anyone. Vanijay will never ask you for this code. This code expires in 10 minutes.`;
     // Send OTP via WhatsApp
     await sendWhatsAppMessage(phone, message);
 
