@@ -49,6 +49,11 @@ export const APOLLO_CONFIG = {
               return incoming;
             },
           },
+          images: {
+            merge(existing, incoming) {
+              return incoming;
+            },
+          },
         },
       },
       SellerOrder: {
