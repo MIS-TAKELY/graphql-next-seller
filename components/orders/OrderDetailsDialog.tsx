@@ -31,6 +31,36 @@ interface OrderDetailsDialogProps {
   children?: React.ReactNode;
 }
 
+const formatPrice = (amount: number | string | undefined | null) => {
+  if (amount === undefined || amount === null) return 'N/A';
+  const value = typeof amount === 'number' ? amount : parseFloat(amount);
+  return isNaN(value) ? 'N/A' : `रू ${value.toLocaleString()}`;
+};
+
+const formatDate = (dateString: string | Date | undefined) => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const parseAddress = (address: any): AddressSnapshot | null => {
+  if (!address) return null;
+  if (typeof address === 'string') {
+    try {
+      return JSON.parse(address);
+    } catch (e) {
+      return null;
+    }
+  }
+  return address;
+};
+
 export function OrderDetailsDialog({
   order,
   onShipmentSuccess,
@@ -57,36 +87,6 @@ export function OrderDetailsDialog({
     } catch (error) {
       console.error('Failed to update status:', error);
     }
-  };
-
-  const formatPrice = (amount: number | string | undefined | null) => {
-    if (amount === undefined || amount === null) return 'N/A';
-    const value = typeof amount === 'number' ? amount : parseFloat(amount);
-    return isNaN(value) ? 'N/A' : `रू ${value.toLocaleString()}`;
-  };
-
-  const formatDate = (dateString: string | Date | undefined) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const parseAddress = (address: any): AddressSnapshot | null => {
-    if (!address) return null;
-    if (typeof address === 'string') {
-      try {
-        return JSON.parse(address);
-      } catch (e) {
-        return null;
-      }
-    }
-    return address;
   };
 
   const shippingAddress = parseAddress(order.order.shippingSnapshot);
