@@ -75,6 +75,13 @@ export function ProductsTable({
     </TableRow>
   ), []);
 
+  // Loading more indicator
+  const loadingMoreComponent = useMemo(() => (
+    <div className="flex items-center justify-center py-4">
+      <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  ), []);
+
   if (isLoading) {
     return (
       <div className="rounded-md border overflow-hidden">
@@ -99,13 +106,6 @@ export function ProductsTable({
       </div>
     );
   }
-
-  // Loading more indicator
-  const loadingMoreComponent = useMemo(() => (
-    <div className="flex items-center justify-center py-4">
-      <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  ), []);
 
   // Use virtualized table for large lists
   if (shouldVirtualize && products?.length > 0) {

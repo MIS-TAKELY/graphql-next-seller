@@ -425,6 +425,13 @@ export const OrderTable = memo(function OrderTable({
     />
   ), [selectedOrders, showCheckbox, showTracking, customActions, selectOrder, handleStatusUpdate, onShipmentSuccess, onConfirmationSuccess, cancelOrder]);
 
+  // Loading more indicator
+  const loadingMoreComponent = useMemo(() => (
+    <div className="flex items-center justify-center py-4">
+      <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  ), []);
+
   // Loading state
   if (isLoading) {
     return (
@@ -458,13 +465,6 @@ export const OrderTable = memo(function OrderTable({
       </div>
     );
   }
-
-  // Loading more indicator
-  const loadingMoreComponent = useMemo(() => (
-    <div className="flex items-center justify-center py-4">
-      <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-    </div>
-  ), []);
 
   // Use virtualized table for large lists
   if (shouldVirtualize && orders?.length > 0) {
