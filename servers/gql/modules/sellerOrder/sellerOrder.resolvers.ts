@@ -27,16 +27,16 @@ const CACHE_TTL = {
 };
 
 // Cache key generators
-const getSellerOrdersCacheKey = (sellerId: string, limit?: number) => 
+const getSellerOrdersCacheKey = (sellerId: string, limit?: number) =>
   `orders:seller:${sellerId}:limit:${limit || 20}:v2`;
 
-const getSellerOrderByIdCacheKey = (orderId: string) => 
+const getSellerOrderByIdCacheKey = (orderId: string) =>
   `orders:id:${orderId}:v2`;
 
-const getActiveUsersCacheKey = (sellerId: string) => 
+const getActiveUsersCacheKey = (sellerId: string) =>
   `orders:activeusers:${sellerId}:v2`;
 
-const getDisputesCacheKey = (sellerId: string) => 
+const getDisputesCacheKey = (sellerId: string) =>
   `orders:disputes:${sellerId}:v2`;
 
 const invalidateSellerOrderCache = async (sellerId: string, orderId?: string) => {
@@ -272,8 +272,8 @@ export const sellerOrderResolver = {
         const getActiveUsers = async (start: Date, end: Date) => {
           const result = await prisma.$queryRaw<[{ count: bigint }]>`
             SELECT COUNT(DISTINCT o."buyerId")::integer as count
-            FROM "SellerOrder" so
-            JOIN "Order" o ON so."buyerOrderId" = o.id
+            FROM "seller_orders" so
+            JOIN "orders" o ON so."buyerOrderId" = o.id
             WHERE so."sellerId" = ${sellerId}
               AND so."createdAt" >= ${start}
               AND so."createdAt" < ${end}
