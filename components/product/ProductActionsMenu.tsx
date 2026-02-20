@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -18,12 +19,19 @@ interface ProductActionsMenuProps {
   onView?: (id: string) => void;
 }
 
-export function ProductActionsMenu({
+export const ProductActionsMenu = memo(function ProductActionsMenu({
   productId,
   onDelete,
   onView,
 }: ProductActionsMenuProps) {
-  console.log("product id-->", productId);
+  const handleDelete = useCallback(() => {
+    onDelete(productId);
+  }, [onDelete, productId]);
+
+  const handleView = useCallback(() => {
+    onView?.(productId);
+  }, [onView, productId]);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -48,8 +56,8 @@ export function ProductActionsMenu({
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => onDelete(productId)}
-          className="text-red-600"
+          onClick={handleDelete}
+          className="text-red-600 focus:text-red-600"
         >
           <Trash2 className="mr-2 h-4 w-4" />
           Delete
@@ -57,4 +65,4 @@ export function ProductActionsMenu({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+});

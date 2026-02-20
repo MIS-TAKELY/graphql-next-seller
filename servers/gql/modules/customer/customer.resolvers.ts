@@ -1,9 +1,19 @@
 import { requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
+interface CustomerFilterInput {
+  searchTerm?: string;
+  dateFrom?: Date;
+  dateTo?: Date;
+}
+
 export const customerResolvers = {
   Query: {
-    getCustomers: async (_: unknown, __: unknown, ctx: GraphQLContext) => {
+    getCustomers: async (
+      _: unknown,
+      { skip, take, filter }: { skip?: number; take?: number; filter?: CustomerFilterInput },
+      ctx: GraphQLContext
+    ) => {
       try {
         const user = requireSeller(ctx);
         const prisma = ctx.prisma;
@@ -11,163 +21,137 @@ export const customerResolvers = {
 
         if (!sellerId) throw new Error("Seller ID not found");
 
-        // Get all unique buyers who have ordered from this seller
-        const sellerOrders = await prisma.sellerOrder.findMany({
-          where: {
-            sellerId,
-            status: { in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"] },
-          },
-          include: {
-            order: {
-              include: {
-                buyer: {
-                  select: {
-                    id: true,
-                    email: true,
-                    firstName: true,
-                    lastName: true,
-                    phoneNumber: true,
-                    createdAt: true,
-                  },
-                },
-              },
-            },
-          },
-          orderBy: {
-            createdAt: "desc",
-          },
-        });
+        const pageSize = take ?? 20;
+        const pageSkip = skip ?? 0;
 
-        // Aggregate customer data
-        const customerMap: Record<
-          string,
-          {
-            id: string;
-            email: string;
-            firstName: string | null;
-            lastName: string | null;
-            phoneNumber: string | null;
-            createdAt: Date;
-            orders: number;
-            totalSpent: number;
-            lastOrderDate: Date | null;
-          }
-        > = {};
+        // Use raw SQL for efficient aggregation - much faster than N+1 queries
+        const customerAggregation = await prisma.$queryRaw`
+          SELECT 
+            u.id as "userId",
+            u.email,
+            u."firstName",
+            u."lastName",
+            u."phoneNumber",
+            u."createdAt",
+            COUNT(DISTINCT so.id) as "orderCount",
+            COALESCE(SUM(so.total), 0)::numeric as "totalSpent",
+            MAX(so."createdAt") as "lastOrderDate"
+          FROM "seller_orders" so
+          JOIN "orders" o ON so."buyerOrderId" = o.id
+          JOIN "user" u ON o."buyerId" = u.id
+          WHERE so."sellerId" = ${sellerId}
+            AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+            ${filter?.dateFrom ? prisma.$queryRaw`AND so."createdAt" >= ${filter.dateFrom}` : prisma.$queryRaw``}
+            ${filter?.dateTo ? prisma.$queryRaw`AND so."createdAt" <= ${filter.dateTo}` : prisma.$queryRaw``}
+          GROUP BY u.id, u.email, u."firstName", u."lastName", u."phoneNumber", u."createdAt"
+          ORDER BY "lastOrderDate" DESC
+          LIMIT ${pageSize} OFFSET ${pageSkip}
+        ` as Array<{
+          userId: string;
+          email: string;
+          firstName: string | null;
+          lastName: string | null;
+          phoneNumber: string | null;
+          createdAt: Date;
+          orderCount: number;
+          totalSpent: number;
+          lastOrderDate: Date | null;
+        }>;
 
-        for (const sellerOrder of sellerOrders as any[]) {
-          const buyer = sellerOrder.order.buyer;
-          if (!buyer) continue;
+        // Get total count for pagination
+        const countResult = await prisma.$queryRaw<Array<{ count: bigint }>>`
+          SELECT COUNT(DISTINCT u.id) as count
+          FROM "seller_orders" so
+          JOIN "orders" o ON so."buyerOrderId" = o.id
+          JOIN "user" u ON o."buyerId" = u.id
+          WHERE so."sellerId" = ${sellerId}
+            AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+        `;
+        const totalCount = Number(countResult[0]?.count ?? 0);
 
-          if (!customerMap[buyer.id]) {
-            customerMap[buyer.id] = {
-              id: buyer.id,
-              email: buyer.email,
-              firstName: buyer.firstName,
-              lastName: buyer.lastName,
-              phoneNumber: buyer.phoneNumber,
-              createdAt: buyer.createdAt,
-              orders: 0,
-              totalSpent: 0,
-              lastOrderDate: null,
-            };
-          }
-
-          customerMap[buyer.id].orders += 1;
-          customerMap[buyer.id].totalSpent += Number(sellerOrder.total);
-          if (
-            !customerMap[buyer.id].lastOrderDate ||
-            sellerOrder.createdAt > customerMap[buyer.id].lastOrderDate!
-          ) {
-            customerMap[buyer.id].lastOrderDate = sellerOrder.createdAt;
-          }
+        // Get reviews stats using SQL aggregation
+        const customerIds = customerAggregation.map(c => c.userId);
+        
+        let reviewStats: Array<{ userId: string; avgRating: number; reviewCount: bigint }> = [];
+        
+        if (customerIds.length > 0) {
+          // Use parameterized query with array
+          reviewStats = await prisma.$queryRaw<Array<{ userId: string; avgRating: number; reviewCount: bigint }>>`
+            SELECT 
+              r."userId",
+              AVG(r.rating)::numeric(3,2) as "avgRating",
+              COUNT(*)::int as "reviewCount"
+            FROM review r
+            JOIN product p ON r."productId" = p.id
+            WHERE p."sellerId" = ${sellerId}
+              AND r.status = 'APPROVED'
+              AND r."userId" = ANY(${customerIds}::text[])
+            GROUP BY r."userId"
+          `;
         }
 
-        // Get average ratings for each customer
-        const customerIds = Object.keys(customerMap);
-        const reviews = await prisma.review.findMany({
-          where: {
-            product: { sellerId },
-            status: "APPROVED",
-          },
-          include: {
-            user: {
-              select: {
-                id: true,
-              },
-            },
-          },
-        });
-
-        const customerRatings: Record<string, number[]> = {};
-        for (const review of reviews) {
-          if (customerIds.includes(review.userId)) {
-            if (!customerRatings[review.userId]) {
-              customerRatings[review.userId] = [];
-            }
-            customerRatings[review.userId].push(review.rating);
-          }
+        // Create lookup map for reviews
+        const reviewMap = new Map<string, { avgRating: number; reviewCount: number }>();
+        for (const r of reviewStats) {
+          reviewMap.set(r.userId, { avgRating: Number(r.avgRating), reviewCount: Number(r.reviewCount) });
         }
 
-        // Calculate stats
-        const customers = Object.values(customerMap).map((customer) => {
-          const ratings = customerRatings[customer.id] || [];
-          const avgRating =
-            ratings.length > 0
-              ? ratings.reduce((sum, r) => sum + r, 0) / ratings.length
-              : 0;
-
+        // Transform to customer objects
+        const customers = customerAggregation.map((customer) => {
+          const reviewStats = reviewMap.get(customer.userId);
           return {
-            id: customer.id,
+            id: customer.userId,
             email: customer.email,
             firstName: customer.firstName,
             lastName: customer.lastName,
             phone: customer.phoneNumber,
-            totalOrders: customer.orders,
-            totalSpent: customer.totalSpent,
-            averageOrderValue:
-              customer.orders > 0 ? customer.totalSpent / customer.orders : 0,
+            totalOrders: Number(customer.orderCount),
+            totalSpent: Number(customer.totalSpent),
+            averageOrderValue: customer.orderCount > 0 
+              ? Number(customer.totalSpent) / Number(customer.orderCount) 
+              : 0,
             lastOrderDate: customer.lastOrderDate,
             createdAt: customer.createdAt,
-            rating: avgRating,
+            rating: reviewStats?.avgRating ?? 0,
           };
         });
 
-        // Calculate overall stats
-        const totalRevenue = customers.reduce(
-          (sum, c) => sum + c.totalSpent,
-          0
-        );
-        const allRatings = Object.values(customerRatings).flat();
-        const averageRating =
-          allRatings.length > 0
-            ? allRatings.reduce((sum, r) => sum + r, 0) / allRatings.length
-            : 0;
+        // Calculate overall stats (cached or computed once)
+        const statsAggregation = await prisma.$queryRaw<Array<{
+          totalCustomers: bigint;
+          totalRevenue: number;
+          avgRating: number;
+          activeCustomers: bigint;
+        }>>`
+          SELECT 
+            COUNT(DISTINCT u.id) as "totalCustomers",
+            COALESCE(SUM(so.total), 0)::numeric as "totalRevenue",
+            (SELECT AVG(r.rating)::numeric(3,2) FROM review r 
+             JOIN product p ON r."productId" = p.id 
+             WHERE p."sellerId" = ${sellerId} AND r.status = 'APPROVED') as "avgRating",
+            COUNT(DISTINCT CASE WHEN so."createdAt" >= NOW() - INTERVAL '30 days' THEN u.id END) as "activeCustomers"
+          FROM "seller_orders" so
+          JOIN "orders" o ON so."buyerOrderId" = o.id
+          JOIN "user" u ON o."buyerId" = u.id
+          WHERE so."sellerId" = ${sellerId}
+            AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+        `;
 
-        // Active customers (ordered in last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const activeCustomers = customers.filter(
-          (c) => c.lastOrderDate && c.lastOrderDate >= thirtyDaysAgo
-        ).length;
+        const stats = statsAggregation[0] ?? { totalCustomers: 0n, totalRevenue: 0, avgRating: 0, activeCustomers: 0 };
 
         return {
-          customers: customers.sort((a, b) => {
-            // Sort by last order date (most recent first)
-            if (!a.lastOrderDate && !b.lastOrderDate) return 0;
-            if (!a.lastOrderDate) return 1;
-            if (!b.lastOrderDate) return -1;
-            return b.lastOrderDate.getTime() - a.lastOrderDate.getTime();
-          }),
+          customers,
+          totalCount,
           stats: {
-            totalCustomers: customers.length,
-            totalRevenue,
-            averageRating,
-            activeCustomers,
+            totalCustomers: Number(stats.totalCustomers),
+            totalRevenue: Number(stats.totalRevenue),
+            averageRating: Number(stats.avgRating) || 0,
+            activeCustomers: Number(stats.activeCustomers),
           },
         };
       } catch (error: any) {
-        console.log("error while fetching customer-->", error);
-        console.error(error);
+        console.error("error while fetching customer-->", error);
+        throw new Error(`Failed to fetch customers: ${error.message}`);
       }
     },
   },

@@ -68,7 +68,7 @@ function calculatePercentChange(current: number, previous: number): number {
   return Number(((current - previous) / previous) * 100);
 }
 
-// Helper to get sales data points grouped by time period
+// Helper to get sales data points grouped by time period using SQL
 async function getSalesDataPoints(
   prisma: any,
   sellerId: string,
@@ -78,124 +78,74 @@ async function getSalesDataPoints(
   const { start, end } = dateRange;
   const daysDiff = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
 
-  let groupBy: "day" | "week" | "month" = "day";
-  if (daysDiff > 90) groupBy = "month";
-  else if (daysDiff > 30) groupBy = "week";
-
-  const orders = await prisma.sellerOrder.findMany({
-    where: {
-      sellerId,
-      status: { in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"] },
-      createdAt: { gte: start, lte: end },
-    },
-    select: {
-      total: true,
-      createdAt: true,
-      items: {
-        select: {
-          quantity: true,
-          unitPrice: true,
-        },
-      },
-    },
-  });
-
-  // Group orders by time period
-  const grouped: Record<string, { revenue: number; orders: number; sales: number }> = {};
-
-  for (const order of orders) {
-    const date = new Date(order.createdAt);
-    let key: string;
-
-    if (groupBy === "month") {
-      key = date.toLocaleString("en", { month: "short", year: "numeric" });
-    } else if (groupBy === "week") {
-      const weekStart = new Date(date);
-      weekStart.setDate(date.getDate() - date.getDay());
-      key = weekStart.toLocaleDateString("en", { month: "short", day: "numeric" });
-    } else {
-      key = date.toLocaleDateString("en", { month: "short", day: "numeric" });
-    }
-
-    if (!grouped[key]) {
-      grouped[key] = { revenue: 0, orders: 0, sales: 0 };
-    }
-
-    grouped[key].revenue += Number(order.total);
-    grouped[key].orders += 1;
-    grouped[key].sales += order.items.reduce(
-      (sum: number, item: any) => sum + Number(item.quantity),
-      0
-    );
+  // Determine grouping interval
+  let groupInterval: string;
+  if (daysDiff > 90) {
+    groupInterval = "YYYY-MM"; // Month
+  } else if (daysDiff > 30) {
+    groupInterval = "YYYY-IW"; // Week
+  } else {
+    groupInterval = "YYYY-MM-DD"; // Day
   }
 
-  return Object.entries(grouped)
-    .map(([name, data]) => ({
-      name,
-      sales: data.sales,
-      revenue: data.revenue,
-      orders: data.orders,
-    }))
-    .sort((a, b) => {
-      // Sort by date
-      return new Date(a.name).getTime() - new Date(b.name).getTime();
-    });
+  // Use raw SQL for efficient aggregation
+  const salesData = await prisma.$queryRaw`
+    SELECT 
+      TO_CHAR(so."createdAt", 'Mon YYYY') as name,
+      COUNT(DISTINCT so.id) as orders,
+      COALESCE(SUM(so.total), 0)::numeric as revenue,
+      COALESCE(SUM(COALESCE(si.quantity, 0)), 0)::int as sales
+    FROM "seller_orders" so
+    LEFT JOIN "seller_order_items" si ON si."sellerOrderId" = so.id
+    WHERE so."sellerId" = ${sellerId}
+      AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+      AND so."createdAt" >= ${start}
+      AND so."createdAt" <= ${end}
+    GROUP BY TO_CHAR(so."createdAt", ${groupInterval}), TO_CHAR(so."createdAt", 'Mon YYYY')
+    ORDER BY MIN(so."createdAt")
+  ` as Array<{ name: string; orders: bigint; revenue: number; sales: bigint }>;
+
+  return salesData.map(row => ({
+    name: row.name,
+    orders: Number(row.orders),
+    revenue: Number(row.revenue),
+    sales: Number(row.sales),
+  }));
 }
 
-// Helper to get top products data
+// Helper to get top products data using SQL aggregation
 async function getTopProductsData(
   prisma: any,
   sellerId: string,
   dateRange: DateRange
 ): Promise<any[]> {
   const { start, end } = dateRange;
-
-  const orderItems = await prisma.sellerOrderItem.findMany({
-    where: {
-      sellerOrder: {
-        sellerId,
-        status: { in: ["CONFIRMED", "PROCESSING", "SHIPPED", "DELIVERED"] },
-        createdAt: { gte: start, lte: end },
-      },
-    },
-    select: {
-      totalPrice: true,
-      quantity: true,
-      variant: {
-        select: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-    },
-  });
-
-  const productMap: Record<string, { name: string; value: number }> = {};
   const colors = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8", "#82CA9D"];
 
-  for (const item of orderItems) {
-    const productId = item.variant.product.id;
-    const productName = item.variant.product.name;
+  // Use raw SQL for efficient aggregation
+  const topProducts = await prisma.$queryRaw`
+    SELECT 
+      p.id as "productId",
+      p.name as "productName",
+      COALESCE(SUM(si."totalPrice"), 0)::numeric as value
+    FROM "seller_order_items" si
+    JOIN "seller_orders" so ON si."sellerOrderId" = so.id
+    JOIN "product_variants" pv ON si."variantId" = pv.id
+    JOIN products p ON pv."productId" = p.id
+    WHERE so."sellerId" = ${sellerId}
+      AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+      AND so."createdAt" >= ${start}
+      AND so."createdAt" <= ${end}
+    GROUP BY p.id, p.name
+    ORDER BY value DESC
+    LIMIT 5
+  ` as Array<{ productId: string; productName: string; value: number }>;
 
-    if (!productMap[productId]) {
-      productMap[productId] = { name: productName, value: 0 };
-    }
-
-    productMap[productId].value += Number(item.totalPrice);
-  }
-
-  return Object.values(productMap)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 5)
-    .map((product, index) => ({
-      name: product.name,
-      value: product.value,
-      color: colors[index % colors.length],
-    }));
+  return topProducts.map((product, index) => ({
+    name: product.productName,
+    value: Number(product.value),
+    color: colors[index % colors.length],
+  }));
 }
 
 export const analyticsResolvers = {
@@ -549,95 +499,89 @@ export const analyticsResolvers = {
 
       const dateRange = getDateRange(period);
 
-      // Get unique customers in current period
-      const currentOrders = await prisma.sellerOrder.findMany({
-        where: {
-          sellerId,
-          createdAt: { gte: dateRange.start, lte: dateRange.end },
-        },
-        select: { buyerOrderId: true },
-      });
+      // Use raw SQL for efficient customer analytics - single query instead of N+1
+      const customerStats = await prisma.$queryRaw`
+        -- Current period customers
+        WITH current_customers AS (
+          SELECT DISTINCT o."buyerId"
+          FROM "seller_orders" so
+          JOIN orders o ON so."buyerOrderId" = o.id
+          WHERE so."sellerId" = ${sellerId}
+            AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+            AND so."createdAt" >= ${dateRange.start}
+            AND so."createdAt" <= ${dateRange.end}
+        ),
+        -- Previous period customers
+        prev_customers AS (
+          SELECT DISTINCT o."buyerId"
+          FROM "seller_orders" so
+          JOIN orders o ON so."buyerOrderId" = o.id
+          WHERE so."sellerId" = ${sellerId}
+            AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+            AND so."createdAt" >= ${dateRange.previousStart}
+            AND so."createdAt" < ${dateRange.previousEnd}
+        ),
+        -- First order dates for current customers
+        customer_first_order AS (
+          SELECT o."buyerId", MIN(so."createdAt") as first_order_date
+          FROM "seller_orders" so
+          JOIN orders o ON so."buyerOrderId" = o.id
+          WHERE so."sellerId" = ${sellerId}
+            AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+          GROUP BY o."buyerId"
+        )
+        SELECT 
+          (SELECT COUNT(*) FROM current_customers)::int as "totalCustomers",
+          (SELECT COUNT(*) FROM customer_first_order cfo 
+           WHERE cfo.first_order_date >= ${dateRange.start})::int as "newCustomers",
+          (SELECT COUNT(*) FROM current_customers cc 
+           WHERE EXISTS (SELECT 1 FROM prev_customers pc WHERE pc."buyerId" = cc."buyerId"))::int as "repeatCustomers",
+          (SELECT COALESCE(AVG(lifetime_value), 0)::numeric(12,2)
+           FROM (
+             SELECT o."buyerId", SUM(so.total)::numeric as lifetime_value
+             FROM "seller_orders" so
+             JOIN orders o ON so."buyerOrderId" = o.id
+             WHERE so."sellerId" = ${sellerId}
+               AND so.status = 'DELIVERED'
+             GROUP BY o."buyerId"
+           ) as ltv) as "averageLifetimeValue"
+      ` as Array<{
+        totalCustomers: number;
+        newCustomers: number;
+        repeatCustomers: number;
+        averageLifetimeValue: number;
+      }>;
 
-      const buyerIds = new Set<string>();
-      for (const order of currentOrders) {
-        const buyerOrder = await prisma.order.findUnique({
-          where: { id: order.buyerOrderId },
-          select: { buyerId: true },
-        });
-        if (buyerOrder) buyerIds.add(buyerOrder.buyerId);
-      }
+      const stats = customerStats[0] ?? { totalCustomers: 0, newCustomers: 0, repeatCustomers: 0, averageLifetimeValue: 0 };
+      const totalCustomers = stats.totalCustomers;
+      const repeatCustomerRate = totalCustomers > 0 ? (stats.repeatCustomers / totalCustomers) * 100 : 0;
 
-      const totalCustomers = buyerIds.size;
+      // Customer acquisition data using optimized query
+      const acquisitionData = await prisma.$queryRaw`
+        SELECT 
+          TO_CHAR(so."createdAt", 'Mon YYYY') as name,
+          COUNT(DISTINCT o."buyerId") as customers
+        FROM "seller_orders" so
+        JOIN orders o ON so."buyerOrderId" = o.id
+        WHERE so."sellerId" = ${sellerId}
+          AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
+          AND so."createdAt" >= ${dateRange.start}
+          AND so."createdAt" <= ${dateRange.end}
+        GROUP BY TO_CHAR(so."createdAt", 'YYYY-MM')
+        ORDER BY MIN(so."createdAt")
+      ` as Array<{ name: string; customers: bigint }>;
 
-      // New customers (first order in this period)
-      const allBuyerIds = Array.from(buyerIds);
-      let newCustomers = 0;
-
-      for (const buyerId of allBuyerIds) {
-        const firstOrder = await prisma.order.findFirst({
-          where: {
-            buyerId,
-            sellerOrders: { some: { sellerId } },
-          },
-          orderBy: { createdAt: "asc" },
-          select: { createdAt: true },
-        });
-
-        if (firstOrder && firstOrder.createdAt >= dateRange.start) {
-          newCustomers++;
-        }
-      }
-
-      // Repeat customer rate
-      const previousOrders = await prisma.sellerOrder.findMany({
-        where: {
-          sellerId,
-          createdAt: { gte: dateRange.previousStart, lt: dateRange.previousEnd },
-        },
-        select: { buyerOrderId: true },
-      });
-
-      const prevBuyerIds = new Set<string>();
-      for (const order of previousOrders) {
-        const buyerOrder = await prisma.order.findUnique({
-          where: { id: order.buyerOrderId },
-          select: { buyerId: true },
-        });
-        if (buyerOrder) prevBuyerIds.add(buyerOrder.buyerId);
-      }
-
-      const repeatCustomers = Array.from(buyerIds).filter((id) => prevBuyerIds.has(id)).length;
-      const repeatCustomerRate = totalCustomers > 0 ? (repeatCustomers / totalCustomers) * 100 : 0;
-
-      // Average lifetime value
-      let totalLTV = 0;
-      for (const buyerId of allBuyerIds) {
-        const customerOrders = await prisma.sellerOrder.aggregate({
-          where: {
-            sellerId,
-            order: { buyerId },
-            status: "DELIVERED",
-          },
-          _sum: { total: true },
-        });
-        totalLTV += Number(customerOrders._sum.total ?? 0);
-      }
-
-      const averageLifetimeValue = totalCustomers > 0 ? totalLTV / totalCustomers : 0;
-
-      // Customer acquisition data
-      const acquisitionData = await getSalesDataPoints(prisma, sellerId, period, dateRange);
-      const customerAcquisition = acquisitionData.map((point) => ({
-        name: point.name,
-        customers: Math.floor(point.orders * 0.8), // Approximation
+      const customerAcquisition = acquisitionData.map(row => ({
+        name: row.name,
+        customers: Number(row.customers),
       }));
 
       return {
         metrics: {
           totalCustomers,
-          newCustomers,
+          newCustomers: stats.newCustomers,
           repeatCustomerRate: Number(repeatCustomerRate.toFixed(2)),
-          averageLifetimeValue: Number(averageLifetimeValue.toFixed(2)),
+          averageLifetimeValue: Number(stats.averageLifetimeValue) || 0,
         },
         customerAcquisition,
       };

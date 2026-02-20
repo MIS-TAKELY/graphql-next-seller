@@ -14,6 +14,38 @@ const PRODUCT_CACHE_VERSION = "v2";
 const getProductCacheKey = (slug: string) =>
   `product:details:${PRODUCT_CACHE_VERSION}:${slug}`;
 
+// Cache TTL configurations (in seconds)
+const CACHE_TTL = {
+  PRODUCTS_ALL: 300, // 5 minutes
+  PRODUCT_BY_ID: 600, // 10 minutes
+  PRODUCT_BY_SLUG: 3600, // 1 hour
+  MY_PRODUCTS: 120, // 2 minutes (seller-specific, changes more often)
+  MY_PRODUCT_STATS: 60, // 1 minute
+};
+
+// Helper to invalidate all product-related caches for a seller
+async function invalidateSellerProductCache(sellerId: string, slug?: string, productId?: string) {
+  const keys = [
+    `products:seller:${sellerId}:all:all::0:20:v3`,
+    `products:stats:seller:${sellerId}:v3`,
+    "products:all:v3",
+  ];
+  
+  if (slug) {
+    keys.push(
+      `product:details:v2:${slug}`,
+      `product:details:v3:${slug}`,
+      `product:${slug}`,
+    );
+  }
+  
+  if (productId) {
+    keys.push(`products:id:${productId}:v3`);
+  }
+  
+  await Promise.all(keys.map(key => delCache(key)));
+}
+
 /**
  * Triggers notifications for users who requested to be notified when a product is restocked.
  * Marked as async and handles its own errors to avoid blocking the main stock update transaction.
@@ -96,12 +128,13 @@ export const productResolvers = {
       requireAuth(ctx);
 
       try {
-        const cacheKey = "products:all";
+        const cacheKey = "products:all:v3";
 
-        const cached = await getCache(cacheKey);
-        if (cached) {
+        // Try cache first
+        const cachedData = await getCache(cacheKey);
+        if (cachedData) {
           console.log("⚡ returning products from cache");
-          return cached; // Already parsed inside getCache
+          return cachedData;
         }
 
         console.log("💾 caching products (miss)");
@@ -137,7 +170,8 @@ export const productResolvers = {
           },
         });
 
-        await setCache(cacheKey, products);
+        // Cache with TTL
+        await setCache(cacheKey, products, CACHE_TTL.PRODUCTS_ALL);
         return products;
       } catch (error: any) {
         console.log("error occured while fetching products", error);
@@ -153,13 +187,15 @@ export const productResolvers = {
       requireAuth(ctx);
 
       if (!productId) throw new Error("Product id is required");
-      // const cacheKey = `products:${productId}`;
 
-      // const cached = await getCache(cacheKey);
-      // if (cached) {
-      //   console.log("⚡ returning product from cache");
-      //   return cached;
-      // }
+      const cacheKey = `products:id:${productId}:v3`;
+
+      // Try cache first
+      const cached = await getCache(cacheKey);
+      if (cached) {
+        console.log("⚡ returning product from cache (by ID)");
+        return cached;
+      }
 
       console.log("💾 caching product (miss)");
       const product = await prisma.product.findUnique({
@@ -197,10 +233,10 @@ export const productResolvers = {
         },
       });
 
-      // if (product) {
-      //   // Only cache if fou  nd
-      //   await setCache(cacheKey, product);
-      // }
+      // Cache product if found
+      if (product) {
+        await setCache(cacheKey, product, CACHE_TTL.PRODUCT_BY_ID);
+      }
 
       return product;
     },
@@ -264,7 +300,7 @@ export const productResolvers = {
 
         // Only cache if product is found
         if (product) {
-          await setCache(cacheKey, product, 3600); // Cache for 1 hour
+          await setCache(cacheKey, product, CACHE_TTL.PRODUCT_BY_SLUG);
         }
 
         return product; // Returns null if not found
@@ -284,6 +320,17 @@ export const productResolvers = {
         const userId = user.id;
 
         const prisma = ctx.prisma;
+
+        // Generate cache key based on all query parameters
+        const cacheKey = `products:seller:${userId}:${status || 'all'}:${categoryId || 'all'}:${searchTerm || ''}:${skip || 0}:${take || 20}:v3`;
+
+        // Try cache first (only for first page without search)
+        const cachedData = await getCache(cacheKey);
+        if (cachedData && !searchTerm && (skip === 0 || skip === undefined)) {
+          console.log("⚡ returning my products from cache");
+          return cachedData;
+        }
+
         const where: any = { sellerId: userId };
 
         if (searchTerm) {
@@ -365,13 +412,20 @@ export const productResolvers = {
           percentChange = 100;
         }
 
-        return {
+        const result = {
           products,
           totalCount,
           currentMonthCount,
           previousMonthCount: prevMonthCount,
           percentChange: Number(percentChange.toFixed(2)),
         };
+
+        // Cache only for first page without search
+        if (!searchTerm && (skip === 0 || skip === undefined)) {
+          await setCache(cacheKey, result, CACHE_TTL.MY_PRODUCTS);
+        }
+
+        return result;
       } catch (error: any) {
         console.error("Error while getting my products:", error);
         throw new Error(`Failed to fetch products: ${error.message}`);
@@ -383,6 +437,14 @@ export const productResolvers = {
         const user = requireSeller(ctx);
         const userId = user.id;
         const prisma = ctx.prisma;
+
+        // Try cache first
+        const statsCacheKey = `products:stats:seller:${userId}:v3`;
+        const cachedStats = await getCache(statsCacheKey);
+        if (cachedStats) {
+          console.log("⚡ returning product stats from cache");
+          return cachedStats;
+        }
 
         const [total, active, outOfStock, lowStock] = await Promise.all([
           prisma.product.count({ where: { sellerId: userId } }),
@@ -403,7 +465,12 @@ export const productResolvers = {
           }),
         ]);
 
-        return { total, active, outOfStock, lowStock };
+        const result = { total, active, outOfStock, lowStock };
+        
+        // Cache the stats
+        await setCache(statsCacheKey, result, CACHE_TTL.MY_PRODUCT_STATS);
+        
+        return result;
       } catch (error: any) {
         console.error("Error fetching product stats:", error);
         throw new Error("Failed to fetch product stats");
@@ -610,13 +677,8 @@ export const productResolvers = {
           })();
         }
 
-        // 5. Cleanup Cache
-        await Promise.all([
-          delCache(getProductCacheKey(slug)), // Invalidate versioned detail cache
-          delCache(`product:${slug}`), // Invalidate list internal cache
-          delCache("products:all"),
-          delCache(`products:seller:${sellerId}`),
-        ]);
+        // 5. Cleanup Cache using helper
+        await invalidateSellerProductCache(sellerId, slug);
 
         return true;
       } catch (error: any) {
@@ -973,19 +1035,12 @@ export const productResolvers = {
 
         // 4. Cleanup Cache
         const slug = input.name ? await generateUniqueSlug(input.name) : existingProduct.slug;
-        const keys = [
-          `product:${slug}`,
-          "products:all",
-          `products:seller:${sellerId}`
-        ];
-        // Also clear old slug if name changed
-        if (existingProduct.slug !== slug) {
-          keys.push(`product:${existingProduct.slug}`);
-          keys.push(getProductCacheKey(existingProduct.slug));
+        const oldSlug = existingProduct.slug !== slug ? existingProduct.slug : undefined;
+        await invalidateSellerProductCache(sellerId, slug);
+        // Also invalidate old slug cache if name changed
+        if (oldSlug) {
+          await invalidateSellerProductCache(sellerId, oldSlug);
         }
-        keys.push(getProductCacheKey(slug));
-
-        await Promise.all(keys.map(key => delCache(key)));
 
         return true;
       } catch (error: any) {
@@ -1124,13 +1179,7 @@ export const productResolvers = {
         });
 
         // 5. Invalidate Cache
-        const keys = [
-          `product:${product.slug}`,
-          getProductCacheKey(product.slug),
-          "products:all",
-          `products:seller:${sellerId}`
-        ];
-        await Promise.all(keys.map(k => delCache(k)));
+        await invalidateSellerProductCache(sellerId, product.slug);
 
         console.log("✅ Product deleted successfully");
         return true;
@@ -1235,13 +1284,7 @@ export const productResolvers = {
         }
 
         // 5. Cache Invalidation
-        const keys = [
-          `product:${variant.product.slug}`,
-          getProductCacheKey(variant.product.slug),
-          "products:all",
-          `products:seller:${sellerId}`,
-        ];
-        await Promise.all(keys.map((k) => delCache(k)));
+        await invalidateSellerProductCache(sellerId, variant.product.slug);
 
         console.log(`✅ Stock updated for variant ${variantId}: ${oldStock} -> ${stock}`);
         return updatedVariant;

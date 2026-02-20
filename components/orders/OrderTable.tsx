@@ -1,6 +1,6 @@
 // components/orders/OrderTable.tsx
 'use client';
-import React, { useState, useCallback } from 'react';
+import React, { useCallback, memo, useMemo } from 'react';
 import { useOrder } from '@/hooks/order/useOrder';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,8 @@ import { SellerOrder, OrderFilters, OrderStatus } from '@/types/pages/order.type
 import Image from 'next/image';
 import { Package } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { PaginatedVirtualTable } from '@/components/ui/virtualized-table';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 interface OrderTableProps {
@@ -43,6 +45,16 @@ interface OrderTableProps {
   onConfirmationSuccess?: (orderId: string) => void;
   selectedOrders?: string[];
   onSelectionChange?: (selectedIds: string[]) => void;
+  /** Enable virtualization for large lists (default: true if > 50 items) */
+  enableVirtualization?: boolean;
+  /** Show loading skeleton rows */
+  isLoading?: boolean;
+  /** Infinite scroll: callback when user scrolls near bottom */
+  onEndReached?: () => void;
+  /** Infinite scroll: whether there are more items to load */
+  hasNextPage?: boolean;
+  /** Infinite scroll: whether more items are currently being loaded */
+  isLoadingMore?: boolean;
 }
 
 const formatDate = (dateString: string | Date) => {
@@ -79,7 +91,7 @@ interface OrderTableRowProps {
   cancelOrder: (orderId: string, reason?: string) => Promise<any>;
 }
 
-const OrderTableRow = React.memo(function OrderTableRow({
+const OrderTableRow = memo(function OrderTableRow({
   order,
   isSelected,
   showCheckbox,
@@ -91,6 +103,34 @@ const OrderTableRow = React.memo(function OrderTableRow({
   onConfirmationSuccess,
   cancelOrder
 }: OrderTableRowProps) {
+  // Memoize callbacks to prevent unnecessary re-renders
+  const handleSelectOrder = useCallback(() => {
+    onSelectOrder(order.id);
+  }, [onSelectOrder, order.id]);
+
+  const handleStatusUpdate = useCallback((status: OrderStatus) => {
+    onStatusUpdate(order.id, status);
+  }, [onStatusUpdate, order.id]);
+
+  const handleShipmentSuccess = useCallback(() => {
+    onShipmentSuccess?.(order.id);
+  }, [onShipmentSuccess, order.id]);
+
+  // Memoize customer name computation
+  const customerName = useMemo(() => {
+    const buyer = order.order.buyer;
+    if (!buyer) return "Unknown Customer";
+    if (buyer.firstName || buyer.lastName) {
+      return `${buyer.firstName ?? ""} ${buyer.lastName ?? ""}`.trim();
+    }
+    return buyer.name || "Unknown Customer";
+  }, [order.order.buyer]);
+
+  // Memoize first item
+  const firstItem = order.items?.[0];
+  const firstItemProduct = firstItem?.variant?.product;
+  const firstItemImage = firstItemProduct?.images?.[0];
+
   return (
     <TableRow
       className={cn(
@@ -102,7 +142,7 @@ const OrderTableRow = React.memo(function OrderTableRow({
         <TableCell>
           <Checkbox
             checked={isSelected}
-            onCheckedChange={() => onSelectOrder(order.id)}
+            onCheckedChange={handleSelectOrder}
           />
         </TableCell>
       )}
@@ -112,14 +152,7 @@ const OrderTableRow = React.memo(function OrderTableRow({
       <TableCell>
         <div className="min-w-0">
           <div className="font-medium text-xs sm:text-sm truncate">
-            {(() => {
-              const buyer = order.order.buyer;
-              if (!buyer) return "Unknown Customer";
-              if (buyer.firstName || buyer.lastName) {
-                return `${buyer.firstName ?? ""} ${buyer.lastName ?? ""}`.trim();
-              }
-              return buyer.name || "Unknown Customer";
-            })()}
+            {customerName}
           </div>
           <div className="text-xs text-muted-foreground truncate">
             {order.order.buyer?.email ?? 'N/A'}
@@ -137,10 +170,10 @@ const OrderTableRow = React.memo(function OrderTableRow({
       <TableCell className="hidden md:table-cell text-xs sm:text-sm">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-md bg-muted border overflow-hidden flex-shrink-0 relative shadow-sm">
-            {order.items[0]?.variant?.product?.images?.[0] ? (
+            {firstItemImage ? (
               <Image
-                src={order.items[0].variant.product.images[0].url}
-                alt={order.items[0].variant.product.name}
+                src={firstItemImage.url}
+                alt={firstItemProduct?.name || 'Product'}
                 fill
                 className="object-cover"
                 unoptimized
@@ -151,7 +184,7 @@ const OrderTableRow = React.memo(function OrderTableRow({
           </div>
           <div className="flex flex-col min-w-0">
             <span className="truncate max-w-[150px] font-medium leading-tight">
-              {order.items[0]?.variant?.product?.name || 'Unknown Product'}
+              {firstItemProduct?.name || 'Unknown Product'}
             </span>
           </div>
         </div>
@@ -166,7 +199,7 @@ const OrderTableRow = React.memo(function OrderTableRow({
           ) : (
             <CreateShipmentDialog
               order={order}
-              onSuccess={() => onShipmentSuccess?.(order.id)}
+              onSuccess={handleShipmentSuccess}
               children={
                 <Button variant="outline" size="sm" className="text-xs">
                   Generate Tracking
@@ -236,16 +269,16 @@ const OrderTableRow = React.memo(function OrderTableRow({
                 )}
                 {order.status === OrderStatus.SHIPPED && (
                   <DropdownMenuItem
-                    onClick={() => onStatusUpdate(order.id, OrderStatus.DELIVERED)}
+                    onClick={() => handleStatusUpdate(OrderStatus.DELIVERED)}
                     className="text-xs"
                   >
                     Mark as Delivered
                   </DropdownMenuItem>
                 )}
                 {(order.status === OrderStatus.SHIPPED || order.status === OrderStatus.DELIVERED) &&
-                  order.items[0]?.variant?.product?.returnPolicy?.type !== 'NO_RETURN' && (
+                  firstItemProduct?.returnPolicy?.type !== 'NO_RETURN' && (
                     <DropdownMenuItem
-                      onClick={() => onStatusUpdate(order.id, OrderStatus.RETURNED)}
+                      onClick={() => handleStatusUpdate(OrderStatus.RETURNED)}
                       className="text-xs"
                     >
                       Process Return
@@ -256,13 +289,13 @@ const OrderTableRow = React.memo(function OrderTableRow({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       onClick={() => toast.success('Printing invoice...')}
-                      className="text-xs"
+                      className="text-xs cursor-pointer"
                     >
                       Print Invoice
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => toast.success('Printing shipping label...')}
-                      className="text-xs"
+                      className="text-xs cursor-pointer"
                     >
                       Print Shipping Label
                     </DropdownMenuItem>
@@ -270,7 +303,7 @@ const OrderTableRow = React.memo(function OrderTableRow({
                 )}
                 <DropdownMenuItem
                   onClick={() => toast.success('Opening email client...')}
-                  className="text-xs"
+                  className="text-xs cursor-pointer"
                 >
                   Contact Customer
                 </DropdownMenuItem>
@@ -283,7 +316,7 @@ const OrderTableRow = React.memo(function OrderTableRow({
   );
 });
 
-export function OrderTable({
+export const OrderTable = memo(function OrderTable({
   orders,
   showCheckbox = false,
   showTracking = false,
@@ -293,80 +326,244 @@ export function OrderTable({
   onConfirmationSuccess,
   selectedOrders = [],
   onSelectionChange,
+  enableVirtualization,
+  isLoading = false,
+  onEndReached,
+  hasNextPage,
+  isLoadingMore,
 }: OrderTableProps) {
   const { confirmSingleOrder, updateOrderStatus, cancelOrder } = useOrder();
 
-  const selectOrder = (orderId: string) => {
+  // Enable virtualization automatically for large lists (> 50 items)
+  const shouldVirtualize = useMemo(() => {
+    if (enableVirtualization !== undefined) return enableVirtualization;
+    return (orders?.length || 0) > 50;
+  }, [orders?.length, enableVirtualization]);
+
+  // Loading skeleton rows
+  const loadingRows = useMemo(() => (
+    Array.from({ length: 5 }).map((_, i) => (
+      <TableRow key={i}>
+        {showCheckbox && <TableCell><Skeleton className="h-4 w-4" /></TableCell>}
+        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+        <TableCell>
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-40" />
+          </div>
+        </TableCell>
+        <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+        <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+        <TableCell className="hidden md:table-cell">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-10 w-10 rounded-md" />
+            <Skeleton className="h-4 w-28" />
+          </div>
+        </TableCell>
+        <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+        {showTracking && <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-28" /></TableCell>}
+        <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+      </TableRow>
+    ))
+  ), [showCheckbox, showTracking]);
+
+  // Empty state
+  const emptyComponent = useMemo(() => (
+    <TableRow>
+      <TableCell colSpan={showCheckbox ? 9 : 8} className="text-center py-8 h-[80px]">
+        <p className="text-muted-foreground">No orders found</p>
+      </TableCell>
+    </TableRow>
+  ), [showCheckbox]);
+
+  // Define callbacks before they are used in renderOrderRow
+  const selectOrder = useCallback((orderId: string) => {
     const newSelected = selectedOrders.includes(orderId)
       ? selectedOrders.filter((id) => id !== orderId)
       : [...selectedOrders, orderId];
     onSelectionChange?.(newSelected);
-  };
+  }, [selectedOrders, onSelectionChange]);
 
-  const selectAllOrders = () => {
+  const selectAllOrders = useCallback(() => {
     if (selectedOrders.length === orders.length) {
       onSelectionChange?.([]);
     } else {
       onSelectionChange?.(orders.map((order) => order.id));
     }
-  };
+  }, [selectedOrders, orders, onSelectionChange]);
 
-  const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
+  const handleStatusUpdate = useCallback(async (orderId: string, newStatus: OrderStatus) => {
     try {
       if (newStatus === OrderStatus.CONFIRMED) {
         await confirmSingleOrder(orderId);
-        onConfirmationSuccess?.(orderId); // Trigger callback
+        onConfirmationSuccess?.(orderId);
       } else {
         await updateOrderStatus(orderId, newStatus);
       }
     } catch (error) {
       // Error handling is managed by the hook
     }
-  };
+  }, [confirmSingleOrder, updateOrderStatus, onConfirmationSuccess]);
 
+  const handleCancelOrder = useCallback(async (orderId: string, reason?: string) => {
+    return cancelOrder(orderId, reason);
+  }, [cancelOrder]);
+
+  // Memoized row renderer for virtualization (must be after selectOrder and handleStatusUpdate)
+  const renderOrderRow = useCallback((order: SellerOrder) => (
+    <OrderTableRow
+      order={order}
+      isSelected={selectedOrders.includes(order.id)}
+      showCheckbox={showCheckbox}
+      showTracking={showTracking}
+      customActions={customActions}
+      onSelectOrder={selectOrder}
+      onStatusUpdate={handleStatusUpdate}
+      onShipmentSuccess={onShipmentSuccess}
+      onConfirmationSuccess={onConfirmationSuccess}
+      cancelOrder={cancelOrder}
+    />
+  ), [selectedOrders, showCheckbox, showTracking, customActions, selectOrder, handleStatusUpdate, onShipmentSuccess, onConfirmationSuccess, cancelOrder]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="rounded-md border overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {showCheckbox && (
+                  <TableHead className="w-8 sm:w-12">
+                    <Skeleton className="h-4 w-4" />
+                  </TableHead>
+                )}
+                <TableHead className="min-w-[100px] text-xs sm:text-sm">Order ID</TableHead>
+                <TableHead className="min-w-[120px] text-xs sm:text-sm">Customer</TableHead>
+                <TableHead className="text-xs sm:text-sm">Status</TableHead>
+                <TableHead className="text-xs sm:text-sm">Total</TableHead>
+                <TableHead className="hidden md:table-cell text-xs sm:text-sm">Items</TableHead>
+                <TableHead className="hidden lg:table-cell text-xs sm:text-sm">Date</TableHead>
+                {showTracking && (
+                  <TableHead className="hidden md:table-cell text-xs sm:text-sm">Tracking</TableHead>
+                )}
+                <TableHead className="text-xs sm:text-sm">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loadingRows}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading more indicator
+  const loadingMoreComponent = useMemo(() => (
+    <div className="flex items-center justify-center py-4">
+      <div className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+    </div>
+  ), []);
+
+  // Use virtualized table for large lists
+  if (shouldVirtualize && orders?.length > 0) {
+    return (
+      <div className="rounded-md border overflow-hidden">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {showCheckbox && (
+                <TableHead className="w-8 sm:w-12">
+                  <Checkbox
+                    checked={selectedOrders.length === orders.length && orders.length > 0}
+                    onCheckedChange={selectAllOrders}
+                  />
+                </TableHead>
+              )}
+              <TableHead className="min-w-[100px] text-xs sm:text-sm">Order ID</TableHead>
+              <TableHead className="min-w-[120px] text-xs sm:text-sm">Customer</TableHead>
+              <TableHead className="text-xs sm:text-sm">Status</TableHead>
+              <TableHead className="text-xs sm:text-sm">Total</TableHead>
+              <TableHead className="hidden md:table-cell text-xs sm:text-sm">Items</TableHead>
+              <TableHead className="hidden lg:table-cell text-xs sm:text-sm">Date</TableHead>
+              {showTracking && (
+                <TableHead className="hidden md:table-cell text-xs sm:text-sm">Tracking</TableHead>
+              )}
+              <TableHead className="text-xs sm:text-sm">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+        </Table>
+        <PaginatedVirtualTable
+          data={orders}
+          renderRow={renderOrderRow}
+          estimateSize={80}
+          overscan={5}
+          containerClassName="max-h-[600px]"
+          emptyComponent={
+            <Table>
+              <TableBody>{emptyComponent}</TableBody>
+            </Table>
+          }
+          onEndReached={onEndReached}
+          hasNextPage={hasNextPage}
+          isLoading={isLoadingMore}
+          loadingComponent={loadingMoreComponent}
+        />
+      </div>
+    );
+  }
+
+  // Regular table for small lists or empty
   return (
-    <div className="overflow-x-auto transition-all duration-300 ease-in-out">
-      <Table className="transition-all duration-300">
-        <TableHeader>
-          <TableRow>
-            {showCheckbox && (
-              <TableHead className="w-8 sm:w-12">
-                <Checkbox
-                  checked={selectedOrders.length === orders.length && orders.length > 0}
-                  onCheckedChange={selectAllOrders}
+    <div className="rounded-md border overflow-hidden">
+      <div className="overflow-x-auto transition-all duration-300 ease-in-out">
+        <Table className="transition-all duration-300">
+          <TableHeader>
+            <TableRow>
+              {showCheckbox && (
+                <TableHead className="w-8 sm:w-12">
+                  <Checkbox
+                    checked={selectedOrders.length === orders.length && orders.length > 0}
+                    onCheckedChange={selectAllOrders}
+                  />
+                </TableHead>
+              )}
+              <TableHead className="min-w-[100px] text-xs sm:text-sm">Order ID</TableHead>
+              <TableHead className="min-w-[120px] text-xs sm:text-sm">Customer</TableHead>
+              <TableHead className="text-xs sm:text-sm">Status</TableHead>
+              <TableHead className="text-xs sm:text-sm">Total</TableHead>
+              <TableHead className="hidden md:table-cell text-xs sm:text-sm">Items</TableHead>
+              <TableHead className="hidden lg:table-cell text-xs sm:text-sm">Date</TableHead>
+              {showTracking && (
+                <TableHead className="hidden md:table-cell text-xs sm:text-sm">Tracking</TableHead>
+              )}
+              <TableHead className="text-xs sm:text-sm">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {orders?.length === 0 ? (
+              emptyComponent
+            ) : (
+              orders?.map((order) => (
+                <OrderTableRow
+                  key={order.id}
+                  order={order}
+                  isSelected={selectedOrders.includes(order.id)}
+                  showCheckbox={showCheckbox}
+                  showTracking={showTracking}
+                  customActions={customActions}
+                  onSelectOrder={selectOrder}
+                  onStatusUpdate={handleStatusUpdate}
+                  onShipmentSuccess={onShipmentSuccess}
+                  onConfirmationSuccess={onConfirmationSuccess}
+                  cancelOrder={cancelOrder}
                 />
-              </TableHead>
+              ))
             )}
-            <TableHead className="min-w-[100px] text-xs sm:text-sm">Order ID</TableHead>
-            <TableHead className="min-w-[120px] text-xs sm:text-sm">Customer</TableHead>
-            <TableHead className="text-xs sm:text-sm">Status</TableHead>
-            <TableHead className="text-xs sm:text-sm">Total</TableHead>
-            <TableHead className="hidden md:table-cell text-xs sm:text-sm">Items</TableHead>
-            <TableHead className="hidden lg:table-cell text-xs sm:text-sm">Date</TableHead>
-            {showTracking && (
-              <TableHead className="hidden md:table-cell text-xs sm:text-sm">Tracking</TableHead>
-            )}
-            <TableHead className="text-xs sm:text-sm">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {orders.map((order) => (
-            <OrderTableRow
-              key={order.id}
-              order={order}
-              isSelected={selectedOrders.includes(order.id)}
-              showCheckbox={showCheckbox}
-              showTracking={showTracking}
-              customActions={customActions}
-              onSelectOrder={selectOrder}
-              onStatusUpdate={handleStatusUpdate}
-              onShipmentSuccess={onShipmentSuccess}
-              onConfirmationSuccess={onConfirmationSuccess}
-              cancelOrder={cancelOrder}
-            />
-          ))}
-        </TableBody>
-      </Table>
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
-}
+});

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useTransition } from "react";
+import React, { useTransition, useState, useCallback } from "react";
 import { EmptyProductsState } from "@/components/product/EmptyProductsState";
 import { ProductFilters } from "@/components/product/ProductFilters";
 import { ProductsPageHeader } from "@/components/product/ProductsPageHeader";
@@ -44,8 +44,12 @@ export function ProductsPageContent({
     const pageSize = 50;
     const totalPages = Math.ceil(totalCount / pageSize);
 
+    // Infinite scroll state
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasNextPage, setHasNextPage] = useState(true);
+
     // Use useProduct to fetch products and make it reactive to the cache
-    const { productsData, handleDelete, productsDataLoading } = useProduct({
+    const { productsData, handleDelete, productsDataLoading, fetchMoreProducts } = useProduct({
         skip: (page - 1) * pageSize,
         take: pageSize,
         searchTerm: searchTerm || undefined,
@@ -56,6 +60,29 @@ export function ProductsPageContent({
     // Use products from hook if available, otherwise fallback to initial products from server
     const products = productsData?.getMyProducts?.products || initialProducts;
     const currentTotalCount = productsData?.getMyProducts?.totalCount || totalCount;
+
+    // Handle infinite scroll - load more products
+    const handleEndReached = useCallback(async () => {
+        if (isLoadingMore || !hasNextPage || productsDataLoading) return;
+        
+        setIsLoadingMore(true);
+        try {
+            const result = await fetchMoreProducts(products.length, pageSize);
+            if (result?.data?.getMyProducts?.products) {
+                const newProducts = result.data.getMyProducts.products.length;
+                setHasNextPage(newProducts === pageSize);
+            }
+        } catch (error) {
+            console.error("Error loading more products:", error);
+        } finally {
+            setIsLoadingMore(false);
+        }
+    }, [fetchMoreProducts, products, hasNextPage, isLoadingMore, pageSize, productsDataLoading]);
+
+    // Reset infinite scroll when filters change
+    const handleFilterChange = useCallback(() => {
+        setHasNextPage(true);
+    }, []);
 
     // URL Update Helper
     const createQueryString = (params: Record<string, string | number | null>) => {
@@ -104,11 +131,11 @@ export function ProductsPageContent({
                 <CardContent className="space-y-4">
                     <ProductFilters
                         searchTerm={searchTerm}
-                        onSearchChange={(val) => updateUrl({ search: val, page: 1 })}
+                        onSearchChange={(val) => { handleFilterChange(); updateUrl({ search: val, page: 1 }); }}
                         statusFilter={statusFilter}
-                        onStatusChange={(val) => updateUrl({ status: val, page: 1 })}
+                        onStatusChange={(val) => { handleFilterChange(); updateUrl({ status: val, page: 1 }); }}
                         categoryFilter={categoryFilter}
-                        onCategoryChange={(val) => updateUrl({ categoryId: val, page: 1 })}
+                        onCategoryChange={(val) => { handleFilterChange(); updateUrl({ categoryId: val, page: 1 }); }}
                         categories={categories}
                         isCategoryLoading={false}
                     />
@@ -118,6 +145,9 @@ export function ProductsPageContent({
                             products={products}
                             onDelete={handleDeleteProduct}
                             isLoading={isPending || productsDataLoading}
+                            onEndReached={handleEndReached}
+                            hasNextPage={hasNextPage}
+                            isLoadingMore={isLoadingMore}
                         />
                     </div>
 

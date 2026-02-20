@@ -150,6 +150,7 @@ export const useProduct = (variables?: {
     loading: productsDataLoading,
     error: productsDataError,
     refetch: refetchProducts,
+    fetchMore,
   } = useQuery<GetMyProductsResponse>(GET_MY_PRODUCTS, {
     variables,
     errorPolicy: "all",
@@ -331,6 +332,36 @@ export const useProduct = (variables?: {
     });
   };
 
+  // Fetch more products for infinite scroll
+  const fetchMoreProducts = async (currentCount: number, pageSize: number) => {
+    if (!fetchMore) return;
+    
+    const result = await fetchMore({
+      variables: {
+        skip: currentCount,
+        take: pageSize,
+        searchTerm: variables?.searchTerm,
+        status: variables?.status,
+        categoryId: variables?.categoryId,
+      },
+      updateQuery: (previousResult, { fetchMoreResult }) => {
+        if (!fetchMoreResult?.getMyProducts) {
+          return previousResult;
+        }
+        return {
+          getMyProducts: {
+            ...fetchMoreResult.getMyProducts,
+            products: [
+              ...(previousResult.getMyProducts?.products || []),
+              ...fetchMoreResult.getMyProducts.products,
+            ],
+          },
+        };
+      },
+    });
+    return result;
+  };
+
   return {
     handleSubmitHandler,
     handleDelete,
@@ -339,7 +370,7 @@ export const useProduct = (variables?: {
     productsDataError,
     handleUpdateHandler,
     refetchProducts,
-
+    fetchMoreProducts,
     isAdding
   };
 };

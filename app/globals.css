@@ -119,13 +119,10 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-}
-
-@keyframes accordion-down {
+}@keyframes accordion-down {
   from {
     height: 0;
   }
-
   to {
     height: var(--radix-accordion-content-height);
   }
@@ -139,6 +136,19 @@
   to {
     height: 0;
   }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
 }
 
 @layer base {

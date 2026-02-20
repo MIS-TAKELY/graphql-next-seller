@@ -7,6 +7,7 @@ import type {
   UpdateSellerOrderStatusInput,
 } from "../../types";
 import { sendOrderStatusNotifications, sendReturnNotifications } from "@/services/orderNotificationService";
+import { getCachedData, setCachedData, invalidateCache } from "@/lib/cache";
 
 type SellerOrderStatus =
   | "PENDING"
@@ -16,6 +17,40 @@ type SellerOrderStatus =
   | "DELIVERED"
   | "CANCELLED"
   | "RETURNED";
+
+// Cache TTL configurations (in seconds)
+const CACHE_TTL = {
+  SELLER_ORDERS: 120, // 2 min - changes frequently
+  SELLER_ORDER_BY_ID: 300, // 5 min - relatively stable
+  ACTIVE_USERS: 300, // 5 min
+  DISPUTES: 60, // 1 min - changes often
+};
+
+// Cache key generators
+const getSellerOrdersCacheKey = (sellerId: string, limit?: number) => 
+  `orders:seller:${sellerId}:limit:${limit || 20}:v2`;
+
+const getSellerOrderByIdCacheKey = (orderId: string) => 
+  `orders:id:${orderId}:v2`;
+
+const getActiveUsersCacheKey = (sellerId: string) => 
+  `orders:activeusers:${sellerId}:v2`;
+
+const getDisputesCacheKey = (sellerId: string) => 
+  `orders:disputes:${sellerId}:v2`;
+
+const invalidateSellerOrderCache = async (sellerId: string, orderId?: string) => {
+  const keys = [
+    getSellerOrdersCacheKey(sellerId),
+    getActiveUsersCacheKey(sellerId),
+    getDisputesCacheKey(sellerId),
+    "orders:all:v2",
+  ];
+  if (orderId) {
+    keys.push(getSellerOrderByIdCacheKey(orderId));
+  }
+  await Promise.all(keys.map((k) => invalidateCache(k)));
+};
 
 const emitOrderStatusChanged = async (
   userIds: Array<string | null | undefined>,
@@ -96,6 +131,13 @@ export const sellerOrderResolver = {
         const user = requireSeller(ctx);
         const sellerId = user.id;
         const prisma = ctx.prisma;
+
+        // Try cache first
+        const cacheKey = getSellerOrdersCacheKey(sellerId, limit);
+        const cachedData = await getCachedData(cacheKey);
+        if (cachedData) {
+          return cachedData;
+        }
 
         const now = new Date();
         const currentMonthStart = new Date(
@@ -179,12 +221,17 @@ export const sellerOrderResolver = {
         }
 
         // Return orders + percentage change
-        return {
+        const result = {
           sellerOrders: orders,
           currentOrderCount,
           previousOrderCount: prevOrderCount,
           percentChange: Number(percentChange.toFixed(2)),
         };
+
+        // Cache the result
+        await setCachedData(cacheKey, result, CACHE_TTL.SELLER_ORDERS);
+
+        return result;
       } catch (error) {
         console.error("Error occurred while fetching orders -->", error);
         throw error;
@@ -200,6 +247,13 @@ export const sellerOrderResolver = {
         const sellerId = user.id;
         const prisma = ctx.prisma;
 
+        // Try cache first
+        const cacheKey = getActiveUsersCacheKey(sellerId);
+        const cachedData = await getCachedData(cacheKey);
+        if (cachedData) {
+          return cachedData;
+        }
+
         const now = new Date();
 
         const currentMonthStart = new Date(
@@ -214,30 +268,17 @@ export const sellerOrderResolver = {
         );
         const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0);
 
-        // Helper function to get unique active users in a date range
+        // Optimized: Use raw SQL to get unique active users in a date range
         const getActiveUsers = async (start: Date, end: Date) => {
-          const orders = await prisma.sellerOrder.findMany({
-            where: {
-              sellerId,
-              createdAt: {
-                gte: start,
-                lt: end,
-              },
-            },
-            select: { buyerOrderId: true },
-          });
-
-          const buyerIds = new Set<string>();
-
-          for (const order of orders) {
-            const buyerOrder = await prisma.order.findUnique({
-              where: { id: order.buyerOrderId },
-              select: { buyerId: true },
-            });
-            if (buyerOrder) buyerIds.add(buyerOrder.buyerId);
-          }
-
-          return buyerIds.size;
+          const result = await prisma.$queryRaw<[{ count: bigint }]>`
+            SELECT COUNT(DISTINCT o."buyerId")::integer as count
+            FROM "SellerOrder" so
+            JOIN "Order" o ON so."buyerOrderId" = o.id
+            WHERE so."sellerId" = ${sellerId}
+              AND so."createdAt" >= ${start}
+              AND so."createdAt" < ${end}
+          `;
+          return Number(result[0]?.count || 0);
         };
 
         const currentActiveUsers = await getActiveUsers(currentMonthStart, now);
@@ -255,11 +296,16 @@ export const sellerOrderResolver = {
           percentChange = 100;
         }
 
-        return {
+        const result = {
           currentActiveUsers,
           previousActiveUsers: prevActiveUsers,
           percentChange: Number(percentChange.toFixed(2)),
         };
+
+        // Cache the result
+        await setCachedData(cacheKey, result, CACHE_TTL.ACTIVE_USERS);
+
+        return result;
       } catch (error) {
         console.error("Error calculating active users change:", error);
         throw error;
@@ -271,6 +317,15 @@ export const sellerOrderResolver = {
       ctx: ResolverContext
     ) => {
       const user = requireSeller(ctx);
+
+      // Try cache first (only for first page)
+      if (offset === 0) {
+        const cacheKey = getDisputesCacheKey(user.id);
+        const cachedData = await getCachedData<any[]>(cacheKey);
+        if (cachedData) {
+          return cachedData.slice(offset, offset + limit);
+        }
+      }
       const [disputes, returns] = await Promise.all([
         ctx.prisma.orderDispute.findMany({
           where: {
@@ -362,6 +417,12 @@ export const sellerOrderResolver = {
       const allDisputes = [...disputes, ...mappedReturns].sort(
         (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
+
+      // Cache the result (only for first page)
+      if (offset === 0) {
+        const cacheKey = getDisputesCacheKey(user.id);
+        await setCachedData(cacheKey, allDisputes, CACHE_TTL.DISPUTES);
+      }
 
       return allDisputes.slice(offset, offset + limit);
     },
@@ -535,6 +596,9 @@ export const sellerOrderResolver = {
           console.error("Failed to send order confirmation notifications:", notificationError);
           // Don't fail the mutation if notifications fail
         }
+
+        // Invalidate cache
+        await invalidateSellerOrderCache(updatedSellerOrder.sellerId, sellerOrderId);
 
         return true;
       } catch (error) {
@@ -720,6 +784,9 @@ export const sellerOrderResolver = {
         // Sync parent order status
         await syncParentOrderStatus(updatedSellerOrder.buyerOrderId, prisma);
 
+        // Invalidate cache
+        await invalidateSellerOrderCache(updatedSellerOrder.sellerId, sellerOrderId);
+
         return {
           ...updatedSellerOrder,
           subtotal: updatedSellerOrder.subtotal.toNumber(),
@@ -817,6 +884,9 @@ export const sellerOrderResolver = {
       // Sync parent order status
       await syncParentOrderStatus(updatedSellerOrder.buyerOrderId, prisma);
 
+      // Invalidate cache
+      await invalidateSellerOrderCache(updatedSellerOrder.sellerId, sellerOrderId);
+
       // Optional: Log cancellation reason or notify buyer
 
       return updatedSellerOrder;
@@ -896,6 +966,14 @@ export const sellerOrderResolver = {
             estimatedDelivery: null, // Optionally calculate based on carrier
           },
         });
+
+        // Invalidate cache
+        const shipSellerOrder = order.sellerOrders.find(
+          (so: any) => so.sellerId === context.user?.id
+        );
+        if (shipSellerOrder) {
+          await invalidateSellerOrderCache(context.user!.id, shipSellerOrder.id);
+        }
 
         return {
           ...shipment,
@@ -1021,6 +1099,11 @@ export const sellerOrderResolver = {
         }, {
           timeout: 15000 // Increase timeout to 15 seconds
         });
+
+        // Invalidate cache
+        if (sellerId) {
+          await invalidateSellerOrderCache(sellerId);
+        }
 
         // 2. Fetch updated orders outside transaction for return and notifications
         const results = await prisma.sellerOrder.findMany({
@@ -1202,6 +1285,11 @@ export const sellerOrderResolver = {
         }, {
           timeout: 15000
         });
+
+        // Invalidate cache
+        if (sellerId) {
+          await invalidateSellerOrderCache(sellerId);
+        }
 
         // 4. Fetch final updated orders for return outside transaction
         const results = await prisma.sellerOrder.findMany({
@@ -1435,6 +1523,9 @@ export const sellerOrderResolver = {
             }
           }
         }
+        // Invalidate cache
+        await invalidateSellerOrderCache(user.id);
+
         return updatedDispute;
       }
 

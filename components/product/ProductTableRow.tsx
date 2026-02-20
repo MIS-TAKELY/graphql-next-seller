@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { TableCell, TableRow } from "@/components/ui/table";
@@ -12,8 +13,7 @@ interface ProductTableRowProps {
   onDelete: (id: string) => void;
 }
 
-export function ProductTableRow({ product, onDelete }: ProductTableRowProps) {
-  console.log("product-->", product);
+export const ProductTableRow = memo(function ProductTableRow({ product, onDelete }: ProductTableRowProps) {
   return (
     <TableRow key={product?.id}>
       <TableCell>
@@ -46,8 +46,8 @@ export function ProductTableRow({ product, onDelete }: ProductTableRowProps) {
       <TableCell className="hidden md:table-cell">
         <Badge
           variant="outline"
-          className="max-w-[150px] truncate "
-          title={product.category?.name || "No Category"} // Tooltip on hover
+          className="max-w-[150px] truncate"
+          title={product.category?.name || "No Category"}
         >
           {product.category?.name || "No Category"}
         </Badge>
@@ -75,4 +75,4 @@ export function ProductTableRow({ product, onDelete }: ProductTableRowProps) {
       </TableCell>
     </TableRow>
   );
-}
+});

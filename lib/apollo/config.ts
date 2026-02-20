@@ -1,5 +1,6 @@
 // lib/apollo/config.ts
 import { DefaultOptions, InMemoryCache } from "@apollo/client";
+import { relayStylePagination } from "@apollo/client/utilities";
 
 export const APOLLO_CONFIG = {
   defaultOptions: {
@@ -18,11 +19,40 @@ export const APOLLO_CONFIG = {
     typePolicies: {
       Query: {
         fields: {
+          // Optimize pagination with relay style
+          getMyProducts: relayStylePagination(),
+          getSellerOrders: relayStylePagination(),
+          getCustomers: {
+            keyArgs: ['filter'],
+            merge(existing, incoming, { args }) {
+              if (!args?.skip) {
+                // Initial load - replace
+                return incoming;
+              }
+              // Append for pagination, preserve stats and totalCount
+              return {
+                ...incoming,
+                customers: [...(existing?.customers ?? []), ...incoming.customers],
+                stats: incoming.stats ?? existing?.stats,
+                totalCount: incoming.totalCount ?? existing?.totalCount,
+              };
+            },
+          },
         },
       },
       Product: {
+        keyFields: ['id', 'slug'],
         fields: {
+          // Cache variants computation
+          variants: {
+            merge(existing, incoming) {
+              return incoming;
+            },
+          },
         },
+      },
+      SellerOrder: {
+        keyFields: ['id'],
       },
     },
   }),
