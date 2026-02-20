@@ -41,7 +41,7 @@ export const APOLLO_CONFIG = {
         },
       },
       Product: {
-        keyFields: ['id', 'slug'],
+        keyFields: ['id'],
         fields: {
           // Cache variants computation
           variants: {
