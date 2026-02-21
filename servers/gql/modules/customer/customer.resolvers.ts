@@ -1,3 +1,4 @@
+import { Prisma } from "@/app/generated/prisma";
 import { requireSeller } from "../../auth/auth";
 import { GraphQLContext } from "../../context";
 
@@ -41,8 +42,8 @@ export const customerResolvers = {
           JOIN "user" u ON o."buyerId" = u.id
           WHERE so."sellerId" = ${sellerId}
             AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
-            ${filter?.dateFrom ? prisma.$queryRaw`AND so."createdAt" >= ${filter.dateFrom}` : prisma.$queryRaw``}
-            ${filter?.dateTo ? prisma.$queryRaw`AND so."createdAt" <= ${filter.dateTo}` : prisma.$queryRaw``}
+            ${filter?.dateFrom ? Prisma.sql`AND so."createdAt" >= ${filter.dateFrom}` : Prisma.empty}
+            ${filter?.dateTo ? Prisma.sql`AND so."createdAt" <= ${filter.dateTo}` : Prisma.empty}
           GROUP BY u.id, u.email, u."firstName", u."lastName", u."phoneNumber", u."createdAt"
           ORDER BY "lastOrderDate" DESC
           LIMIT ${pageSize} OFFSET ${pageSkip}
