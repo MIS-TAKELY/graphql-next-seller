@@ -32,7 +32,7 @@ export const customerResolvers = {
             u.email,
             u."firstName",
             u."lastName",
-            u."phoneNumber",
+            u."phone" as "phoneNumber",
             u."createdAt",
             COUNT(DISTINCT so.id) as "orderCount",
             COALESCE(SUM(so.total), 0)::numeric as "totalSpent",
@@ -44,7 +44,7 @@ export const customerResolvers = {
             AND so.status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED')
             ${filter?.dateFrom ? Prisma.sql`AND so."createdAt" >= ${filter.dateFrom}` : Prisma.empty}
             ${filter?.dateTo ? Prisma.sql`AND so."createdAt" <= ${filter.dateTo}` : Prisma.empty}
-          GROUP BY u.id, u.email, u."firstName", u."lastName", u."phoneNumber", u."createdAt"
+          GROUP BY u.id, u.email, u."firstName", u."lastName", u."phone", u."createdAt"
           ORDER BY "lastOrderDate" DESC
           LIMIT ${pageSize} OFFSET ${pageSkip}
         ` as Array<{

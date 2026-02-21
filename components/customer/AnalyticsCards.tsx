@@ -35,10 +35,10 @@ const AnalyticsCards: React.FC<AnalyticsCardsProps> = ({
         </CardHeader>
         <CardContent className="transition-all duration-300">
           <div className="text-lg sm:text-xl md:text-2xl font-bold transition-all duration-300">
-            {totalCustomers.toLocaleString()}
+            {(totalCustomers ?? 0).toLocaleString()}
           </div>
           <p className="text-xs text-muted-foreground transition-all duration-300">
-            {activeCustomers} active customers
+            {activeCustomers ?? 0} active customers
           </p>
         </CardContent>
       </Card>
@@ -51,7 +51,7 @@ const AnalyticsCards: React.FC<AnalyticsCardsProps> = ({
         </CardHeader>
         <CardContent className="transition-all duration-300">
           <div className="text-lg sm:text-xl md:text-2xl font-bold transition-all duration-300">
-            {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
+            {(averageRating ?? 0) > 0 ? (averageRating ?? 0).toFixed(1) : "N/A"}
           </div>
           <p className="text-xs text-muted-foreground transition-all duration-300">
             Customer satisfaction
@@ -67,7 +67,7 @@ const AnalyticsCards: React.FC<AnalyticsCardsProps> = ({
         </CardHeader>
         <CardContent className="transition-all duration-300">
           <div className="text-lg sm:text-xl md:text-2xl font-bold transition-all duration-300">
-            {formatCurrency(totalRevenue)}
+            {formatCurrency(totalRevenue ?? 0)}
           </div>
           <p className="text-xs text-muted-foreground transition-all duration-300">
             From all customers
