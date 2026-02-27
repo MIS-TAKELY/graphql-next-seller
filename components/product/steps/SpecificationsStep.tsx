@@ -201,9 +201,6 @@ export const SpecificationsStep = React.memo(
               Organize specifications into sections (e.g., Display, Memory, Ports).
             </p>
           </div>
-          <Button onClick={addSection} size="sm" variant="secondary">
-            <Plus className="h-4 w-4 mr-2" /> Add Section
-          </Button>
         </div>
 
         {sections.map((section, sectionIndex) => {
@@ -335,6 +332,12 @@ export const SpecificationsStep = React.memo(
             </div>
           );
         })}
+
+        <div className="flex justify-end">
+          <Button onClick={addSection} size="sm" variant="secondary">
+            <Plus className="h-4 w-4 mr-2" /> Add Section
+          </Button>
+        </div>
 
         {/* Preview Section - Shows all sections */}
         {sections.some(s => s.rows.some(r => r.some(c => c.trim()))) && (
