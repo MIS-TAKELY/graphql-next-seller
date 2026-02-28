@@ -70,6 +70,7 @@ jobs:
             set -e
 
             cd ${{ secrets.VPS_PROJECT_PATH_SELLER }}
+            git config --global --add safe.directory ${{ secrets.VPS_PROJECT_PATH_SELLER }}
 
             # Ensure clean pull
             git reset --hard
