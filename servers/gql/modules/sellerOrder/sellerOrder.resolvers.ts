@@ -1,4 +1,4 @@
-import { OrderStatusChangedPayload, realtime } from "@/lib/realtime";
+import { OrderStatusChangedPayload, pusher } from "@/lib/realtime";
 import { ApolloError } from "@apollo/client";
 import { requireSeller } from "../../auth/auth";
 import type { GraphQLContext as ResolverContext } from "../../context";
@@ -63,9 +63,7 @@ const emitOrderStatusChanged = async (
   await Promise.all(
     recipients.map(async (userId) => {
       try {
-        await realtime
-          .channel(`user:${userId}`)
-          .emit("order.statusChanged", payload);
+        await pusher.trigger(`user-${userId}`, "order.statusChanged", payload);
       } catch (error) {
         console.error("Failed to dispatch order status notification:", error);
       }

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
-import { realtime } from "@/lib/realtime";
+import { pusher } from "@/lib/realtime";
 
 export const faqResolvers = {
     Query: {
@@ -90,7 +90,7 @@ export const faqResolvers = {
             // Emit Realtime Event
             try {
                 // @ts-ignore
-                await realtime.channel(`product:${answer.question.productId}:faq`).emit("faq.newAnswer", {
+                await pusher.trigger(`product-${answer.question.productId}-faq`, "faq.newAnswer", {
                     id: answer.id,
                     questionId: answer.questionId,
                     content: answer.content,
@@ -104,7 +104,7 @@ export const faqResolvers = {
                 });
                 // We need to fetch shopName from DB if not in context, or usage answer.seller
                 // The answer.seller includes sellerProfile as per include above.
-                await realtime.channel(`product:${answer.question.productId}:faq`).emit("faq.newAnswer", {
+                await pusher.trigger(`product-${answer.question.productId}-faq`, "faq.newAnswer", {
                     id: answer.id,
                     questionId: answer.questionId,
                     content: answer.content,

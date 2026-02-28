@@ -1,7 +1,7 @@
 // servers/gql/messageResolvers.ts
 import type { FileType as PrismaFileType } from "@/app/generated/prisma";
 import { createAndPushNotification } from "@/lib/notification";
-import { NewMessagePayload, realtime } from "@/lib/realtime";
+import { NewMessagePayload, pusher } from "@/lib/realtime";
 import type {
   FileType as CustomerFileType,
   MessageType,
@@ -232,9 +232,7 @@ export const messageResolvers = {
 
         // 1. Emit to conversation channel (Most critical for real-time)
         tasks.push(
-          realtime
-            .channel(channel)
-            .emit("message.newMessage", realtimePayload)
+          pusher.trigger(channel.replace(':', '-'), "message.newMessage", realtimePayload)
             .catch((err) => console.error("[SELLER-BACKEND] Realtime emit error:", err))
         );
 
@@ -249,10 +247,8 @@ export const messageResolvers = {
         for (const pid of participantIds) {
           if (!pid || pid === user.id) continue;
           tasks.push(
-            realtime
-              .channel(`user:${pid}`)
-              .emit("message.newMessage", realtimePayload)
-              .catch((err) => console.error(`[SELLER-BACKEND] User emit error (${pid}):`, err))
+            pusher.trigger(`user-${pid}`, "message.newMessage", realtimePayload)
+              .catch((err: any) => console.error(`[SELLER-BACKEND] User emit error (${pid}):`, err))
           );
         }
 

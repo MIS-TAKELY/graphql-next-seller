@@ -2,7 +2,8 @@ import { redis } from "./redis";
 
 export async function getCachedData<T>(key: string): Promise<T | null> {
     try {
-        return await redis.get<T>(key);
+        const data = await redis.get(key);
+        return (data ? (typeof data === 'string' ? JSON.parse(data) : data) : null) as T | null;
     } catch (error) {
         console.error(`Redis get error for key ${key}:`, error);
         return null;

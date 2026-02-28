@@ -225,7 +225,7 @@ export default function ChatModal({
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLazyQuery, useMutation } from "@apollo/client";
 import { toast } from "sonner";
-import { useRealtime } from "@upstash/realtime/client";
+import { useRealtime } from "@/lib/usePusherRealtime";
 import { uploadFilesToStorage } from "@/utils/uploadFilesToStorage";
 
 // NOTE: Replace these imports with your actual GraphQL queries/mutations

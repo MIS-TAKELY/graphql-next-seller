@@ -1,6 +1,6 @@
 "use client";
 
-import { useRealtime } from "@upstash/realtime/client";
+import { useRealtime } from "@/lib/usePusherRealtime";
 import { useSession } from "@/lib/auth-client";
 import { useCallback, useMemo } from "react";
 

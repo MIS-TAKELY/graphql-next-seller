@@ -1,7 +1,5 @@
-// lib/realtime.ts (shared between both apps)
-import { InferRealtimeEvents, Realtime } from "@upstash/realtime";
+import Pusher from "pusher";
 import { z } from "zod";
-import { redis } from "./redis";
 
 const orderStatusEnum = z.enum([
   "PENDING",
@@ -101,13 +99,16 @@ const schema = {
   },
 };
 
-export const realtime = new Realtime({
-  schema,
-  redis,
-  maxDurationSecs: 300,
+export const pusher = new Pusher({
+  appId: process.env.PUSHER_APP_ID || "app-id",
+  key: process.env.NEXT_PUBLIC_PUSHER_KEY || "app-key",
+  secret: process.env.PUSHER_SECRET || "app-secret",
+  host: process.env.NEXT_PUBLIC_PUSHER_HOST || "127.0.0.1",
+  port: process.env.NEXT_PUBLIC_PUSHER_PORT || "6001",
+  useTLS: process.env.NEXT_PUBLIC_PUSHER_USE_TLS === "true",
 });
 
-export type RealtimeEvents = InferRealtimeEvents<typeof realtime>;
+export type RealtimeEvents = any;
 
 // Export individual payload types for convenience
 export type NewMessagePayload = z.infer<typeof schema.message.newMessage>;

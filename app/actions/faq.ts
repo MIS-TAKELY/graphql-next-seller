@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/db/prisma";
-import { realtime } from "@/lib/realtime";
+import { pusher } from "@/lib/realtime";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 
@@ -61,7 +61,7 @@ export async function replyToQuestion(questionId: string, content: string) {
     }
 
     // @ts-ignore
-    await realtime.channel(`product:${answerResult.question.productId}:faq`).emit("faq.newAnswer", {
+    await pusher.trigger(`product-${answerResult.question.productId}-faq`, "faq.newAnswer", {
         id: answerResult.id,
         questionId: answerResult.questionId,
         content: answerResult.content,

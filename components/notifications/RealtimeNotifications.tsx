@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth-client";
-import { useRealtime } from "@upstash/realtime/client";
+import { useRealtime } from "@/lib/usePusherRealtime";
 import { useNotificationStore } from "@/store/notificationStore";
 import { useApolloClient } from "@apollo/client";
 import { GET_CONVERSATIONS } from "@/client/conversatation/conversatation.query";
