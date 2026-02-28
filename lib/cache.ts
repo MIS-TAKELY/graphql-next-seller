@@ -16,7 +16,7 @@ export async function setCachedData<T>(
     expirationInSeconds: number = 300 // Default 5 minutes
 ): Promise<void> {
     try {
-        await redis.set(key, JSON.stringify(data), { ex: expirationInSeconds });
+        await redis.setex(key, expirationInSeconds, JSON.stringify(data));
     } catch (error) {
         console.error(`Redis set error for key ${key}:`, error);
     }

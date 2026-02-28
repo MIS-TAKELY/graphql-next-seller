@@ -2,7 +2,7 @@ import redisConfig from "@/config/redis";
 
 export async function setCache(key: string, value: any, ttlSeconds = 3600) {
   if (!redisConfig.redis) throw new Error("Redis not initialized");
-  await redisConfig.redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+  await redisConfig.redis.setex(key, ttlSeconds, typeof value === 'string' ? value : JSON.stringify(value));
 }
 
 export async function getCache<T>(key: string): Promise<T | null> {
