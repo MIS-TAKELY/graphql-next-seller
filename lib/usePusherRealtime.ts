@@ -6,10 +6,13 @@ let pusherInstance: Pusher | null = null;
 
 const getPusher = () => {
     if (!pusherInstance) {
-        const useTLS = process.env.NEXT_PUBLIC_PUSHER_USE_TLS === "true";
-        const port = parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT || "6001");
+        const isBrowser = typeof window !== 'undefined';
+        const wsHost = isBrowser ? window.location.hostname : (process.env.NEXT_PUBLIC_PUSHER_HOST || "127.0.0.1");
+        const useTLS = isBrowser ? window.location.protocol === 'https:' : (process.env.NEXT_PUBLIC_PUSHER_USE_TLS === "true");
+        const port = isBrowser ? (useTLS ? 443 : 6001) : parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT || "6001");
+
         pusherInstance = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || "app-key", {
-            wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST || "127.0.0.1",
+            wsHost: wsHost,
             wsPort: port,
             wssPort: port,
             forceTLS: useTLS,

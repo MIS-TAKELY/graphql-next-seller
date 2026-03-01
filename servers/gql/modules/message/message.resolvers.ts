@@ -223,7 +223,7 @@ export const messageResolvers = {
         })),
       };
 
-      const channel = `conversation:${conversationId}`;
+      const channel = `conversation-${conversationId}`;
 
       // Side-effects function
       const runSideEffects = async () => {
@@ -247,7 +247,7 @@ export const messageResolvers = {
         for (const pid of participantIds) {
           if (!pid || pid === user.id) continue;
           tasks.push(
-            pusher.trigger(`user:${pid}`, "message.newMessage", realtimePayload)
+            pusher.trigger(`user-${pid}`, "message.newMessage", realtimePayload)
               .catch((err: any) => console.error(`[SELLER-BACKEND] User emit error (${pid}):`, err))
           );
         }

@@ -133,7 +133,7 @@ export const RealtimeNotifications = () => {
 
   // Memoize channels to prevent re-subscriptions
   const realtimeChannels = useMemo(
-    () => ((isLoaded && userId) ? [`user:${userId}`] : []),
+    () => ((isLoaded && userId) ? [`user-${userId}`] : []),
     [isLoaded, userId]
   );
 

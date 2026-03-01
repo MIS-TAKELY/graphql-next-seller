@@ -22,7 +22,7 @@ export function useConversationRealtime(onNewMessage: () => void) {
     );
 
     (useRealtime as any)({
-        channel: userId ? `user:${userId}` : undefined,
+        channel: userId ? `user-${userId}` : undefined,
         events,
     });
 }
