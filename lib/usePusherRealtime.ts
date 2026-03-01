@@ -6,13 +6,16 @@ let pusherInstance: Pusher | null = null;
 
 const getPusher = () => {
     if (!pusherInstance) {
+        const useTLS = process.env.NEXT_PUBLIC_PUSHER_USE_TLS === "true";
+        const port = parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT || "6001");
         pusherInstance = new Pusher(process.env.NEXT_PUBLIC_PUSHER_KEY || "app-key", {
             wsHost: process.env.NEXT_PUBLIC_PUSHER_HOST || "127.0.0.1",
-            wsPort: parseInt(process.env.NEXT_PUBLIC_PUSHER_PORT || "6001"),
-            forceTLS: process.env.NEXT_PUBLIC_PUSHER_USE_TLS === "true",
+            wsPort: port,
+            wssPort: port,
+            forceTLS: useTLS,
             disableStats: true,
-            enabledTransports: ["ws", "wss"],
-            cluster: "mt1"
+            enabledTransports: useTLS ? ["wss"] : ["ws"],
+            cluster: "mt1",
         });
     }
     return pusherInstance;
