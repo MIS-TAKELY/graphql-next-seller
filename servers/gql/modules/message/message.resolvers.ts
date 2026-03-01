@@ -232,7 +232,7 @@ export const messageResolvers = {
 
         // 1. Emit to conversation channel (Most critical for real-time)
         tasks.push(
-          pusher.trigger(channel.replace(':', '-'), "message.newMessage", realtimePayload)
+          pusher.trigger(channel, "message.newMessage", realtimePayload)
             .catch((err) => console.error("[SELLER-BACKEND] Realtime emit error:", err))
         );
 
@@ -247,7 +247,7 @@ export const messageResolvers = {
         for (const pid of participantIds) {
           if (!pid || pid === user.id) continue;
           tasks.push(
-            pusher.trigger(`user-${pid}`, "message.newMessage", realtimePayload)
+            pusher.trigger(`user:${pid}`, "message.newMessage", realtimePayload)
               .catch((err: any) => console.error(`[SELLER-BACKEND] User emit error (${pid}):`, err))
           );
         }

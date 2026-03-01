@@ -90,7 +90,7 @@ export const faqResolvers = {
             // Emit Realtime Event
             try {
                 // @ts-ignore
-                await pusher.trigger(`product-${answer.question.productId}-faq`, "faq.newAnswer", {
+                await pusher.trigger(`product:${answer.question.productId}:faq`, "faq.newAnswer", {
                     id: answer.id,
                     questionId: answer.questionId,
                     content: answer.content,
@@ -104,7 +104,7 @@ export const faqResolvers = {
                 });
                 // We need to fetch shopName from DB if not in context, or usage answer.seller
                 // The answer.seller includes sellerProfile as per include above.
-                await pusher.trigger(`product-${answer.question.productId}-faq`, "faq.newAnswer", {
+                await pusher.trigger(`product:${answer.question.productId}:faq`, "faq.newAnswer", {
                     id: answer.id,
                     questionId: answer.questionId,
                     content: answer.content,

@@ -36,7 +36,7 @@ export async function createAndPushNotification({
     console.log(`user:${userId}`);
     // console.log("REALTIME INSTANCE (publisher):", realtime)
     try {
-        await pusher.trigger(`user-${userId}`, "notification.newNotification", {
+        await pusher.trigger(`user:${userId}`, "notification.newNotification", {
             id: notification.id,
             title,
             body,

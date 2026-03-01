@@ -63,7 +63,7 @@ const emitOrderStatusChanged = async (
   await Promise.all(
     recipients.map(async (userId) => {
       try {
-        await pusher.trigger(`user-${userId}`, "order.statusChanged", payload);
+        await pusher.trigger(`user:${userId}`, "order.statusChanged", payload);
       } catch (error) {
         console.error("Failed to dispatch order status notification:", error);
       }

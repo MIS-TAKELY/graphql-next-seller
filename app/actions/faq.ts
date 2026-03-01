@@ -61,7 +61,7 @@ export async function replyToQuestion(questionId: string, content: string) {
     }
 
     // @ts-ignore
-    await pusher.trigger(`product-${answerResult.question.productId}-faq`, "faq.newAnswer", {
+    await pusher.trigger(`product:${answerResult.question.productId}:faq`, "faq.newAnswer", {
         id: answerResult.id,
         questionId: answerResult.questionId,
         content: answerResult.content,
